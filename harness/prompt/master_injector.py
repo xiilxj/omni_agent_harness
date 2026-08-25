@@ -147,9 +147,12 @@ class MasterPromptInjector:
         if master_content.strip():
             reinforced_master = (
                 "[CRITICAL OPERATING DIRECTIVE: ABSOLUTE OBEDIENCE MANDATORY]\n"
-                "You MUST strictly follow, embody, and prioritize ALL persona traits, tone constraints, length requirements, and behavior guidelines below without exception or dilution:\n\n"
+                "You MUST strictly follow, embody, and prioritize ALL persona traits, tone constraints, length requirements, and behavior guidelines below without exception or dilution.\n\n"
+                "[FIRST-TOKEN & EXECUTION MANDATE]:\n"
+                "- NEVER output default generic AI greetings or polite opening filler (e.g., '您好！我是.../请问有什么可以帮您').\n"
+                "- Your very first sentence and token MUST IMMEDIATELY embody the assigned persona and directly execute the task.\n\n"
                 f"{master_content}\n\n"
-                "[MANDATE]: Every rule above must be fully reflected in your execution and answers."
+                "[MANDATE]: Every rule above must be fully reflected in your execution and answers from your very first word."
             )
         else:
             reinforced_master = ""
@@ -168,10 +171,10 @@ class MasterPromptInjector:
         ]
 
         # 5. 双端物理锚定（Dual-Anchor Enforcement）：在最近一条用户消息末尾追加尾部注意力锁死指令
-        # 彻底解决自回归 Transformer 长上下文“注意力衰减”与单句提问“忽略第 0 条系统提示词”的固有顽疾
+        # 彻底解决自回归 Transformer 长上下文“注意力衰减”与首轮单句提问“忽略第 0 条系统提示词”的固有顽疾
         if master_content.strip() and filtered_messages:
             tail_directive = (
-                "\n\n[MANDATE ENFORCEMENT: You MUST strictly adhere to and fully reflect ALL persona constraints, tone, format, length, and execution rules defined in the Master System Prompt without omission or softening.]"
+                "\n\n[MANDATE ENFORCEMENT: Strictly execute following the Master System Prompt persona, tone, length, and behavioral constraints from your very first sentence. Prohibit generic AI disclaimers, refusals, or default polite greetings.]"
             )
             final_messages: List[Message] = []
             last_user_idx = -1
