@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni Agent Harness - Industrial ReAct Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef6ff',
+                            500: '#1e88e5',
+                            600: '#0d6efd',
+                            700: '#0b5ed7',
+                            900: '#084298'
+                        },
+                        dark: {
+                            bg: '#0d1117',
+                            surface: '#161b22',
+                            border: '#30363d',
+                            hover: '#21262d',
+                            muted: '#8b949e',
+                            text: '#c9d1d9',
+                            heading: '#f0f6fc'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"Fira Code"', 'Consolas', 'Monaco', 'monospace'],
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+        body { background-color: #0d1117; color: #c9d1d9; font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'Fira Code', monospace; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0d1117; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2.5px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+        .drawer-slide { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .markdown-body pre { background-color: #161b22 !important; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin: 8px 0; overflow-x: auto; }
+        .markdown-body code { font-family: 'Fira Code', monospace; font-size: 12px; }
+        .markdown-body p { margin-bottom: 8px; line-height: 1.6; }
+        .markdown-body ul, .markdown-body ol { margin-left: 20px; margin-bottom: 8px; }
+        .markdown-body li { list-style-type: disc; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+        .markdown-body th, .markdown-body td { border: 1px solid #30363d; padding: 6px 10px; }
+        .markdown-body th { background: #161b22; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-xs select-none">
+
+    <!-- Left Sidebar (Sessions & Workspace Explorer) -->
+    <aside id="app-sidebar" class="w-64 bg-dark-surface border-r border-dark-border flex flex-col flex-shrink-0 z-10 transition-all duration-200">
+        <!-- Logo / Workspace Header -->
+        <div class="h-13 p-3 border-b border-dark-border flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-6 h-6 rounded bg-brand-600 flex items-center justify-center text-white font-bold text-xs tracking-tighter">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-semibold text-dark-heading tracking-wide">
+                        Omni Agent Harness
+                    </span>
+                    <div class="flex items-center space-x-1">
+                        <span class="text-[10px] text-dark-muted font-mono truncate max-w-[100px]" id="sidebar-cwd">/workspace</span>
+                        <button id="btn-switch-cwd" class="text-[10px] text-blue-400 hover:text-blue-300 underline" title="Switch Workspace Directory on Computer">Switch</button>
+                    </div>
+                </div>
+            </div>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Master</span>
+        </div>
+
+        <!-- Sidebar Mode Switcher (Sessions vs File Explorer) -->
+        <div class="px-3 pt-2.5 pb-1 flex space-x-2 border-b border-dark-border/60 bg-dark-bg/30">
+            <button id="sidebar-tab-sessions" class="flex-1 py-1 text-center font-medium text-blue-400 border-b-2 border-brand-500 text-xs">
+                Sessions
+            </button>
+            <button id="sidebar-tab-files" class="flex-1 py-1 text-center font-medium text-dark-muted hover:text-dark-heading border-b-2 border-transparent text-xs">
+                Explorer
+            </button>
+        </div>
+
+        <!-- Mode 1: Sessions Pane -->
+        <div id="pane-sessions" class="flex-1 flex flex-col min-h-0">
+            <div class="p-2.5 space-y-2">
+                <button id="btn-new-session" class="w-full py-1.5 px-3 bg-dark-hover hover:bg-zinc-800 border border-dark-border hover:border-zinc-700 text-dark-heading rounded flex items-center justify-between transition">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span class="font-medium text-xs">New Session</span>
+                    </div>
+                    <kbd class="text-[10px] text-dark-muted bg-dark-bg px-1.5 py-0.5 rounded border border-dark-border">Ctrl+K</kbd>
+                </button>
+                <div class="flex items-center space-x-1 p-0.5 bg-dark-bg/60 rounded border border-dark-border text-[11px]">
+                    <button id="tab-session-active" class="flex-1 py-0.5 text-center font-medium rounded bg-dark-surface text-blue-400 shadow-sm transition">
+                        Active (<span id="count-active-sessions">0</span>)
+                    </button>
+                    <button id="tab-session-archived" class="flex-1 py-0.5 text-center font-medium rounded text-dark-muted hover:text-dark-heading transition">
+                        Archived (<span id="count-archived-sessions">0</span>)
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto px-2.5 py-1 space-y-1 custom-scroll" id="session-history-list">
+                <!-- Dynamically Rendered Sessions -->
+            </div>
+        </div>
+
+        <!-- Mode 2: File Explorer Pane -->
+        <div id="pane-files" class="hidden flex-1 flex flex-col min-h-0">
+            <div class="p-2 border-b border-dark-border/40 flex items-center justify-between bg-dark-bg/20">
+                <span class="text-[10px] font-mono text-dark-muted uppercase">Workspace Files</span>
+                <div class="flex items-center space-x-1">
+                    <button id="btn-new-folder" class="p-1 hover:bg-dark-hover rounded text-dark-muted hover:text-blue-400" title="New Folder">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            <line x1="12" y1="11" x2="12" y2="17"></line>
+                            <line x1="9" y1="14" x2="15" y2="14"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-new-file" class="p-1 hover:bg-dark-hover rounded text-dark-muted hover:text-blue-400" title="New File">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-refresh-tree" class="p-1 hover:bg-dark-hover rounded text-dark-muted hover:text-dark-heading" title="Refresh">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 font-mono text-[11px] space-y-0.5 custom-scroll" id="file-tree-container">
+                <!-- File Tree Nodes -->
+            </div>
+        </div>
+
+        <!-- Sidebar Bottom Footer -->
+        <div class="p-3 border-t border-dark-border bg-dark-bg/50 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="text-[11px] text-dark-muted font-mono">100% Injected</span>
+            </div>
+            <button id="btn-open-settings" class="p-1.5 rounded hover:bg-dark-hover text-dark-muted hover:text-dark-heading transition" title="Open Settings">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Workspace Center Area -->
+    <div class="flex-1 flex flex-col min-w-0 bg-dark-bg relative">
+        <!-- Top Navigation Bar -->
+        <header class="h-13 border-b border-dark-border bg-dark-surface/90 backdrop-blur px-4 flex items-center justify-between flex-shrink-0 z-10">
+            <div class="flex items-center space-x-2.5">
+                <button id="btn-toggle-sidebar" class="p-1.5 text-dark-muted hover:text-dark-heading rounded hover:bg-dark-hover transition" title="Toggle Sidebar (Ctrl+B)">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                    </svg>
+                </button>
+
+                <!-- DSH Model Tier Pills (模型档位) -->
+                <div class="flex items-center space-x-1 p-0.5 bg-dark-bg rounded border border-dark-border" id="model-tier-pills">
+                    <button data-tier="flash" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Flash (极速档 · deepseek-v4-flash)">⚡ Flash</button>
+                    <button data-tier="pro" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition" title="Pro (专业工程档 · deepseek-v4-pro)">🛠️ Pro</button>
+                    <button data-tier="reasoner" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Reasoner (深度推理档 · deepseek-reasoner)">🧠 Reasoner</button>
+                    <button data-tier="vision" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Vision (多模态档 · deepseek-v4-flash-vision-exp)">👁️ Vision</button>
+                </div>
+
+                <!-- Custom Model Select Dropdown -->
+                <div class="hidden lg:flex items-center space-x-1.5 bg-dark-bg border border-dark-border rounded px-2 py-1">
+                    <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-400 font-mono focus:outline-none cursor-pointer">
+                        <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner</option>
+                        <option value="deepseek-v4-flash-vision-exp">deepseek-v4-flash-vision-exp</option>
+                    </select>
+                </div>
+
+                <!-- DSH Permission Mode Selector (权限模式) -->
+                <div class="flex items-center space-x-1 bg-dark-bg border border-dark-border rounded px-2 py-1" id="permission-mode-box">
+                    <span class="text-[11px] text-dark-muted font-medium">Auth:</span>
+                    <select id="header-permission-select" class="bg-transparent text-[11px] text-emerald-400 font-medium focus:outline-none cursor-pointer">
+                        <option value="unrestricted">🔓 Unrestricted</option>
+                        <option value="ask_confirmation">🛡️ Controlled</option>
+                        <option value="read_only">🔒 Read-Only</option>
+                    </select>
+                </div>
+
+                <div class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-dark-bg border border-dark-border text-[11px]">
+                    <span class="text-dark-muted font-medium">Balance:</span>
+                    <strong class="text-emerald-400 font-mono" id="header-balance-badge">¥--</strong>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <div id="runtime-status-pill" class="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-zinc-800/80 border border-zinc-700/80 text-[11px] text-zinc-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-zinc-500" id="status-dot"></span>
+                    <span id="status-text">Idle</span>
+                </div>
+                <button id="btn-quick-prompt" class="px-2.5 py-1 text-xs text-dark-muted hover:text-dark-heading bg-dark-hover border border-dark-border rounded flex items-center space-x-1.5 transition">
+                    <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                    </svg>
+                    <span>Master Prompt</span>
+                </button>
+                <button id="btn-clear-stream" class="p-1.5 text-dark-muted hover:text-dark-heading rounded hover:bg-dark-hover transition" title="Clear Console">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Central Execution Stream (Timeline) -->
+        <main id="chat-timeline" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll max-w-4xl w-full mx-auto select-text">
+            <!-- Empty State -->
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center text-dark-muted py-20 select-none">
+                <div class="w-12 h-12 rounded-xl bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted mb-4">
+                    <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                </div>
+                <h3 class="text-sm font-semibold text-dark-heading mb-1">Omni Agent Harness Ready</h3>
+                <p class="text-xs text-dark-muted max-w-md">100% 绝对系统提示词注入已生效。在此下发任务，Agent 将以 ReAct 模式自动执行工具、读写工作区并交付成果。</p>
+            </div>
+        </main>
+
+        <!-- Bottom Container: Task Input Bar & DSH Telemetry Meter -->
+        <div class="p-4 bg-dark-bg/95 border-t border-dark-border max-w-4xl w-full mx-auto flex-shrink-0 space-y-2">
+            <!-- Modern Integrated Task Input Card (仿照截图一体化设计) -->
+            <div class="relative bg-dark-surface border border-dark-border rounded-2xl p-2.5 shadow-xl focus-within:border-blue-500/80 focus-within:ring-1 focus-within:ring-blue-500/30 transition">
+                
+                <!-- Floating Model & Reasoning Effort Selector Popover (折叠弹出面板) -->
+                <div id="popover-model-effort" class="hidden absolute bottom-full left-2 mb-2 w-84 bg-dark-surface border border-dark-border rounded-xl shadow-2xl p-3 z-30 space-y-3">
+                    <div class="flex items-center justify-between border-b border-dark-border pb-2">
+                        <span class="text-xs font-semibold text-dark-heading">Model & Reasoning Config</span>
+                        <button id="btn-close-popover" class="text-dark-muted hover:text-dark-heading p-0.5">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+
+                    <!-- 1. Model Tier Selection -->
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-semibold text-dark-muted uppercase">Model / 模型档位:</label>
+                        <div class="grid grid-cols-2 gap-1.5" id="popover-tier-grid">
+                            <button data-tier="flash" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>⚡</span><span>Flash</span></div>
+                                <div class="text-[10px] text-dark-muted truncate">deepseek-v4-flash</div>
+                            </button>
+                            <button data-tier="pro" class="pop-tier-btn p-1.5 rounded bg-blue-950/40 border border-blue-600 text-left transition">
+                                <div class="font-medium text-xs text-blue-400 flex items-center space-x-1"><span>🛠️</span><span>Pro</span></div>
+                                <div class="text-[10px] text-dark-muted truncate">deepseek-v4-pro</div>
+                            </button>
+                            <button data-tier="reasoner" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>🧠</span><span>Reasoner</span></div>
+                                <div class="text-[10px] text-dark-muted truncate">deepseek-reasoner</div>
+                            </button>
+                            <button data-tier="vision" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>👁️</span><span>Vision</span></div>
+                                <div class="text-[10px] text-dark-muted truncate">deepseek-v4-vision</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Reasoning Intensity (5 档真实有效推理强度) -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-semibold text-dark-muted uppercase">Reasoning Effort / 推理强度 (5 档):</label>
+                            <span id="label-current-budget" class="text-[10px] text-blue-400 font-mono">8K Budget</span>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1" id="popover-effort-grid">
+                            <button data-effort="none" class="pop-effort-btn py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] font-medium text-dark-muted hover:text-dark-heading transition" title="Off (零思考/极速直出)">Off</button>
+                            <button data-effort="low" class="pop-effort-btn py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] font-medium text-dark-muted hover:text-dark-heading transition" title="Low (2K Tokens)">Low</button>
+                            <button data-effort="medium" class="pop-effort-btn py-1 rounded bg-blue-950/60 border border-blue-500 text-center text-[10px] font-medium text-blue-400 transition" title="Medium (8K Tokens)">Med</button>
+                            <button data-effort="high" class="pop-effort-btn py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] font-medium text-dark-muted hover:text-dark-heading transition" title="High (16K Tokens)">High</button>
+                            <button data-effort="max" class="pop-effort-btn py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] font-medium text-dark-muted hover:text-dark-heading transition" title="Max (32K Tokens)">Max</button>
+                        </div>
+                        <div id="effort-desc-hint" class="text-[10px] text-dark-muted italic">标准思考 (预算 8K Tokens)，平衡推理深度与响应速度</div>
+                    </div>
+
+                    <!-- 3. Permission Mode -->
+                    <div class="space-y-1 pt-1 border-t border-dark-border/60">
+                        <label class="text-[10px] font-semibold text-dark-muted uppercase">Auth Mode / 权限模式:</label>
+                        <div class="flex items-center space-x-1">
+                            <button data-auth="unrestricted" class="pop-auth-btn flex-1 py-1 rounded bg-emerald-950/40 border border-emerald-500/60 text-center text-[10px] text-emerald-400 font-medium">🔓 Full</button>
+                            <button data-auth="ask_confirmation" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-amber-400 font-medium">🛡️ Ask</button>
+                            <button data-auth="read_only" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-blue-400 font-medium">🔒 Read</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Textarea -->
+                <textarea id="prompt-input" rows="2" class="w-full bg-transparent px-2 pt-1 pb-2 text-xs text-dark-heading placeholder-dark-muted focus:outline-none resize-none font-sans leading-relaxed custom-scroll" placeholder="Type instructions or assign a task... (Press Enter to execute, Shift+Enter for newline)"></textarea>
+
+                <!-- Input Card Lower Control Bar (折叠底部栏，正如截图所示) -->
+                <div class="flex items-center justify-between pt-1 border-t border-dark-border/40">
+                    <!-- Left: Quick +, Model Tier & Reasoning Pill, Auth Badge -->
+                    <div class="flex items-center space-x-1.5">
+                        <button id="btn-input-plus" class="w-7 h-7 rounded-lg hover:bg-dark-hover text-dark-muted hover:text-dark-heading flex items-center justify-center transition" title="Add / System Presets">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+
+                        <!-- Folded Model & Effort Pill Button (核心组件：只显示模型 + 推理强度) -->
+                        <button id="btn-model-effort-popover" class="px-2.5 py-1 bg-dark-bg hover:bg-zinc-800/90 border border-dark-border hover:border-zinc-700 rounded-lg flex items-center space-x-1.5 text-xs text-dark-heading cursor-pointer transition select-none group">
+                            <span class="text-xs" id="pill-model-icon">🛠️</span>
+                            <span class="font-medium text-xs" id="pill-model-name">deepseek-v4-pro</span>
+                            <span class="text-xs font-semibold text-blue-400" id="pill-effort-label">Med</span>
+                            <svg class="w-3 h-3 text-dark-muted group-hover:text-dark-heading transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                        </button>
+
+                        <!-- Auth Status Badge -->
+                        <div id="pill-auth-status" class="hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-400 font-mono">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span id="pill-auth-label">Unrestricted</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Token Estimate & Circular Send Button -->
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-clear-input" class="p-1 text-dark-muted hover:text-dark-heading rounded hover:bg-dark-hover transition" title="Clear input">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+
+                        <!-- Circular Action Blue Send Button (对齐截图) -->
+                        <button id="btn-submit-task" class="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white flex items-center justify-center shadow-lg transition" title="Send (Enter)">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="19" x2="12" y2="5"></line>
+                                <polyline points="5 12 12 5 19 12"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DSH Style Token & Telemetry Dashboard (底部仪表盘) -->
+            <div class="p-2 rounded bg-dark-bg border border-dark-border text-[10px] font-mono text-dark-muted flex items-center justify-between">
+                <div class="flex items-center space-x-3.5">
+                    <div class="flex items-center space-x-1">
+                        <span>Prompt:</span>
+                        <strong class="text-dark-heading" id="meter-prompt-tokens">0</strong>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span>Completion:</span>
+                        <strong class="text-dark-heading" id="meter-comp-tokens">0</strong>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span>Total:</span>
+                        <strong class="text-blue-400" id="meter-total-tokens">0</strong>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span>Latency:</span>
+                        <strong class="text-dark-heading" id="meter-latency">0.0s</strong>
+                        <span id="meter-tps" class="text-zinc-500">(0.0 t/s)</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span>Prompt Cache:</span>
+                        <strong class="text-emerald-400" id="meter-cache-hit">0.0%</strong>
+                    </div>
+                    <div class="flex items-center space-x-1 border-l border-dark-border/80 pl-2.5">
+                        <span>Balance:</span>
+                        <strong class="text-emerald-400 font-semibold" id="meter-balance-badge">¥--</strong>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-20 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                        <div id="meter-progress-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <span id="meter-context-ratio">0/128k</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Slide-out Settings Drawer -->
+    <div id="settings-drawer" class="fixed inset-y-0 right-0 w-[480px] bg-dark-surface border-l border-dark-border shadow-2xl flex flex-col z-50 transform translate-x-full drawer-slide">
+        <!-- Drawer Header -->
+        <div class="h-13 px-5 border-b border-dark-border flex items-center justify-between bg-dark-bg/60">
+            <div class="flex items-center space-x-2">
+                <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <h2 class="text-xs font-semibold text-dark-heading uppercase tracking-wider">Harness Settings</h2>
+            </div>
+            <button id="btn-close-settings" class="p-1 rounded hover:bg-dark-hover text-dark-muted hover:text-dark-heading transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Drawer Tab Switcher -->
+        <div class="px-5 pt-3 border-b border-dark-border flex space-x-4 bg-dark-bg/40 text-xs">
+            <button id="tab-btn-models" class="pb-2.5 border-b-2 border-brand-500 font-semibold text-dark-heading flex items-center space-x-1.5">
+                <span>Model & API</span>
+            </button>
+            <button id="tab-btn-prompt" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1.5">
+                <span>Master System Prompt</span>
+            </button>
+            <button id="tab-btn-tools" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1.5">
+                <span>Tools & Env</span>
+            </button>
+        </div>
+
+        <!-- Tab 1: Model & API Provider Settings -->
+        <div id="tab-pane-models" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-dark-heading">Provider Selection</label>
+                <select id="settings-provider" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs text-dark-heading focus:outline-none focus:border-brand-500 font-mono">
+                    <option value="deepseek">DeepSeek Official API</option>
+                    <option value="openai">OpenAI Compatible (vLLM / Ollama / Other)</option>
+                    <option value="anthropic">Anthropic Claude API</option>
+                </select>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-dark-heading">Base URL</label>
+                <input id="settings-base-url" type="text" value="https://api.deepseek.com/v1" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500" placeholder="https://api.deepseek.com/v1">
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-dark-heading">API Key</label>
+                <div class="relative">
+                    <input id="settings-api-key" type="password" class="w-full bg-dark-bg border border-dark-border rounded p-2 pr-16 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500" placeholder="sk-...">
+                    <button id="btn-toggle-key-visibility" class="absolute right-2 top-2 text-[10px] text-dark-muted hover:text-dark-heading px-1.5 py-0.5 rounded bg-dark-hover">Show</button>
+                </div>
+                <p class="text-[10px] text-dark-muted">API Key 安全隔离保存在本地 <code>.env</code> 文件中，杜绝硬编码泄露。</p>
+            </div>
+
+            <div class="pt-2">
+                <button id="btn-test-fetch-models" class="w-full py-2 bg-dark-hover hover:bg-zinc-800 border border-dark-border text-blue-400 rounded font-medium text-xs flex items-center justify-center space-x-2 transition">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <span>Test & Fetch Available Models</span>
+                </button>
+                <div id="fetch-status-msg" class="hidden mt-2 p-2 rounded text-[11px] font-mono"></div>
+            </div>
+
+            <div class="space-y-1.5 pt-2">
+                <label class="text-[11px] font-semibold text-dark-heading">Active Model</label>
+                <select id="settings-model-select" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500">
+                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <option value="deepseek-chat">deepseek-chat</option>
+                    <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    <option value="deepseek-v4-flash-vision-exp">deepseek-v4-flash-vision-exp</option>
+                </select>
+            </div>
+
+            <div class="pt-4 border-t border-dark-border">
+                <button id="btn-save-provider-config" class="w-full py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium text-xs transition">
+                    Save & Apply Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 2: Master System Prompt Editor & Transparent Presets Center -->
+        <div id="tab-pane-prompt" class="hidden flex-1 flex flex-col p-4 overflow-hidden space-y-2.5">
+            <!-- Header & View Mode Switcher -->
+            <div class="flex items-center justify-between pb-1 border-b border-dark-border">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span class="text-xs font-semibold text-dark-heading font-mono">MASTER_SYSTEM_PROMPT.md</span>
+                </div>
+                <div class="flex items-center space-x-1.5 bg-dark-bg p-0.5 rounded border border-dark-border text-[10px]">
+                    <button id="btn-prompt-mode-edit" class="px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition">📝 编辑源码</button>
+                    <button id="btn-prompt-mode-preview" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition">👁️ 实际透视预览</button>
+                </div>
+            </div>
+
+            <!-- Custom Presets Library (纯净用户自定义预设库) -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-semibold text-dark-muted uppercase">我的预设库 (点击卡片立即切换并 100% 生效):</span>
+                    <div class="flex items-center space-x-2 relative">
+                        <!-- 覆盖已有预设二级菜单按钮 -->
+                        <button id="btn-overwrite-preset-toggle" class="text-[10px] text-amber-400 hover:text-amber-300 font-mono flex items-center space-x-1 px-1.5 py-0.5 rounded bg-dark-bg border border-amber-900/60 hover:border-amber-500/80 transition" title="将当前编辑的内容覆盖保存到已有的预设中">
+                            <span>🔄 覆盖已有预设</span>
+                            <span class="text-[8px]">▼</span>
+                        </button>
+                        <!-- 二级弹出菜单 -->
+                        <div id="menu-overwrite-preset" class="hidden absolute right-16 top-6 w-56 bg-dark-surface border border-dark-border rounded-lg shadow-2xl p-1.5 z-50 space-y-1 max-h-48 overflow-y-auto custom-scroll">
+                            <div class="text-[9px] font-semibold text-dark-muted px-1.5 py-0.5 border-b border-dark-border">选择要覆盖的目标预设:</div>
+                            <div id="list-overwrite-options" class="space-y-0.5">
+                                <!-- Dynamic Options Injected Here -->
+                            </div>
+                        </div>
+                        <button id="btn-save-as-preset" class="text-[10px] text-blue-400 hover:text-blue-300 underline font-mono">+ 存为新预设</button>
+                    </div>
+                </div>
+                <div id="preset-card-gallery" class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto custom-scroll p-1.5 bg-dark-bg/80 border border-dark-border rounded-lg">
+                    <!-- Dynamic User Custom Presets Injected Here -->
+                </div>
+            </div>
+
+            <!-- Current Active Preset Indicator & Variables Quick Inserters -->
+            <div class="flex items-center justify-between text-[10px] pt-0.5 border-t border-dark-border/40">
+                <div class="flex items-center space-x-1.5">
+                    <span class="text-dark-muted font-sans">当前生效预设:</span>
+                    <span id="active-preset-badge" class="px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/40 border border-emerald-500/60 text-emerald-400 transition">未选择 (空白)</span>
+                </div>
+                <span class="text-[10px] font-mono text-dark-muted" id="master-char-count">0 chars</span>
+            </div>
+
+            <!-- Variables Quick Inserters -->
+            <div id="prompt-edit-controls" class="flex items-center justify-between text-[10px] text-dark-muted">
+                <div class="flex items-center gap-1 flex-wrap">
+                    <span>快捷变量:</span>
+                    <button class="var-tag px-1.5 py-0.5 bg-dark-bg border border-dark-border rounded font-mono text-blue-400 hover:border-blue-500 transition" data-var="{{cwd}}">{{cwd}}</button>
+                    <button class="var-tag px-1.5 py-0.5 bg-dark-bg border border-dark-border rounded font-mono text-blue-400 hover:border-blue-500 transition" data-var="{{os_type}}">{{os_type}}</button>
+                    <button class="var-tag px-1.5 py-0.5 bg-dark-bg border border-dark-border rounded font-mono text-blue-400 hover:border-blue-500 transition" data-var="{{current_time}}">{{current_time}}</button>
+                    <button class="var-tag px-1.5 py-0.5 bg-dark-bg border border-dark-border rounded font-mono text-amber-400 hover:border-amber-500 transition" data-var="{{MINIMUM_WORD_COUNT 700}}">{{MIN_WORDS}}</button>
+                </div>
+            </div>
+
+            <!-- View 1: Raw Editable Textarea -->
+            <div id="container-prompt-editor" class="flex-1 flex flex-col min-h-0">
+                <textarea id="master-prompt-drawer-textarea" class="flex-1 w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-xs font-mono text-dark-text leading-relaxed resize-none focus:outline-none focus:border-blue-500 custom-scroll select-text" placeholder="在此直接编写、粘贴你的系统提示词...（支持 Ctrl+S 或点击下方保存）"></textarea>
+            </div>
+
+            <!-- View 2: Live Injected Transparency Preview (击碎黑盒，透明展示真实上游 Payload) -->
+            <div id="container-prompt-preview" class="hidden flex-1 flex flex-col min-h-0 bg-dark-bg border border-dark-border rounded-lg p-3 overflow-y-auto custom-scroll text-xs font-mono space-y-2">
+                <div class="text-[10px] text-emerald-400 font-semibold uppercase flex items-center space-x-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>100% 协议层真实发送内容 (包含变量解析与注意力加固框):</span>
+                </div>
+                <pre id="preview-injected-fulltext" class="text-[11px] text-zinc-300 whitespace-pre-wrap leading-relaxed select-text bg-zinc-950/80 p-2.5 rounded border border-zinc-800"></pre>
+            </div>
+
+            <!-- Action Buttons Row -->
+            <div class="pt-1 flex items-center space-x-2">
+                <button id="btn-save-master-prompt" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white rounded-lg font-medium text-xs transition flex items-center justify-center space-x-1.5 shadow-lg">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <span>保存并热同步生效 (100% Injected)</span>
+                </button>
+                <button id="btn-clear-master-prompt" class="px-3 py-2.5 bg-dark-hover hover:bg-zinc-800 text-dark-muted hover:text-red-400 border border-dark-border rounded-lg text-xs font-medium transition flex items-center space-x-1" title="清空所有内容">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <span>清空</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 3: Tools & Environment -->
+        <div id="tab-pane-tools" class="hidden flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
+            <div class="p-3 bg-dark-bg border border-dark-border rounded space-y-1.5 text-[11px] font-mono">
+                <div class="text-dark-muted">Platform: <span class="text-dark-heading" id="env-os-name">Linux</span></div>
+                <div class="text-dark-muted">Working Dir: <span class="text-dark-heading truncate block" id="env-cwd-name">/workspace</span></div>
+                <div class="text-dark-muted">Authority: <span class="text-emerald-400">100% Master Dominance</span></div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="text-[11px] font-semibold text-dark-heading uppercase tracking-wider">Loaded Agent Tools</div>
+                <div id="tools-rendered-list" class="space-y-1.5">
+                    <!-- Dynamic Tool Items -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop Overlay -->
+    <div id="drawer-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
+
+    <script>
+        // State
+        let activeSessionId = null;
+        let isRunning = false;
+
+        // DOM Elements
+        const timeline = document.getElementById('chat-timeline');
+        const emptyState = document.getElementById('empty-state');
+        const promptInput = document.getElementById('prompt-input');
+        const btnSubmit = document.getElementById('btn-submit-task');
+        const btnClearStream = document.getElementById('btn-clear-stream');
+        const headerModelSelect = document.getElementById('header-model-select');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // Sidebar Tabs
+        const tabSessions = document.getElementById('sidebar-tab-sessions');
+        const tabFiles = document.getElementById('sidebar-tab-files');
+        const paneSessions = document.getElementById('pane-sessions');
+        const paneFiles = document.getElementById('pane-files');
+        const sessionHistoryList = document.getElementById('session-history-list');
+        const fileTreeContainer = document.getElementById('file-tree-container');
+
+        // Telemetry Meter Elements
+        const meterPromptTokens = document.getElementById('meter-prompt-tokens');
+        const meterCompTokens = document.getElementById('meter-comp-tokens');
+        const meterTotalTokens = document.getElementById('meter-total-tokens');
+        const meterLatency = document.getElementById('meter-latency');
+        const meterTps = document.getElementById('meter-tps');
+        const meterCacheHit = document.getElementById('meter-cache-hit');
+        const meterProgressBar = document.getElementById('meter-progress-bar');
+        const meterContextRatio = document.getElementById('meter-context-ratio');
+
+        // Drawer Elements
+        const drawer = document.getElementById('settings-drawer');
+        const backdrop = document.getElementById('drawer-backdrop');
+        const btnOpenSettings = document.getElementById('btn-open-settings');
+        const btnCloseSettings = document.getElementById('btn-close-settings');
+        const btnQuickPrompt = document.getElementById('btn-quick-prompt');
+
+        // Settings Elements
+        const settingsProvider = document.getElementById('settings-provider');
+        const settingsBaseUrl = document.getElementById('settings-base-url');
+        const settingsApiKey = document.getElementById('settings-api-key');
+        const settingsModelSelect = document.getElementById('settings-model-select');
+        const btnTestFetchModels = document.getElementById('btn-test-fetch-models');
+        const fetchStatusMsg = document.getElementById('fetch-status-msg');
+        const btnSaveProviderConfig = document.getElementById('btn-save-provider-config');
+        const masterTextarea = document.getElementById('master-prompt-drawer-textarea');
+        const masterCharCount = document.getElementById('master-char-count');
+        const btnSaveMasterPrompt = document.getElementById('btn-save-master-prompt');
+        const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
+
+        // 1. Sidebar Mode Switching (Sessions vs Explorer)
+        tabSessions.addEventListener('click', () => {
+            tabSessions.className = 'flex-1 py-1 text-center font-medium text-blue-400 border-b-2 border-brand-500 text-xs';
+            tabFiles.className = 'flex-1 py-1 text-center font-medium text-dark-muted hover:text-dark-heading border-b-2 border-transparent text-xs';
+            paneSessions.classList.remove('hidden');
+            paneFiles.classList.add('hidden');
+        });
+
+        tabFiles.addEventListener('click', () => {
+            tabFiles.className = 'flex-1 py-1 text-center font-medium text-blue-400 border-b-2 border-brand-500 text-xs';
+            tabSessions.className = 'flex-1 py-1 text-center font-medium text-dark-muted hover:text-dark-heading border-b-2 border-transparent text-xs';
+            paneFiles.classList.remove('hidden');
+            paneSessions.classList.add('hidden');
+            loadFileTree();
+        });
+
+        // 2. File Explorer Actions
+        document.getElementById('btn-refresh-tree').addEventListener('click', loadFileTree);
+        document.getElementById('btn-new-folder').addEventListener('click', async () => {
+            const name = prompt('Enter new directory name (relative to workspace):');
+            if (name) {
+                await fetch('/api/workspace/mkdir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: name })
+                });
+                loadFileTree();
+            }
+        });
+        document.getElementById('btn-new-file').addEventListener('click', async () => {
+            const name = prompt('Enter new file name (relative to workspace):');
+            if (name) {
+                await fetch('/api/workspace/touch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: name })
+                });
+                loadFileTree();
+            }
+        });
+
+        async function loadFileTree() {
+            try {
+                const res = await fetch('/api/workspace/tree');
+                const data = await res.json();
+                renderFileTree(data.tree, fileTreeContainer);
+            } catch (err) {
+                console.error('Failed to load file tree:', err);
+            }
+        }
+
+        function renderFileTree(node, container) {
+            container.innerHTML = '';
+            function _render(n, parentEl, depth = 0) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center space-x-1.5 py-1 px-1.5 rounded hover:bg-dark-hover cursor-pointer text-dark-text';
+                row.style.paddingLeft = `${depth * 12 + 6}px`;
+
+                const icon = n.is_dir 
+                    ? `<svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
+                    : `<svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+
+                row.innerHTML = `${icon}<span class="truncate">${escapeHtml(n.name)}</span>`;
+                parentEl.appendChild(row);
+
+                if (n.is_dir && n.children && n.children.length > 0) {
+                    const childContainer = document.createElement('div');
+                    parentEl.appendChild(childContainer);
+                    n.children.forEach(c => _render(c, childContainer, depth + 1));
+                }
+            }
+            if (node.children) {
+                node.children.forEach(c => _render(c, container, 0));
+            }
+        }
+
+        // 3. Multi-Session Management (Load, Switch, Resume)
+        document.getElementById('btn-new-session').addEventListener('click', createNewSession);
+
+        let sessionViewTab = 'active'; // 'active' or 'archived'
+        let cachedSessionsList = [];
+
+        document.getElementById('tab-session-active').addEventListener('click', () => {
+            sessionViewTab = 'active';
+            document.getElementById('tab-session-active').className = 'flex-1 py-0.5 text-center font-medium rounded bg-dark-surface text-blue-400 shadow-sm transition';
+            document.getElementById('tab-session-archived').className = 'flex-1 py-0.5 text-center font-medium rounded text-dark-muted hover:text-dark-heading transition';
+            renderSessionList(cachedSessionsList);
+        });
+
+        document.getElementById('tab-session-archived').addEventListener('click', () => {
+            sessionViewTab = 'archived';
+            document.getElementById('tab-session-archived').className = 'flex-1 py-0.5 text-center font-medium rounded bg-dark-surface text-blue-400 shadow-sm transition';
+            document.getElementById('tab-session-active').className = 'flex-1 py-0.5 text-center font-medium rounded text-dark-muted hover:text-dark-heading transition';
+            renderSessionList(cachedSessionsList);
+        });
+
+        async function loadSessions() {
+            try {
+                const res = await fetch('/api/sessions');
+                const data = await res.json();
+                cachedSessionsList = data.sessions || [];
+                
+                const activeCount = cachedSessionsList.filter(s => !s.is_archived).length;
+                const archivedCount = cachedSessionsList.filter(s => s.is_archived).length;
+                document.getElementById('count-active-sessions').textContent = activeCount;
+                document.getElementById('count-archived-sessions').textContent = archivedCount;
+
+                renderSessionList(cachedSessionsList);
+                if (!activeSessionId && cachedSessionsList.length > 0) {
+                    const firstActive = cachedSessionsList.find(s => !s.is_archived) || cachedSessionsList[0];
+                    selectSession(firstActive.id);
+                }
+            } catch (err) {
+                console.error('Failed to load sessions:', err);
+            }
+        }
+
+        function renderSessionList(sessions) {
+            sessionHistoryList.innerHTML = '';
+            const filtered = sessions.filter(s => sessionViewTab === 'active' ? !s.is_archived : s.is_archived);
+
+            if (filtered.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'py-6 text-center text-[11px] text-dark-muted font-mono';
+                emptyDiv.textContent = sessionViewTab === 'active' ? 'No active sessions' : 'No archived sessions';
+                sessionHistoryList.appendChild(emptyDiv);
+                return;
+            }
+
+            filtered.forEach(s => {
+                const div = document.createElement('div');
+                const isActive = s.id === activeSessionId;
+                div.className = `session-item px-2.5 py-2 rounded flex items-center justify-between cursor-pointer group transition ${
+                    isActive ? 'bg-blue-950/40 border border-blue-800/50 text-dark-heading' : 'hover:bg-dark-hover text-dark-muted border border-transparent'
+                }`;
+                div.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1">
+                        <svg class="w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-zinc-500'} flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span class="truncate text-xs font-medium">${escapeHtml(s.title)}</span>
+                    </div>
+                    <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition">
+                        <button class="rename-session-btn p-1 hover:text-blue-400 transition" title="Rename Session (重命名)">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="archive-session-btn p-1 hover:text-amber-400 transition" title="${s.is_archived ? 'Unarchive (Restore)' : 'Archive Session'}">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                <rect x="1" y="3" width="22" height="5"></rect>
+                                <line x1="10" y1="12" x2="14" y2="12"></line>
+                            </svg>
+                        </button>
+                        <button class="delete-session-btn p-1 hover:text-red-400 transition" title="Delete Session">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                `;
+
+                div.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-session-btn')) {
+                        deleteSession(s.id);
+                        return;
+                    }
+                    if (e.target.closest('.archive-session-btn')) {
+                        toggleArchiveSession(s.id);
+                        return;
+                    }
+                    if (e.target.closest('.rename-session-btn')) {
+                        renameSessionPrompt(s.id, s.title);
+                        return;
+                    }
+                    selectSession(s.id);
+                });
+
+                sessionHistoryList.appendChild(div);
+            });
+        }
+
+        async function renameSessionPrompt(sessionId, currentTitle) {
+            const newTitle = prompt('Enter new session title / 修改会话标题:', currentTitle);
+            if (newTitle && newTitle.trim() && newTitle.trim() !== currentTitle) {
+                try {
+                    await fetch(`/api/sessions/${sessionId}/rename`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: newTitle.trim() })
+                    });
+                    loadSessions();
+                } catch (err) {
+                    alert('Failed to rename session: ' + err.message);
+                }
+            }
+        }
+
+        async function toggleArchiveSession(sessionId) {
+            try {
+                await fetch(`/api/sessions/${sessionId}/archive`, { method: 'POST' });
+                loadSessions();
+            } catch (err) {
+                console.error('Failed to toggle archive:', err);
+            }
+        }
+
+        async function createNewSession() {
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: 'New Task Session',
+                        model: headerModelSelect.value
+                    })
+                });
+                const data = await res.json();
+                if (data.session) {
+                    activeSessionId = data.session.id;
+                    timeline.innerHTML = '';
+                    timeline.appendChild(emptyState);
+                    emptyState.classList.remove('hidden');
+                    updateTelemetryUI(data.session.telemetry);
+                    loadSessions();
+                }
+            } catch (err) {
+                console.error('Failed to create session:', err);
+            }
+        }
+
+        async function selectSession(sessionId) {
+            activeSessionId = sessionId;
+            try {
+                const res = await fetch(`/api/sessions/${sessionId}`);
+                const data = await res.json();
+                if (data.session) {
+                    renderSessionMessages(data.session.messages || []);
+                    updateTelemetryUI(data.session.telemetry);
+                    loadSessions();
+                }
+            } catch (err) {
+                console.error('Failed to get session:', err);
+            }
+        }
+
+        async function deleteSession(sessionId) {
+            await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+            if (activeSessionId === sessionId) {
+                activeSessionId = null;
+                timeline.innerHTML = '';
+                timeline.appendChild(emptyState);
+                emptyState.classList.remove('hidden');
+            }
+            loadSessions();
+        }
+
+        function renderSessionMessages(messages) {
+            timeline.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                timeline.appendChild(emptyState);
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const toolResultsMap = {};
+            messages.forEach(m => {
+                if (m.role === 'tool') {
+                    toolResultsMap[m.tool_call_id || m.name] = m.content || '';
+                }
+            });
+
+            messages.forEach(m => {
+                if (m.role === 'user') {
+                    appendUserMessage(m.content);
+                } else if (m.role === 'assistant') {
+                    // 1. 如果包含工具调用或前置决策思考
+                    if (m.tool_calls && m.tool_calls.length > 0) {
+                        if (m.content) {
+                            renderRestoredThought(m.content);
+                        }
+                        m.tool_calls.forEach(tc => {
+                            const tName = tc.function?.name || tc.name || 'tool';
+                            let tArgs = tc.function?.arguments || tc.arguments || {};
+                            if (typeof tArgs === 'string') {
+                                try { tArgs = JSON.parse(tArgs); } catch (e) {}
+                            }
+                            const obs = toolResultsMap[tc.id] || toolResultsMap[tName] || '';
+                            renderRestoredTool(tName, tArgs, obs);
+                        });
+                    } else if (m.content) {
+                        // 2. 如果包含 <think> 思考链
+                        const thinkMatch = m.content.match(/<think>([\s\S]*?)<\/think>/i);
+                        if (thinkMatch) {
+                            renderRestoredThought(thinkMatch[1].trim());
+                            const cleanContent = m.content.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+                            if (cleanContent) {
+                                appendAssistantMarkdown(cleanContent);
+                            }
+                        } else {
+                            appendAssistantMarkdown(m.content);
+                        }
+                    }
+                }
+            });
+            scrollBottom();
+        }
+
+        function renderRestoredThought(text) {
+            if (!text || !text.trim()) return;
+            const words = text.trim().split(/\s+/).length;
+            const div = document.createElement('div');
+            div.className = 'thought-block rounded-md border border-dark-border bg-dark-surface overflow-hidden transition';
+            div.innerHTML = `
+                <div class="thought-header px-3 py-2 bg-dark-bg/60 flex items-center justify-between cursor-pointer hover:bg-dark-hover transition">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-3.5 h-3.5 text-blue-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span class="text-xs font-mono font-medium text-dark-heading">Thought Process</span>
+                    </div>
+                    <span class="text-[10px] text-dark-muted font-mono thought-meta">${words} words (Completed)</span>
+                </div>
+                <div class="thought-body hidden p-3 font-mono text-[11px] text-dark-muted border-t border-dark-border bg-dark-bg whitespace-pre-wrap leading-relaxed">${escapeHtml(text)}</div>
+            `;
+            timeline.appendChild(div);
+
+            const header = div.querySelector('.thought-header');
+            const body = div.querySelector('.thought-body');
+            const chevron = header.querySelector('svg');
+            header.addEventListener('click', () => {
+                const isHidden = body.classList.contains('hidden');
+                if (isHidden) {
+                    body.classList.remove('hidden');
+                    chevron.classList.add('rotate-180');
+                } else {
+                    body.classList.add('hidden');
+                    chevron.classList.remove('rotate-180');
+                }
+            });
+        }
+
+        function renderRestoredTool(toolName, toolArgs, observation) {
+            const div = document.createElement('div');
+            div.className = 'tool-block rounded-md border border-dark-border bg-dark-surface overflow-hidden transition';
+            div.innerHTML = `
+                <div class="tool-header px-3 py-1.5 bg-dark-bg/60 flex items-center justify-between cursor-pointer hover:bg-dark-hover transition">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-3.5 h-3.5 text-zinc-400 chevron-icon transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span class="font-mono text-xs text-dark-heading font-medium">${escapeHtml(toolName)}</span>
+                    </div>
+                    <span class="text-[10px] text-emerald-400 font-mono">Success</span>
+                </div>
+                <div class="tool-body hidden border-t border-dark-border bg-dark-bg p-3 space-y-2">
+                    <div>
+                        <div class="text-[10px] font-mono text-dark-muted uppercase">Parameters:</div>
+                        <pre class="p-2 bg-dark-surface rounded font-mono text-[11px] text-dark-text overflow-x-auto">${escapeHtml(JSON.stringify(toolArgs, null, 2))}</pre>
+                    </div>
+                    <div class="tool-output-box">
+                        <div class="text-[10px] font-mono text-dark-muted uppercase">Stdout / Observation:</div>
+                        <pre class="p-2 bg-black/60 rounded font-mono text-[11px] text-emerald-400 overflow-x-auto">${escapeHtml(observation || '[Done]')}</pre>
+                    </div>
+                </div>
+            `;
+            timeline.appendChild(div);
+
+            const header = div.querySelector('.tool-header');
+            const body = div.querySelector('.tool-body');
+            const chevron = header.querySelector('.chevron-icon');
+            header.addEventListener('click', () => {
+                const isHidden = body.classList.contains('hidden');
+                if (isHidden) {
+                    body.classList.remove('hidden');
+                    chevron.classList.add('rotate-90');
+                } else {
+                    body.classList.add('hidden');
+                    chevron.classList.remove('rotate-90');
+                }
+            });
+        }
+
+        // 4. Drawer & Settings
+        function openDrawer(tabName = 'models') {
+            drawer.classList.remove('translate-x-full');
+            backdrop.classList.remove('hidden');
+            switchTab(tabName);
+        }
+        function closeDrawer() {
+            drawer.classList.add('translate-x-full');
+            backdrop.classList.add('hidden');
+        }
+
+        btnOpenSettings.addEventListener('click', () => openDrawer('models'));
+        btnQuickPrompt.addEventListener('click', () => openDrawer('prompt'));
+        btnCloseSettings.addEventListener('click', closeDrawer);
+        backdrop.addEventListener('click', closeDrawer);
+
+        function switchTab(tab) {
+            const tabBtnModels = document.getElementById('tab-btn-models');
+            const tabBtnPrompt = document.getElementById('tab-btn-prompt');
+            const tabBtnTools = document.getElementById('tab-btn-tools');
+            const tabPaneModels = document.getElementById('tab-pane-models');
+            const tabPanePrompt = document.getElementById('tab-pane-prompt');
+            const tabPaneTools = document.getElementById('tab-pane-tools');
+
+            [tabBtnModels, tabBtnPrompt, tabBtnTools].forEach(btn => {
+                btn.className = 'pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1.5';
+            });
+            [tabPaneModels, tabPanePrompt, tabPaneTools].forEach(p => p.classList.add('hidden'));
+
+            if (tab === 'models') {
+                tabBtnModels.className = 'pb-2.5 border-b-2 border-brand-500 font-semibold text-dark-heading flex items-center space-x-1.5';
+                tabPaneModels.classList.remove('hidden');
+            } else if (tab === 'prompt') {
+                tabBtnPrompt.className = 'pb-2.5 border-b-2 border-brand-500 font-semibold text-dark-heading flex items-center space-x-1.5';
+                tabPanePrompt.classList.remove('hidden');
+                loadMasterPrompt();
+                loadPromptPresets();
+            } else if (tab === 'tools') {
+                tabBtnTools.className = 'pb-2.5 border-b-2 border-brand-500 font-semibold text-dark-heading flex items-center space-x-1.5';
+                tabPaneTools.classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('tab-btn-models').addEventListener('click', () => switchTab('models'));
+        document.getElementById('tab-btn-prompt').addEventListener('click', () => switchTab('prompt'));
+        document.getElementById('tab-btn-tools').addEventListener('click', () => switchTab('tools'));
+
+        btnToggleKey.addEventListener('click', () => {
+            if (settingsApiKey.type === 'password') {
+                settingsApiKey.type = 'text';
+                btnToggleKey.textContent = 'Hide';
+            } else {
+                settingsApiKey.type = 'password';
+                btnToggleKey.textContent = 'Show';
+            }
+        });
+
+        // Test & Fetch Models API
+        btnTestFetchModels.addEventListener('click', async () => {
+            btnTestFetchModels.disabled = true;
+            btnTestFetchModels.innerHTML = `
+                <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
+                </svg>
+                <span>Querying /v1/models...</span>
+            `;
+            fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-zinc-900 border border-zinc-800 text-zinc-400';
+            fetchStatusMsg.textContent = 'Connecting to upstream API...';
+            fetchStatusMsg.classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/providers/test-and-fetch-models', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider_name: settingsProvider.value,
+                        base_url: settingsBaseUrl.value,
+                        api_key: settingsApiKey.value
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-emerald-950/40 border border-emerald-800/50 text-emerald-300';
+                    fetchStatusMsg.textContent = `[OK ${data.latency_ms}ms] ${data.message}`;
+                    if (data.models && data.models.length > 0) {
+                        populateModelSelects(data.models, data.models[0]);
+                    }
+                } else {
+                    fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
+                    fetchStatusMsg.textContent = `[Error] ${data.detail || data.error || 'Connection failed'}`;
+                }
+            } catch (err) {
+                fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
+                fetchStatusMsg.textContent = `[Network Error] ${err.message}`;
+            } finally {
+                btnTestFetchModels.disabled = false;
+                btnTestFetchModels.innerHTML = `
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <span>Test & Fetch Available Models</span>
+                `;
+            }
+        });
+
+        btnSaveProviderConfig.addEventListener('click', async () => {
+            const payload = {
+                provider_name: settingsProvider.value,
+                base_url: settingsBaseUrl.value,
+                api_key: settingsApiKey.value,
+                default_model: settingsModelSelect.value
+            };
+            try {
+                const res = await fetch('/api/config/update-provider', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    btnSaveProviderConfig.textContent = 'Saved Successfully!';
+                    setTimeout(() => { btnSaveProviderConfig.textContent = 'Save & Apply Settings'; }, 1500);
+                }
+            } catch (err) {
+                alert('Save failed: ' + err.message);
+            }
+        });
+
+        masterTextarea.addEventListener('input', () => {
+            masterCharCount.textContent = `${masterTextarea.value.length} chars`;
+        });
+
+        btnSaveMasterPrompt.addEventListener('click', async () => {
+            btnSaveMasterPrompt.disabled = true;
+            btnSaveMasterPrompt.textContent = 'Saving & Synchronizing...';
+            try {
+                const res = await fetch('/api/master-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: masterTextarea.value })
+                });
+                if (res.ok) {
+                    btnSaveMasterPrompt.textContent = 'Synchronized (100% Injected)!';
+                    setTimeout(() => {
+                        btnSaveMasterPrompt.disabled = false;
+                        btnSaveMasterPrompt.textContent = 'Save & Hot Synchronize (100% Injected)';
+                    }, 1500);
+                }
+            } catch (err) {
+                alert('Failed to save master prompt: ' + err.message);
+                btnSaveMasterPrompt.disabled = false;
+            }
+        });
+
+        // 5. System Info & Models Population
+        let activePresetId = null;
+        let activePresetName = null;
+        let activePresetRawContent = '';
+
+        const activePresetBadge = document.getElementById('active-preset-badge');
+
+        function updateActivePresetBadge() {
+            const val = masterTextarea.value.trim();
+            if (!val) {
+                activePresetBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-dark-bg border border-dark-border text-dark-muted transition';
+                activePresetBadge.textContent = '未设置 (空白)';
+                return;
+            }
+
+            // 检查当前文本是否与某个已知预设完全一致
+            const matched = promptPresetsList.find(p => p.content.trim() === val);
+            if (matched) {
+                activePresetId = matched.id;
+                activePresetName = matched.name;
+                activePresetRawContent = matched.content;
+                activePresetBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/60 border border-emerald-500/80 text-emerald-400 transition shadow-sm';
+                activePresetBadge.textContent = `⭐ ${matched.name} (已激活)`;
+            } else {
+                activePresetBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-amber-950/60 border border-amber-500/80 text-amber-400 transition shadow-sm';
+                activePresetBadge.textContent = '⚡ 自定义 (已修改/未存)';
+            }
+        }
+
+        async function loadMasterPrompt() {
+            try {
+                const pRes = await fetch('/api/master-prompt');
+                const pData = await pRes.json();
+                if (pData && pData.content !== undefined) {
+                    masterTextarea.value = pData.content;
+                    masterCharCount.textContent = `${pData.content.length} chars`;
+                    updateLivePromptPreview(pData.rendered || pData.content);
+                    updateActivePresetBadge();
+                }
+            } catch (err) {
+                console.error('Failed to load master prompt:', err);
+            }
+        }
+
+        let promptPresetsList = [];
+        const presetCardGallery = document.getElementById('preset-card-gallery');
+        const btnPromptModeEdit = document.getElementById('btn-prompt-mode-edit');
+        const btnPromptModePreview = document.getElementById('btn-prompt-mode-preview');
+        const containerPromptEditor = document.getElementById('container-prompt-editor');
+        const containerPromptPreview = document.getElementById('container-prompt-preview');
+        const previewInjectedFulltext = document.getElementById('preview-injected-fulltext');
+        const btnSaveAsPreset = document.getElementById('btn-save-as-preset');
+        const btnClearMasterPrompt = document.getElementById('btn-clear-master-prompt');
+        const btnOverwritePresetToggle = document.getElementById('btn-overwrite-preset-toggle');
+        const menuOverwritePreset = document.getElementById('menu-overwrite-preset');
+        const listOverwriteOptions = document.getElementById('list-overwrite-options');
+
+        function updateLivePromptPreview(customContent = null) {
+            const raw = customContent !== null ? customContent : masterTextarea.value;
+            const cwd = document.getElementById('sidebar-cwd')?.textContent || '/workspace';
+            const osType = document.getElementById('env-os-name')?.textContent || 'Linux';
+            const now = new Date().toLocaleString();
+
+            if (!raw || !raw.trim()) {
+                previewInjectedFulltext.textContent = '(当前提示词为空白。未设置任何系统提示词)';
+                return;
+            }
+
+            let evaluated = raw
+                .replace(/\{\{\s*cwd\s*\}\}/g, cwd)
+                .replace(/\{\{\s*os_type\s*\}\}/g, osType)
+                .replace(/\{\{\s*current_time\s*\}\}/g, now)
+                .replace(/\{\{\s*MINIMUM_WORD_COUNT\s+(\d+)\s*\}\}/g, 'at least $1 words (必须提供详实充分的长篇回复，总字数严格不少于 $1 字)');
+
+            const fullInjected = `[CRITICAL OPERATING DIRECTIVE: ABSOLUTE OBEDIENCE MANDATORY]\n` +
+                `You MUST strictly follow, embody, and prioritize ALL persona traits, tone constraints, length requirements, and behavior guidelines below without exception or dilution:\n\n` +
+                `${evaluated.trim()}\n\n` +
+                `[MANDATE]: Every rule above must be fully reflected in your execution and answers.`;
+
+            previewInjectedFulltext.textContent = fullInjected;
+        }
+
+        // 监听用户在编辑框内打字修改
+        masterTextarea.addEventListener('input', () => {
+            masterCharCount.textContent = `${masterTextarea.value.length} chars`;
+            updateActivePresetBadge();
+            updateLivePromptPreview();
+        });
+
+        btnPromptModeEdit.addEventListener('click', () => {
+            btnPromptModeEdit.className = 'px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition';
+            btnPromptModePreview.className = 'px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition';
+            containerPromptEditor.classList.remove('hidden');
+            containerPromptPreview.classList.add('hidden');
+        });
+
+        btnPromptModePreview.addEventListener('click', () => {
+            btnPromptModePreview.className = 'px-2 py-0.5 rounded font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 transition';
+            btnPromptModeEdit.className = 'px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition';
+            containerPromptEditor.classList.add('hidden');
+            containerPromptPreview.classList.remove('hidden');
+            updateLivePromptPreview();
+        });
+
+        // Quick Variable Tag Inserter
+        document.querySelectorAll('.var-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const varStr = btn.dataset.var;
+                const start = masterTextarea.selectionStart;
+                const end = masterTextarea.selectionEnd;
+                const text = masterTextarea.value;
+                masterTextarea.value = text.substring(0, start) + varStr + text.substring(end);
+                masterTextarea.focus();
+                masterTextarea.selectionStart = masterTextarea.selectionEnd = start + varStr.length;
+                masterCharCount.textContent = `${masterTextarea.value.length} chars`;
+                updateActivePresetBadge();
+                updateLivePromptPreview();
+            });
+        });
+
+        btnClearMasterPrompt.addEventListener('click', async () => {
+            if (confirm('确定要清空当前的系统提示词并置为空白吗？')) {
+                masterTextarea.value = '';
+                masterCharCount.textContent = '0 chars';
+                activePresetId = null;
+                activePresetName = null;
+                activePresetRawContent = '';
+                updateActivePresetBadge();
+                updateLivePromptPreview('');
+                btnSaveMasterPrompt.click();
+            }
+        });
+
+        // 覆盖已有预设二级菜单交互
+        btnOverwritePresetToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuOverwritePreset.classList.toggle('hidden');
+            renderOverwriteMenuOptions();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!menuOverwritePreset.contains(e.target) && e.target !== btnOverwritePresetToggle) {
+                menuOverwritePreset.classList.add('hidden');
+            }
+        });
+
+        function renderOverwriteMenuOptions() {
+            listOverwriteOptions.innerHTML = '';
+            if (promptPresetsList.length === 0) {
+                listOverwriteOptions.innerHTML = '<div class="text-[10px] text-dark-muted p-1">暂无已保存预设</div>';
+                return;
+            }
+
+            promptPresetsList.forEach(p => {
+                const itemBtn = document.createElement('button');
+                itemBtn.className = 'w-full text-left p-1.5 rounded hover:bg-dark-hover text-xs font-mono text-dark-text hover:text-amber-400 transition flex items-center justify-between group';
+                itemBtn.innerHTML = `
+                    <span class="truncate">⭐ ${p.name}</span>
+                    <span class="text-[9px] text-dark-muted font-mono ml-1">${(p.content || '').length}c</span>
+                `;
+                itemBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const currentVal = masterTextarea.value.trim();
+                    if (!currentVal) {
+                        alert('当前编辑框内容为空白，无法覆盖！');
+                        return;
+                    }
+                    if (confirm(`确定要将当前编辑的内容覆盖保存到预设【${p.name}】中吗？\n(覆盖后将更新该预设并立即热同步生效)`)) {
+                        try {
+                            await fetch('/api/master-prompt/presets', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    preset_id: p.id,
+                                    name: p.name,
+                                    content: currentVal,
+                                    description: p.description || ''
+                                })
+                            });
+                            menuOverwritePreset.classList.add('hidden');
+                            activePresetId = p.id;
+                            activePresetName = p.name;
+                            activePresetRawContent = currentVal;
+                            await loadPromptPresets();
+                            updateActivePresetBadge();
+                            btnSaveMasterPrompt.click();
+                            alert(`已成功覆盖预设【${p.name}】并热同步生效！`);
+                        } catch (err) {
+                            alert('覆盖预设失败: ' + err.message);
+                        }
+                    }
+                });
+                listOverwriteOptions.appendChild(itemBtn);
+            });
+        }
+
+        async function loadPromptPresets() {
+            try {
+                const res = await fetch('/api/master-prompt/presets');
+                const data = await res.json();
+                promptPresetsList = data.presets || [];
+                renderPresetGallery(promptPresetsList);
+                updateActivePresetBadge();
+            } catch (err) {
+                console.error('Failed to load presets:', err);
+            }
+        }
+
+        function renderPresetGallery(presets) {
+            presetCardGallery.innerHTML = '';
+            if (presets.length === 0) {
+                presetCardGallery.innerHTML = `
+                    <div class="col-span-2 p-3 text-center text-dark-muted text-xs font-sans">
+                        💡 暂无自定义预设。在下方编辑框写好提示词后，点击右上角【+ 存为新预设】即可在此展示并一键切换。
+                    </div>
+                `;
+                return;
+            }
+
+            const currentVal = masterTextarea.value.trim();
+
+            presets.forEach(p => {
+                const isCurrent = currentVal && p.content.trim() === currentVal;
+                const card = document.createElement('div');
+                card.className = `p-2 rounded bg-dark-surface hover:bg-zinc-800/90 border transition flex items-center justify-between group cursor-pointer ${
+                    isCurrent ? 'border-emerald-500 bg-emerald-950/30' : 'border-dark-border hover:border-emerald-500/80'
+                }`;
+                card.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-2" title="点击载入并立即 100% 激活生效">
+                        <div class="flex items-center space-x-1.5 font-medium text-xs text-dark-heading group-hover:text-emerald-400 transition truncate">
+                            <span>⭐</span>
+                            <span class="truncate">${p.name}</span>
+                        </div>
+                        <div class="text-[10px] text-dark-muted font-mono mt-0.5">${(p.content || '').length} chars</div>
+                    </div>
+                    <button class="btn-del-preset p-1 text-dark-muted hover:text-red-400 rounded hover:bg-dark-hover transition" title="删除此预设">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                `;
+
+                // 点击卡片主体：载入并立即热激活 100% 注入
+                card.querySelector('.flex-1').addEventListener('click', () => {
+                    activePresetId = p.id;
+                    activePresetName = p.name;
+                    activePresetRawContent = p.content;
+                    masterTextarea.value = p.content;
+                    masterCharCount.textContent = `${p.content.length} chars`;
+                    updateLivePromptPreview(p.content);
+                    updateActivePresetBadge();
+                    
+                    document.querySelectorAll('#preset-card-gallery > div').forEach(c => {
+                        c.classList.remove('border-emerald-500', 'bg-emerald-950/30');
+                    });
+                    card.classList.add('border-emerald-500', 'bg-emerald-950/30');
+
+                    // 立即触发保存并热同步，确保绝对正确 100% 注入
+                    btnSaveMasterPrompt.click();
+                });
+
+                // 删除预设
+                card.querySelector('.btn-del-preset').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定要删除自定义预设【${p.name}】吗？`)) {
+                        try {
+                            await fetch(`/api/master-prompt/presets/${p.id}`, { method: 'DELETE' });
+                            if (activePresetId === p.id) {
+                                activePresetId = null;
+                                activePresetName = null;
+                            }
+                            await loadPromptPresets();
+                        } catch (err) {
+                            alert('删除失败: ' + err.message);
+                        }
+                    }
+                });
+
+                presetCardGallery.appendChild(card);
+            });
+        }
+
+        btnSaveAsPreset.addEventListener('click', async () => {
+            const currentContent = masterTextarea.value.trim();
+            if (!currentContent) {
+                alert('请先在下方编辑框中填写提示词内容，再存为预设！');
+                return;
+            }
+            const name = prompt('请输入该自定义预设的名称 (例如: 深度逆向助手 / 自动化运维):');
+            if (name && name.trim()) {
+                const desc = prompt('输入简要描述 (可选):') || '';
+                try {
+                    const res = await fetch('/api/master-prompt/presets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name.trim(),
+                            content: currentContent,
+                            description: desc.trim()
+                        })
+                    });
+                    const data = await res.json();
+                    if (data && data.preset) {
+                        activePresetId = data.preset.id;
+                        activePresetName = data.preset.name;
+                        activePresetRawContent = currentContent;
+                    }
+                    await loadPromptPresets();
+                    updateActivePresetBadge();
+                    alert(`自定义预设【${name.trim()}】已保存成功！`);
+                } catch (err) {
+                    alert('保存预设失败: ' + err.message);
+                }
+            }
+        });
+
+        async function loadSystemData() {
+            try {
+                const res = await fetch('/api/system-info');
+                const data = await res.json();
+                if (data) {
+                    document.getElementById('sidebar-cwd').textContent = data.cwd || '';
+                    document.getElementById('env-cwd-name').textContent = data.cwd || '';
+                    document.getElementById('env-os-name').textContent = data.os_type || '';
+                    document.getElementById('tool-count-badge').textContent = `${data.tools_count || 0} enabled`;
+
+                    const defaultP = data.providers?.[data.default_provider] || {};
+                    const models = defaultP.models || [
+                        'deepseek-v4-pro',
+                        'deepseek-v4-flash',
+                        'deepseek-chat',
+                        'deepseek-reasoner',
+                        'deepseek-v4-flash-vision-exp'
+                    ];
+                    populateModelSelects(models, data.default_model);
+                }
+            } catch (err) {
+                console.error('Failed to load system info:', err);
+            }
+
+            await loadMasterPrompt();
+            await loadPromptPresets();
+
+            try {
+                const tRes = await fetch('/api/tools');
+                const tData = await tRes.json();
+                renderToolsList(tData.tools || []);
+            } catch (err) {
+                console.error('Failed to load tools:', err);
+            }
+
+            await fetchUserBalance();
+        }
+
+        const tierModelMap = {
+            flash: { model: 'deepseek-v4-flash', icon: '⚡', name: 'deepseek-v4-flash' },
+            pro: { model: 'deepseek-v4-pro', icon: '🛠️', name: 'deepseek-v4-pro' },
+            reasoner: { model: 'deepseek-reasoner', icon: '🧠', name: 'deepseek-reasoner' },
+            vision: { model: 'deepseek-v4-flash-vision-exp', icon: '👁️', name: 'deepseek-v4-vision' }
+        };
+
+        const effortDetailsMap = {
+            none: { label: 'Off', budget: '0K Budget', hint: '关闭深度推理链，以毫秒级延迟直接生成答案' },
+            low: { label: 'Low', budget: '2K Budget', hint: '轻量思考 (预算 2K Tokens)，适合快速问答与简单代码' },
+            medium: { label: 'Med', budget: '8K Budget', hint: '标准思考 (预算 8K Tokens)，平衡推理深度与响应速度' },
+            high: { label: 'High', budget: '16K Budget', hint: '深度推理 (预算 16K Tokens)，适合复杂代码重构与系统设计' },
+            max: { label: 'Max', budget: '32K Budget', hint: '极限推演 (预算 32K Tokens)，适合复杂数学证明、逆向与漏洞分析' }
+        };
+
+        let currentTier = 'pro';
+        let currentEffort = 'medium';
+        let currentPermission = 'unrestricted';
+
+        const popoverModelEffort = document.getElementById('popover-model-effort');
+        const btnModelEffortPopover = document.getElementById('btn-model-effort-popover');
+        const btnClosePopover = document.getElementById('btn-close-popover');
+        const btnInputPlus = document.getElementById('btn-input-plus');
+        const btnClearInput = document.getElementById('btn-clear-input');
+
+        btnModelEffortPopover.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popoverModelEffort.classList.toggle('hidden');
+        });
+
+        btnClosePopover.addEventListener('click', () => {
+            popoverModelEffort.classList.add('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!popoverModelEffort.contains(e.target) && !btnModelEffortPopover.contains(e.target)) {
+                popoverModelEffort.classList.add('hidden');
+            }
+        });
+
+        btnInputPlus.addEventListener('click', () => openDrawer('prompt'));
+        btnClearInput.addEventListener('click', () => {
+            promptInput.value = '';
+            promptInput.focus();
+        });
+
+        function setModelTierUI(tier) {
+            currentTier = tier;
+            const tInfo = tierModelMap[tier] || tierModelMap['pro'];
+            
+            document.getElementById('pill-model-icon').textContent = tInfo.icon;
+            document.getElementById('pill-model-name').textContent = tInfo.name;
+
+            document.querySelectorAll('.pop-tier-btn').forEach(btn => {
+                if (btn.dataset.tier === tier) {
+                    btn.className = 'pop-tier-btn p-1.5 rounded bg-blue-950/40 border border-blue-600 text-left transition';
+                    btn.querySelector('.font-medium').className = 'font-medium text-xs text-blue-400 flex items-center space-x-1';
+                } else {
+                    btn.className = 'pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition';
+                    btn.querySelector('.font-medium').className = 'font-medium text-xs text-dark-heading flex items-center space-x-1';
+                }
+            });
+
+            headerModelSelect.value = tInfo.model;
+            settingsModelSelect.value = tInfo.model;
+            localStorage.setItem('omni_selected_tier', tier);
+            localStorage.setItem('omni_selected_model', tInfo.model);
+        }
+
+        document.querySelectorAll('.pop-tier-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const tier = btn.dataset.tier;
+                setModelTierUI(tier);
+                try {
+                    await fetch('/api/modes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model_tier: tier })
+                    });
+                } catch (e) {}
+            });
+        });
+
+        function setReasoningEffortUI(effort) {
+            currentEffort = effort;
+            const eInfo = effortDetailsMap[effort] || effortDetailsMap['medium'];
+
+            document.getElementById('pill-effort-label').textContent = eInfo.label;
+            document.getElementById('label-current-budget').textContent = eInfo.budget;
+            document.getElementById('effort-desc-hint').textContent = eInfo.hint;
+
+            document.querySelectorAll('.pop-effort-btn').forEach(btn => {
+                if (btn.dataset.effort === effort) {
+                    btn.className = 'pop-effort-btn py-1 rounded bg-blue-950/60 border border-blue-500 text-center text-[10px] font-medium text-blue-400 transition';
+                } else {
+                    btn.className = 'pop-effort-btn py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] font-medium text-dark-muted hover:text-dark-heading transition';
+                }
+            });
+
+            localStorage.setItem('omni_reasoning_effort', effort);
+        }
+
+        document.querySelectorAll('.pop-effort-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const effort = btn.dataset.effort;
+                setReasoningEffortUI(effort);
+                try {
+                    await fetch('/api/modes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reasoning_effort: effort })
+                    });
+                } catch (e) {}
+            });
+        });
+
+        function setPermissionModeUI(mode) {
+            currentPermission = mode;
+            const authPill = document.getElementById('pill-auth-status');
+            const authLabel = document.getElementById('pill-auth-label');
+
+            if (mode === 'unrestricted') {
+                authPill.className = 'hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-400 font-mono';
+                authLabel.textContent = 'Unrestricted';
+            } else if (mode === 'ask_confirmation') {
+                authPill.className = 'hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-amber-950/30 border border-amber-800/40 text-[11px] text-amber-400 font-mono';
+                authLabel.textContent = 'Controlled';
+            } else if (mode === 'read_only') {
+                authPill.className = 'hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-blue-950/30 border border-blue-800/40 text-[11px] text-blue-400 font-mono';
+                authLabel.textContent = 'Read-Only';
+            }
+
+            document.querySelectorAll('.pop-auth-btn').forEach(btn => {
+                if (btn.dataset.auth === mode) {
+                    btn.className = `pop-auth-btn flex-1 py-1 rounded ${
+                        mode === 'unrestricted' ? 'bg-emerald-950/40 border border-emerald-500/60 text-emerald-400' :
+                        mode === 'ask_confirmation' ? 'bg-amber-950/40 border border-amber-500/60 text-amber-400' :
+                        'bg-blue-950/40 border border-blue-500/60 text-blue-400'
+                    } text-center text-[10px] font-medium`;
+                } else {
+                    btn.className = 'pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-dark-heading font-medium';
+                }
+            });
+
+            localStorage.setItem('omni_permission_mode', mode);
+        }
+
+        document.querySelectorAll('.pop-auth-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const mode = btn.dataset.auth;
+                setPermissionModeUI(mode);
+                try {
+                    await fetch('/api/modes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ permission_mode: mode })
+                    });
+                } catch (e) {}
+            });
+        });
+
+        function populateModelSelects(models, defaultModel) {
+            headerModelSelect.innerHTML = '';
+            settingsModelSelect.innerHTML = '';
+            models.forEach(m => {
+                const isSelected = m === defaultModel;
+                headerModelSelect.add(new Option(m, m, isSelected, isSelected));
+                settingsModelSelect.add(new Option(m, m, isSelected, isSelected));
+            });
+
+            // 还原持久化档位与推理强度与权限
+            const savedTier = localStorage.getItem('omni_selected_tier') || 'pro';
+            setModelTierUI(savedTier);
+            const savedEffort = localStorage.getItem('omni_reasoning_effort') || 'medium';
+            setReasoningEffortUI(savedEffort);
+            const savedPerm = localStorage.getItem('omni_permission_mode') || 'unrestricted';
+            setPermissionModeUI(savedPerm);
+        }
+
+        function renderToolsList(tools) {
+            const container = document.getElementById('tools-rendered-list');
+            container.innerHTML = '';
+            tools.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'p-2 rounded bg-dark-bg border border-dark-border text-xs';
+                div.innerHTML = `
+                    <div class="font-mono text-blue-400 font-medium">${t.function.name}</div>
+                    <div class="text-[11px] text-dark-muted mt-0.5">${t.function.description}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 6. Telemetry Meter Updater
+        function updateTelemetryUI(telemetry) {
+            if (!telemetry) return;
+            meterPromptTokens.textContent = (telemetry.prompt_tokens || 0).toLocaleString();
+            meterCompTokens.textContent = (telemetry.completion_tokens || 0).toLocaleString();
+            meterTotalTokens.textContent = (telemetry.total_tokens || 0).toLocaleString();
+            meterLatency.textContent = `${((telemetry.latency_ms || 0) / 1000).toFixed(1)}s`;
+            meterTps.textContent = `(${telemetry.tokens_per_sec || 0} t/s)`;
+            meterCacheHit.textContent = `${telemetry.cache_hit_ratio || 0}%`;
+
+            const maxWindow = 128000;
+            const used = telemetry.total_tokens || 0;
+            const pct = Math.min(100, Math.round((used / maxWindow) * 100));
+            meterProgressBar.style.width = `${pct}%`;
+            meterContextRatio.textContent = `${(used / 1000).toFixed(1)}k/128k`;
+        }
+
+        // 7. Execution Engine (Streaming & Auto-Collapsing)
+        btnSubmit.addEventListener('click', executeTask);
+        promptInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                executeTask();
+            }
+        });
+
+        async function executeTask() {
+            const prompt = promptInput.value.trim();
+            if (!prompt || isRunning) return;
+
+            isRunning = true;
+            emptyState?.classList.add('hidden');
+            btnSubmit.disabled = true;
+            promptInput.value = '';
+
+            statusDot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping';
+            statusText.textContent = 'Agent Running...';
+
+            appendUserMessage(prompt);
+
+            const payload = {
+                session_id: activeSessionId,
+                prompt: prompt,
+                provider: settingsProvider.value,
+                model: headerModelSelect.value,
+                permission_mode: currentPermission,
+                reasoning_effort: currentEffort,
+                custom_master_prompt: masterTextarea.value
+            };
+
+            let currentThoughtContainer = null;
+            let currentThoughtText = '';
+            let startTime = Date.now();
+
+            try {
+                const response = await fetch('/api/agent/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const dataStr = line.slice(6).trim();
+                        if (dataStr === '[DONE]') break;
+
+                        try {
+                            const ev = JSON.parse(dataStr);
+
+                            if (ev.type === 'init' && ev.session_id) {
+                                activeSessionId = ev.session_id;
+                            } else if (ev.type === 'assistant_thought') {
+                                if (!currentThoughtContainer) {
+                                    currentThoughtContainer = createThoughtAccordion();
+                                }
+                                currentThoughtText += ev.content;
+                                updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
+                            } else if (ev.type === 'tool_executing') {
+                                if (currentThoughtContainer) {
+                                    finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
+                                    currentThoughtContainer = null;
+                                }
+                                createToolAccordion(ev.tool_name, ev.tool_args, ev.tool_id);
+                            } else if (ev.type === 'tool_result') {
+                                finalizeToolAccordion(ev.tool_id, ev.observation);
+                            } else if (ev.type === 'task_completed') {
+                                if (currentThoughtContainer) {
+                                    finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
+                                    currentThoughtContainer = null;
+                                }
+                                if (ev.final_answer) {
+                                    appendAssistantMarkdown(ev.final_answer);
+                                }
+                            } else if (ev.type === 'complete') {
+                                if (currentThoughtContainer) {
+                                    finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
+                                    currentThoughtContainer = null;
+                                }
+                                if (ev.telemetry) {
+                                    updateTelemetryUI(ev.telemetry);
+                                }
+                                loadSessions();
+                                loadUserBalance();
+                            } else if (ev.type === 'error') {
+                                appendErrorCard(ev.error);
+                            }
+                        } catch (err) {
+                            console.error('Parse error:', err);
+                        }
+                    }
+                }
+            } catch (err) {
+                appendErrorCard(err.message);
+            } finally {
+                isRunning = false;
+                btnSubmit.disabled = false;
+                statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+                statusText.textContent = 'Completed';
+            }
+        }
+
+        // Accordion Helpers: User Message
+        function appendUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 text-dark-heading';
+            div.innerHTML = `
+                <div class="text-[11px] font-mono text-dark-muted mb-1 flex items-center justify-between">
+                    <span class="text-blue-400 font-semibold flex items-center gap-1.5">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        User Request
+                    </span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="font-mono text-xs whitespace-pre-wrap">${escapeHtml(text)}</div>
+            `;
+            timeline.appendChild(div);
+            scrollBottom();
+        }
+
+        // Accordion Helpers: Thought Process
+        function createThoughtAccordion() {
+            const div = document.createElement('div');
+            div.className = 'thought-block rounded-md border border-dark-border bg-dark-surface overflow-hidden transition';
+            div.innerHTML = `
+                <div class="thought-header px-3 py-2 bg-dark-bg/60 flex items-center justify-between cursor-pointer hover:bg-dark-hover transition">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-3.5 h-3.5 text-blue-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span class="text-xs font-mono font-medium text-dark-heading">Thought Process</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                    </div>
+                    <span class="text-[10px] text-dark-muted font-mono thought-meta">Thinking...</span>
+                </div>
+                <div class="thought-body p-3 font-mono text-[11px] text-dark-muted border-t border-dark-border bg-dark-bg whitespace-pre-wrap leading-relaxed"></div>
+            `;
+            timeline.appendChild(div);
+
+            const header = div.querySelector('.thought-header');
+            const body = div.querySelector('.thought-body');
+            const chevron = header.querySelector('svg');
+
+            header.addEventListener('click', () => {
+                const isHidden = body.classList.contains('hidden');
+                if (isHidden) {
+                    body.classList.remove('hidden');
+                    chevron.classList.add('rotate-180');
+                } else {
+                    body.classList.add('hidden');
+                    chevron.classList.remove('rotate-180');
+                }
+            });
+
+            scrollBottom();
+            return div;
+        }
+
+        function updateThoughtAccordion(container, text) {
+            const body = container.querySelector('.thought-body');
+            body.textContent = text;
+            scrollBottom();
+        }
+
+        function finalizeThoughtAccordion(container, text, durationSec) {
+            const ping = container.querySelector('.animate-ping');
+            if (ping) ping.remove();
+            const meta = container.querySelector('.thought-meta');
+            const words = text.trim().split(/\s+/).length;
+            meta.textContent = `${durationSec.toFixed(1)}s · ${words} words`;
+
+            const body = container.querySelector('.thought-body');
+            body.classList.add('hidden');
+        }
+
+        // Accordion Helpers: Tool Invocations
+        function createToolAccordion(toolName, toolArgs, toolId) {
+            const div = document.createElement('div');
+            div.id = `tool-exec-${toolId}`;
+            div.className = 'tool-block rounded-md border border-amber-500/30 bg-dark-surface overflow-hidden transition';
+            div.innerHTML = `
+                <div class="tool-header px-3 py-2 bg-amber-950/10 flex items-center justify-between cursor-pointer hover:bg-amber-950/20 transition">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-3.5 h-3.5 text-amber-400 chevron-icon transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span class="font-mono text-xs text-amber-300 font-semibold">${escapeHtml(toolName)}</span>
+                        <span class="text-[10px] text-amber-400/80 font-mono">[Running]</span>
+                    </div>
+                    <span class="text-[10px] text-dark-muted font-mono tool-status-badge">Executing...</span>
+                </div>
+                <div class="tool-body hidden border-t border-dark-border bg-dark-bg p-3 space-y-2">
+                    <div>
+                        <div class="text-[10px] font-mono text-dark-muted uppercase">Parameters:</div>
+                        <pre class="p-2 bg-dark-surface rounded font-mono text-[11px] text-dark-text overflow-x-auto">${escapeHtml(JSON.stringify(toolArgs, null, 2))}</pre>
+                    </div>
+                    <div class="tool-output-box hidden">
+                        <div class="text-[10px] font-mono text-dark-muted uppercase">Stdout / Observation:</div>
+                        <pre class="p-2 bg-black/60 rounded font-mono text-[11px] text-emerald-400 overflow-x-auto tool-obs-text"></pre>
+                    </div>
+                </div>
+            `;
+            timeline.appendChild(div);
+
+            const header = div.querySelector('.tool-header');
+            const body = div.querySelector('.tool-body');
+            const chevron = header.querySelector('.chevron-icon');
+
+            header.addEventListener('click', () => {
+                const isHidden = body.classList.contains('hidden');
+                if (isHidden) {
+                    body.classList.remove('hidden');
+                    chevron.classList.add('rotate-90');
+                } else {
+                    body.classList.add('hidden');
+                    chevron.classList.remove('rotate-90');
+                }
+            });
+
+            scrollBottom();
+        }
+
+        function finalizeToolAccordion(toolId, observation) {
+            const div = document.getElementById(`tool-exec-${toolId}`);
+            if (!div) return;
+
+            div.className = 'tool-block rounded-md border border-dark-border bg-dark-surface overflow-hidden transition';
+            const header = div.querySelector('.tool-header');
+            header.className = 'tool-header px-3 py-1.5 bg-dark-bg/60 flex items-center justify-between cursor-pointer hover:bg-dark-hover transition';
+
+            const statusBadge = div.querySelector('.tool-status-badge');
+            statusBadge.className = 'text-[10px] text-emerald-400 font-mono';
+            statusBadge.textContent = '✓ Completed';
+
+            const outputBox = div.querySelector('.tool-output-box');
+            outputBox.classList.remove('hidden');
+            const obsText = div.querySelector('.tool-obs-text');
+            obsText.textContent = observation;
+
+            const body = div.querySelector('.tool-body');
+            body.classList.add('hidden');
+        }
+
+        function appendAssistantMarkdown(markdown) {
+            const div = document.createElement('div');
+            div.className = 'p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text markdown-body';
+            div.innerHTML = marked.parse(markdown);
+            timeline.appendChild(div);
+            scrollBottom();
+        }
+
+        function appendErrorCard(errText) {
+            const div = document.createElement('div');
+            div.className = 'p-3 rounded-lg bg-red-950/30 border border-red-800/50 text-red-300 font-mono text-xs';
+            div.innerHTML = `<strong>Error:</strong> ${escapeHtml(errText)}`;
+            timeline.appendChild(div);
+            scrollBottom();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function scrollBottom() {
+            timeline.scrollTop = timeline.scrollHeight;
+        }
+
+        btnClearStream.addEventListener('click', () => {
+            timeline.innerHTML = '';
+            timeline.appendChild(emptyState);
+            emptyState.classList.remove('hidden');
+        });
+
+        // Switch Workspace Directory on Computer
+        document.getElementById('btn-switch-cwd').addEventListener('click', async () => {
+            const currentCwd = document.getElementById('sidebar-cwd').textContent;
+            const targetPath = prompt('Enter absolute directory path on your computer (e.g. /home/maker/agycode, /mnt/d/...):', currentCwd);
+            if (targetPath && targetPath.trim()) {
+                try {
+                    const res = await fetch('/api/workspace/set-cwd', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: targetPath.trim() })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        document.getElementById('sidebar-cwd').textContent = data.cwd;
+                        document.getElementById('env-cwd-name').textContent = data.cwd;
+                        loadFileTree();
+                    } else {
+                        alert('Failed to switch directory: ' + (data.detail || data.error || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            }
+        });
+
+        // Load & Update API Account Balance
+        async function loadUserBalance() {
+            try {
+                const res = await fetch('/api/user/balance');
+                const data = await res.json();
+                if (data.is_available && data.total_balance !== undefined) {
+                    const symbol = data.currency === 'USD' ? '$' : '¥';
+                    const text = `${symbol}${data.total_balance}`;
+                    document.getElementById('header-balance-badge').textContent = text;
+                    document.getElementById('meter-balance-badge').textContent = text;
+                }
+            } catch (err) {
+                console.error('Failed to load balance:', err);
+            }
+        }
+
+        // Sidebar Toggle & Persistence
+        const sidebar = document.getElementById('app-sidebar');
+        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+        let sidebarCollapsed = localStorage.getItem('omni_sidebar_collapsed') === 'true';
+
+        function setSidebarState(collapsed) {
+            sidebarCollapsed = collapsed;
+            localStorage.setItem('omni_sidebar_collapsed', collapsed);
+            if (collapsed) {
+                sidebar.classList.add('-ml-64');
+            } else {
+                sidebar.classList.remove('-ml-64');
+            }
+        }
+
+        btnToggleSidebar.addEventListener('click', () => setSidebarState(!sidebarCollapsed));
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                setSidebarState(!sidebarCollapsed);
+            }
+        });
+        setSidebarState(sidebarCollapsed);
+
+        // Remember Last Selected Model
+        headerModelSelect.addEventListener('change', () => {
+            localStorage.setItem('omni_selected_model', headerModelSelect.value);
+            settingsModelSelect.value = headerModelSelect.value;
+        });
+        settingsModelSelect.addEventListener('change', () => {
+            localStorage.setItem('omni_selected_model', settingsModelSelect.value);
+            headerModelSelect.value = settingsModelSelect.value;
+        });
+
+        // Initialize on page load
+        loadSystemData().then(() => {
+            const savedModel = localStorage.getItem('omni_selected_model');
+            if (savedModel) {
+                headerModelSelect.value = savedModel;
+                settingsModelSelect.value = savedModel;
+            }
+        });
+        loadSessions();
+        loadUserBalance();
+    </script>
+</body>
+</html>

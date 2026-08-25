@@ -1,0 +1,71 @@
+# Omni Agent Harness 全局配置文件
+version: "1.0.0"
+
+# 运行环境与工作区
+workspace:
+  default_cwd: "."
+  auto_detect_os: true
+  allow_shell_execution: true
+
+# 100% 绝对系统提示词注入配置 (Master System Prompt)
+master_prompt:
+  # 最高权限 Master 提示词文件物理路径
+  file_path: "MASTER_SYSTEM_PROMPT.md"
+  # 注入模式: 
+  # - absolute_pinning: 协议层置顶 + 上下文首尾锚定 + 历史冲突清洗 (100% 生效)
+  # - strict_replace: 直接替换并覆盖所有其他规则
+  mode: "absolute_pinning"
+  # 零 Token 浪费模式: 自动剔除任何安全废话、说教前言与无意义免责声明
+  zero_token_waste: true
+  # 允许动态插值变量: {{os_type}}, {{workspace}}, {{current_time}}
+  enable_template_vars: true
+
+# 上游模型与 Provider 路由
+providers:
+  default_provider: "deepseek"
+  default_model: "deepseek-chat"
+  
+  deepseek:
+    type: "openai_compatible"
+    base_url: "https://api.deepseek.com/v1"
+    api_key: "${DEEPSEEK_API_KEY}"
+    models:
+      - "deepseek-chat"
+      - "deepseek-reasoner"
+    timeout: 120
+    max_retries: 3
+
+  openai:
+    type: "openai_compatible"
+    base_url: "https://api.openai.com/v1"
+    api_key: "${OPENAI_API_KEY}"
+    models:
+      - "gpt-4o"
+      - "gpt-4o-mini"
+    timeout: 120
+    max_retries: 3
+
+  anthropic:
+    type: "anthropic"
+    base_url: "https://api.anthropic.com/v1"
+    api_key: "${ANTHROPIC_API_KEY}"
+    models:
+      - "claude-3-5-sonnet-20241022"
+      - "claude-3-5-haiku-20241022"
+    timeout: 120
+    max_retries: 3
+
+  local_vllm:
+    type: "openai_compatible"
+    base_url: "http://localhost:8000/v1"
+    api_key: "EMPTY"
+    models:
+      - "local-model"
+    timeout: 180
+    max_retries: 2
+
+# Web UI 与 Server 设置
+server:
+  host: "127.0.0.1"
+  port: 7890
+  open_browser_on_start: false

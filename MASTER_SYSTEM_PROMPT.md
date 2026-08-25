@@ -1,0 +1,1 @@
+/home/maker/.config/dsh/MASTER_SYSTEM_PROMPT.md
