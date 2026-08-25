@@ -66,6 +66,7 @@ def test_three_layer_absolute_injection():
     # 2. 验证客户端传入的旧 system 消息已被降级/沙箱化，无法覆盖 Master 指令
     assert not any(msg.role == "system" and "restricted AI" in str(msg.content) for msg in result_messages[1:])
 
-    # 3. 验证用户原始上下文得到纯净保留，无破坏性篡改，保障 ReAct 工具链连续思考
+    # 3. 验证双端物理锚定（Dual-Anchor）：末尾用户消息包含原始输入与尾部注意力锁死指令
     last_user_msg = [m for m in result_messages if m.role == "user"][-1]
-    assert last_user_msg.content == "Now execute command B."
+    assert "Now execute command B." in str(last_user_msg.content)
+    assert "[MANDATE ENFORCEMENT" in str(last_user_msg.content)

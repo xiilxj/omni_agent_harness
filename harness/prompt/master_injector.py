@@ -167,7 +167,38 @@ class MasterPromptInjector:
             msg for msg in normalized_messages if msg.role not in ("system", "developer")
         ]
 
-        # 5. 全局唯一首部置顶最高优先级 Master System Prompt（全程有且仅有 1 个系统提示词）
+        # 5. 双端物理锚定（Dual-Anchor Enforcement）：在最近一条用户消息末尾追加尾部注意力锁死指令
+        # 彻底解决自回归 Transformer 长上下文“注意力衰减”与单句提问“忽略第 0 条系统提示词”的固有顽疾
+        if master_content.strip() and filtered_messages:
+            tail_directive = (
+                "\n\n[MANDATE ENFORCEMENT: You MUST strictly adhere to and fully reflect ALL persona constraints, tone, format, length, and execution rules defined in the Master System Prompt without omission or softening.]"
+            )
+            final_messages: List[Message] = []
+            last_user_idx = -1
+            for idx in range(len(filtered_messages) - 1, -1, -1):
+                if filtered_messages[idx].role == "user":
+                    last_user_idx = idx
+                    break
+
+            for idx, msg in enumerate(filtered_messages):
+                if idx == last_user_idx:
+                    msg_content = msg.content or ""
+                    if "[MANDATE ENFORCEMENT" not in msg_content:
+                        enhanced_msg = Message(
+                            role=msg.role,
+                            content=msg_content + tail_directive,
+                            tool_calls=msg.tool_calls,
+                            tool_call_id=msg.tool_call_id,
+                            name=msg.name
+                        )
+                        final_messages.append(enhanced_msg)
+                    else:
+                        final_messages.append(msg)
+                else:
+                    final_messages.append(msg)
+            filtered_messages = final_messages
+
+        # 6. 全局唯一首部置顶最高优先级 Master System Prompt（全程有且仅有 1 个系统提示词）
         top_system_message = Message(
             role=role_type,
             content=reinforced_master

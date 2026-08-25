@@ -2,7 +2,10 @@
 
 ## 1. 项目定位与核心愿景
 本项目是基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度改造演进的工业级智能体底座（Agent Harness），具备以下核心特性：
-- **统一命名体系**：全系统严格统一命名为 **Omni Agent Harness**。
+- **开源公开仓库与版本发布 (Open Source Public Release)**：
+  - 公开仓库地址：`https://github.com/xiilxj/omni_agent_harness`
+  - Release v1.0.0：`https://github.com/xiilxj/omni_agent_harness/releases/tag/v1.0.0`
+  - 纯净 Windows 独立分发包直接挂载于 Release 附件中，开箱即用。
 - **纯净 Windows 独立分发版本 (Clean Standalone Windows Release)**：
   - **完全脱离 Linux 虚拟机与 Docker**：原生适配 Windows 操作系统，通过 `start_windows.bat` 实现一键检测 Python、自动安装依赖并自动弹出默认浏览器打开控制台。
   - **100% 绝对安全与隐私隔离**：打包程序严格执行安全扫描，彻底排除用户的 `.env` 私有密钥、个人历史会话、个性化提示词与日志，产出完全绿色的 ZIP 包。
@@ -59,6 +62,7 @@
 
 | 路径 / 模块 | 用途与职责说明 | 状态 |
 | :--- | :--- | :--- |
+| `https://github.com/xiilxj/omni_agent_harness` | GitHub 公开开源主仓库。 | ✅ 已成功上线 |
 | `start_windows.bat` | Windows 纯原生一键启动脚本（自动环境检查、依赖安装与拉起浏览器）。 | ✅ 已就绪 |
 | `install_windows.bat` | Windows 独立依赖安装脚本。 | ✅ 已就绪 |
 | `README_WINDOWS.md` | 面向 Windows 用户的零门槛极速使用文档。 | ✅ 已就绪 |
@@ -83,11 +87,9 @@
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 23 轮（纯净 Windows 独立分发包构建、安全审计与宿主机导出 100% 验收）
+- **审核轮数**: 第 24 轮（GitHub 公开开源仓库创建、代码推送与 Release v1.0.0 发布 100% 验收）
 - **测试状态**:
   - `pytest tests/`: 8/8 全部通过。
-  - 安全审计结果：分发包内 0 私有密钥残留、0 个人提示词残留、0 历史会话残留，仅包含纯净源码与 Windows 一键启动脚本。
-- **纯净 Windows 分发包导出路径**: 
-  - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
-  - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
-  - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
+  - Git 仓库状态：`https://github.com/xiilxj/omni_agent_harness`（Public 状态正常）。
+  - Release 发布状态：`v1.0.0` 发布成功并已将 `Omni_Agent_Harness_Windows_Clean.zip` 成功挂载为附件。
+  - 安全审查：确认 GitHub 仓库及提交记录中 0 密钥泄露、0 历史对话数据。
