@@ -13,24 +13,25 @@
                 extend: {
                     colors: {
                         brand: {
-                            50: '#eef6ff',
-                            500: '#1e88e5',
-                            600: '#0d6efd',
-                            700: '#0b5ed7',
-                            900: '#084298'
+                            50: '#f5f7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81'
                         },
                         dark: {
-                            bg: '#0d1117',
-                            surface: '#161b22',
-                            border: '#30363d',
-                            hover: '#21262d',
-                            muted: '#8b949e',
-                            text: '#c9d1d9',
-                            heading: '#f0f6fc'
+                            bg: '#08090d',
+                            surface: '#0e1017',
+                            card: '#131620',
+                            border: '#1e2230',
+                            hover: '#181c2b',
+                            muted: '#64748b',
+                            text: '#cbd5e1',
+                            heading: '#f8fafc'
                         }
                     },
                     fontFamily: {
-                        mono: ['"Fira Code"', 'Consolas', 'Monaco', 'monospace'],
+                        mono: ['"JetBrains Mono"', '"Fira Code"', 'Consolas', 'monospace'],
                         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
                     }
                 }
@@ -38,25 +39,36 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
-        body { background-color: #0d1117; color: #c9d1d9; font-family: 'Inter', sans-serif; }
-        .font-mono { font-family: 'Fira Code', monospace; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #0d1117; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2.5px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        body {
+            background-color: #08090d;
+            background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+                              radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+            color: #cbd5e1;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.01em;
+        }
+        .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #232738; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+        .glass-panel { background: rgba(14, 16, 23, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.07); }
+        .glass-card { background: rgba(19, 22, 32, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .drawer-slide { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-        .markdown-body pre { background-color: #161b22 !important; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin: 8px 0; overflow-x: auto; }
-        .markdown-body code { font-family: 'Fira Code', monospace; font-size: 12px; }
-        .markdown-body p { margin-bottom: 8px; line-height: 1.6; }
+        .markdown-body pre { background-color: #0c0e14 !important; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px; margin: 10px 0; overflow-x: auto; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .markdown-body code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+        .markdown-body p { margin-bottom: 8px; line-height: 1.65; color: #cbd5e1; }
         .markdown-body ul, .markdown-body ol { margin-left: 20px; margin-bottom: 8px; }
-        .markdown-body li { list-style-type: disc; }
+        .markdown-body li { list-style-type: disc; margin-bottom: 4px; }
         .markdown-body table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
-        .markdown-body th, .markdown-body td { border: 1px solid #30363d; padding: 6px 10px; }
-        .markdown-body th { background: #161b22; }
+        .markdown-body th, .markdown-body td { border: 1px solid #1e2230; padding: 8px 12px; }
+        .markdown-body th { background: #131620; color: #f8fafc; font-weight: 600; }
+        .glow-indigo { box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.25); }
+        .glow-emerald { box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.25); }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden text-xs select-none">
+<body class="h-screen flex overflow-hidden text-xs select-none bg-dark-bg text-dark-text">
 
     <!-- Left Sidebar (Sessions & Workspace Explorer) -->
     <aside id="app-sidebar" class="w-64 bg-dark-surface border-r border-dark-border flex flex-col flex-shrink-0 z-10 transition-all duration-200">
@@ -247,17 +259,57 @@
 
         <!-- Central Execution Stream (Timeline) -->
         <main id="chat-timeline" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll max-w-4xl w-full mx-auto select-text">
-            <!-- Empty State -->
-            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center text-dark-muted py-20 select-none">
-                <div class="w-12 h-12 rounded-xl bg-dark-surface border border-dark-border flex items-center justify-center text-dark-muted mb-4">
-                    <svg class="w-6 h-6 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                        <line x1="8" y1="21" x2="16" y2="21"></line>
-                        <line x1="12" y1="17" x2="12" y2="21"></line>
-                    </svg>
+            <!-- Empty State (Luxury Obsidian Aesthetic) -->
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center text-dark-muted py-16 select-none max-w-xl mx-auto space-y-6">
+                <div class="relative">
+                    <div class="w-14 h-14 rounded-2xl glass-card border border-white/[0.08] flex items-center justify-center text-indigo-400 shadow-2xl glow-indigo">
+                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                    </div>
+                    <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                    </span>
                 </div>
-                <h3 class="text-sm font-semibold text-dark-heading mb-1">Omni Agent Harness Ready</h3>
-                <p class="text-xs text-dark-muted max-w-md">100% 绝对系统提示词注入已生效。在此下发任务，Agent 将以 ReAct 模式自动执行工具、读写工作区并交付成果。</p>
+                <div class="space-y-1.5">
+                    <h3 class="text-base font-semibold text-dark-heading tracking-tight">Omni Agent Harness Pro</h3>
+                    <p class="text-xs text-dark-muted leading-relaxed">全栈 ReAct 工业级执行引擎 · 100% 绝对系统提示词与双端 MCP / Skills 深度就绪</p>
+                </div>
+
+                <!-- Quick Action Chips (点击直接填入并执行) -->
+                <div class="grid grid-cols-2 gap-2.5 w-full text-left pt-2">
+                    <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-indigo-500/40 text-dark-heading transition group shadow-sm" data-prompt="检查当前工作区结构，列出所有核心模块与文件清单并简要汇报">
+                        <div class="flex items-center space-x-2 text-indigo-400 font-medium text-xs mb-1">
+                            <span>🔍</span>
+                            <span>工作区全面审计</span>
+                        </div>
+                        <div class="text-[11px] text-dark-muted truncate">扫描文件结构与当前项目核心逻辑</div>
+                    </button>
+                    <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-emerald-500/40 text-dark-heading transition group shadow-sm" data-prompt="查看当前连接的 MCP 服务与 Skills 技能，执行连通性自检">
+                        <div class="flex items-center space-x-2 text-emerald-400 font-medium text-xs mb-1">
+                            <span>⚡</span>
+                            <span>MCP / Skills 挂载诊断</span>
+                        </div>
+                        <div class="text-[11px] text-dark-muted truncate">验证 29 项技能与 10 大 MCP 服务就绪度</div>
+                    </button>
+                    <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-amber-500/40 text-dark-heading transition group shadow-sm" data-prompt="运行 pytest 测试套件并输出测试覆盖率与结果">
+                        <div class="flex items-center space-x-2 text-amber-400 font-medium text-xs mb-1">
+                            <span>🧪</span>
+                            <span>全量单元测试执行</span>
+                        </div>
+                        <div class="text-[11px] text-dark-muted truncate">自动化测试回归验证与断言分析</div>
+                    </button>
+                    <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-blue-500/40 text-dark-heading transition group shadow-sm" data-prompt="请根据当前任务，自动规划并执行完整的代码重构与优化">
+                        <div class="flex items-center space-x-2 text-blue-400 font-medium text-xs mb-1">
+                            <span>🛠️</span>
+                            <span>自主 ReAct 深度攻坚</span>
+                        </div>
+                        <div class="text-[11px] text-dark-muted truncate">多步骤自主规划、多工具协同编写交付</div>
+                    </button>
+                </div>
             </div>
         </main>
 
@@ -2727,6 +2779,16 @@
         if (btnRefreshBalanceModal) btnRefreshBalanceModal.addEventListener('click', fetchUserBalance);
 
         // 7. Execution Engine (Streaming & Auto-Collapsing)
+        document.querySelectorAll('.quick-chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const promptText = btn.dataset.prompt;
+                if (promptText && !isRunning) {
+                    promptInput.value = promptText;
+                    executeTask();
+                }
+            });
+        });
+
         btnSubmit.addEventListener('click', executeTask);
         promptInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
