@@ -147,7 +147,8 @@ class OpenAICompatibleProvider(BaseProvider):
             "model": model,
             "messages": self._convert_messages_to_payload(messages),
             "temperature": temperature,
-            "stream": True
+            "stream": True,
+            "stream_options": {"include_usage": True}
         }
         if tools:
             body["tools"] = tools

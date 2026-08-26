@@ -53,8 +53,14 @@ class MockProvider(BaseProvider):
             )
 
     async def stream_chat(self, *args, **kwargs) -> AsyncGenerator[Dict[str, Any], None]:
-        yield {"type": "delta", "content": "mock"}
-        yield {"type": "done"}
+        self.step_idx += 1
+        if self.step_idx == 1:
+            yield {"type": "delta", "reasoning_content": "Planning steps...", "content": "I need to inspect the file first."}
+            yield {"type": "delta", "tool_calls": [{"index": 0, "id": "call_001", "function": {"name": "test_tool", "arguments": '{"value": "hello_mock"}'}}]}
+            yield {"type": "done"}
+        else:
+            yield {"type": "delta", "content": "Task completed successfully with output: hello_mock."}
+            yield {"type": "done"}
 
 
 @pytest.mark.asyncio

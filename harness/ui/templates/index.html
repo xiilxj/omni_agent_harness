@@ -1784,6 +1784,8 @@
 
             let currentThoughtContainer = null;
             let currentThoughtText = '';
+            let currentAnswerContainer = null;
+            let currentAnswerText = '';
             let startTime = Date.now();
 
             try {
@@ -1814,11 +1816,29 @@
 
                             if (ev.type === 'init' && ev.session_id) {
                                 activeSessionId = ev.session_id;
+                            } else if (ev.type === 'thought_delta') {
+                                // 1. 毫秒级实时流式吐出思考链内容
+                                if (!currentThoughtContainer) {
+                                    currentThoughtContainer = createThoughtAccordion();
+                                }
+                                currentThoughtText = ev.accumulated || (currentThoughtText + ev.delta);
+                                updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
+                            } else if (ev.type === 'answer_delta') {
+                                // 2. 思考完成，毫秒级实时流式吐出回答内容
+                                if (currentThoughtContainer) {
+                                    finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
+                                    currentThoughtContainer = null;
+                                }
+                                if (!currentAnswerContainer) {
+                                    currentAnswerContainer = createAssistantStreamBlock();
+                                }
+                                currentAnswerText = ev.accumulated || (currentAnswerText + ev.delta);
+                                updateAssistantStreamBlock(currentAnswerContainer, currentAnswerText);
                             } else if (ev.type === 'assistant_thought') {
                                 if (!currentThoughtContainer) {
                                     currentThoughtContainer = createThoughtAccordion();
                                 }
-                                currentThoughtText += ev.content;
+                                currentThoughtText = ev.content;
                                 updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
                             } else if (ev.type === 'ask_user') {
                                 renderAskUserModal(ev);
@@ -1829,6 +1849,7 @@
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
                                 }
+                                currentAnswerContainer = null;
                                 createToolAccordion(ev.tool_name, ev.tool_args, ev.tool_id);
                             } else if (ev.type === 'tool_result') {
                                 finalizeToolAccordion(ev.tool_id, ev.observation, ev.diff);
@@ -1837,7 +1858,10 @@
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
                                 }
-                                if (ev.final_answer) {
+                                if (currentAnswerContainer) {
+                                    updateAssistantStreamBlock(currentAnswerContainer, ev.final_answer || currentAnswerText);
+                                    currentAnswerContainer = null;
+                                } else if (ev.final_answer) {
                                     appendAssistantMarkdown(ev.final_answer);
                                 }
                             } else if (ev.type === 'complete') {
@@ -1845,6 +1869,7 @@
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
                                 }
+                                currentAnswerContainer = null;
                                 if (ev.telemetry) {
                                     updateTelemetryUI(ev.telemetry);
                                 }
@@ -2199,6 +2224,19 @@
 
             const body = div.querySelector('.tool-body');
             body.classList.add('hidden');
+        }
+
+        function createAssistantStreamBlock() {
+            const div = document.createElement('div');
+            div.className = 'p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text markdown-body';
+            timeline.appendChild(div);
+            scrollBottom();
+            return div;
+        }
+
+        function updateAssistantStreamBlock(container, text) {
+            container.innerHTML = marked.parse(text);
+            scrollBottom();
         }
 
         function appendAssistantMarkdown(markdown) {

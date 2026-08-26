@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Any, Callable, Dict, List, Optional
 from harness.core.config import AppConfig, load_config
-from harness.core.models import LLMResponse, Message, ToolCall, UsageStats
+from harness.core.models import LLMResponse, Message, ToolCall, ToolFunction, UsageStats
 from harness.prompt.master_injector import MasterPromptInjector
 from harness.providers.router import ProviderRouter
 from harness.tools.registry import ToolRegistry, global_tools
@@ -95,6 +95,138 @@ class OmniAgent:
 
         return response
 
+    async def step_stream(
+        self,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = None,
+        reasoning_effort: Optional[str] = None,
+        on_chunk_callback: Optional[Callable[[Dict[str, Any]], Any]] = None
+    ) -> LLMResponse:
+        """执行流式 LLM 推理并实时逐字推送思考链 (thought_delta) 与回答 (answer_delta)"""
+        p_name = provider_name or self.config.providers.get("default_provider", "deepseek")
+        provider = self.router.get_provider(p_name)
+        m_name = model_name or self.config.providers.get("default_model", "deepseek-chat")
+
+        # 1. 核心关键：通过 Injector 确保 MASTER_SYSTEM_PROMPT.md 100% 绝对置顶与双端物理锚定
+        injected_messages = self.injector.inject(
+            messages=self.messages,
+            workspace=self.config.workspace.default_cwd,
+            custom_master_prompt=self.custom_master_prompt
+        )
+
+        tool_schemas = self.tools.get_openai_tools()
+
+        extra_params = {}
+        effort = reasoning_effort or self.reasoning_effort
+        if effort:
+            extra_params["reasoning_effort"] = effort
+
+        stream_gen = provider.stream_chat(
+            messages=injected_messages,
+            model=m_name,
+            tools=tool_schemas if tool_schemas else None,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            extra_params=extra_params
+        )
+
+        thought_accumulator = ""
+        content_accumulator = ""
+        tool_calls_builder: Dict[int, Dict[str, Any]] = {}
+        finish_reason = "stop"
+
+        async for chunk in stream_gen:
+            if chunk.get("type") == "done":
+                break
+
+            # 1. 毫秒级实时流式吐出思考链 Token
+            r_delta = chunk.get("reasoning_content")
+            if r_delta:
+                thought_accumulator += r_delta
+                if on_chunk_callback:
+                    await on_chunk_callback({
+                        "type": "thought_delta",
+                        "delta": r_delta,
+                        "accumulated": thought_accumulator
+                    })
+
+            # 2. 毫秒级实时流式吐出回答文本 Token
+            c_delta = chunk.get("content")
+            if c_delta:
+                content_accumulator += c_delta
+                if on_chunk_callback:
+                    await on_chunk_callback({
+                        "type": "answer_delta",
+                        "delta": c_delta,
+                        "accumulated": content_accumulator
+                    })
+
+            # 3. 实时收集工具调用碎片 (Tool Call Fragments)
+            tcs = chunk.get("tool_calls")
+            if tcs:
+                for tc in tcs:
+                    idx = tc.get("index", 0)
+                    if idx not in tool_calls_builder:
+                        tool_calls_builder[idx] = {
+                            "id": tc.get("id") or f"call_{idx}",
+                            "name": tc.get("function", {}).get("name", ""),
+                            "arguments": ""
+                        }
+                    if tc.get("id"):
+                        tool_calls_builder[idx]["id"] = tc["id"]
+                    if tc.get("function", {}).get("name"):
+                        tool_calls_builder[idx]["name"] = tc["function"]["name"]
+                    if tc.get("function", {}).get("arguments"):
+                        tool_calls_builder[idx]["arguments"] += tc["function"]["arguments"]
+
+            if chunk.get("finish_reason"):
+                finish_reason = chunk["finish_reason"]
+
+            if chunk.get("usage"):
+                u = chunk["usage"]
+                self.total_usage.prompt_tokens += u.get("prompt_tokens", 0)
+                self.total_usage.completion_tokens += u.get("completion_tokens", 0)
+                self.total_usage.total_tokens += u.get("total_tokens", 0)
+                self.total_usage.prompt_cache_hit_tokens += u.get("prompt_cache_hit_tokens", 0)
+                self.total_usage.prompt_cache_miss_tokens += u.get("prompt_cache_miss_tokens", 0)
+
+        # 整理构建完整的 ToolCalls 列表
+        assembled_tool_calls = None
+        if tool_calls_builder:
+            assembled_tool_calls = []
+            for idx in sorted(tool_calls_builder.keys()):
+                item = tool_calls_builder[idx]
+                assembled_tool_calls.append(
+                    ToolCall(
+                        id=item["id"],
+                        type="function",
+                        function=ToolFunction(
+                            name=item["name"],
+                            arguments=item["arguments"]
+                        )
+                    )
+                )
+
+        # 若流式中未直接下发 usage 结构，根据字符数进行高精度保底估算
+        if self.total_usage.total_tokens == 0:
+            prompt_chars = sum(len(str(m.content or "")) for m in injected_messages)
+            comp_chars = len(content_accumulator) + len(thought_accumulator)
+            p_tok = max(1, prompt_chars // 3)
+            c_tok = max(1, comp_chars // 3)
+            self.total_usage.prompt_tokens += p_tok
+            self.total_usage.completion_tokens += c_tok
+            self.total_usage.total_tokens += (p_tok + c_tok)
+
+        return LLMResponse(
+            content=content_accumulator,
+            reasoning_content=thought_accumulator,
+            tool_calls=assembled_tool_calls,
+            finish_reason=finish_reason,
+            usage=self.total_usage
+        )
+
     async def run_task(
         self,
         task_prompt: str,
@@ -106,7 +238,7 @@ class OmniAgent:
     ) -> str:
         """
         运行完整 Agent 任务闭环 (ReAct 思考循环)
-        接收用户指令 -> 思考决策 -> 调用工具 -> 观察输出 -> 迭代修正 -> 最终交付
+        接收用户指令 -> 实时流式思考决策 -> 调用工具 -> 观察输出 -> 迭代修正 -> 最终交付
         """
         # 添加用户输入
         self.messages.append(Message(role="user", content=task_prompt))
@@ -123,12 +255,13 @@ class OmniAgent:
                     "step": step_count
                 })
 
-            # 执行单步推理
+            # 执行单步实时流式推理（实时推送 thought_delta 与 answer_delta）
             try:
-                response = await self.step(
+                response = await self.step_stream(
                     provider_name=provider_name,
                     model_name=model_name,
-                    reasoning_effort=effort
+                    reasoning_effort=effort,
+                    on_chunk_callback=on_step_callback
                 )
             except Exception as e:
                 err_msg = f"LLM Call Failed at step {step_count}: {e}"
