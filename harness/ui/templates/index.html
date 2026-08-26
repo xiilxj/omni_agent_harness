@@ -982,8 +982,7 @@
         <span>💬 引用选中</span>
     </div>
 
-    <!-- Backdrop Overlay -->
-    <div id="drawer-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
+
 
     <!-- DSH 计费明细与成本核算弹窗 (Billing Breakdown Modal) -->
     <div id="modal-billing-breakdown" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
@@ -1144,7 +1143,6 @@
 
         // Drawer Elements
         const drawer = document.getElementById('settings-drawer');
-        const backdrop = document.getElementById('drawer-backdrop');
         const btnOpenSettings = document.getElementById('btn-open-settings');
         const btnCloseSettings = document.getElementById('btn-close-settings');
         const btnQuickPrompt = document.getElementById('btn-quick-prompt');
@@ -1649,21 +1647,18 @@
             });
         }
 
-        // 4. Drawer & Settings
+        // 4. Drawer & Settings (无遮罩纯净侧滑面板)
         function openDrawer(tabName = 'models') {
             drawer.classList.remove('translate-x-full');
-            backdrop.classList.remove('hidden');
             switchTab(tabName);
         }
         function closeDrawer() {
             drawer.classList.add('translate-x-full');
-            backdrop.classList.add('hidden');
         }
 
         btnOpenSettings.addEventListener('click', () => openDrawer('models'));
         btnQuickPrompt.addEventListener('click', () => openDrawer('prompt'));
         btnCloseSettings.addEventListener('click', closeDrawer);
-        backdrop.addEventListener('click', closeDrawer);
 
         // 5-Tab Settings Drawer Switcher
         function switchTab(tab) {
