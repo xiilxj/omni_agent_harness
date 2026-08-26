@@ -4,6 +4,7 @@ OpenAI & DeepSeek Compatible Provider
 """
 
 import json
+import asyncio
 import httpx
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from harness.core.models import LLMResponse, Message, ToolCall, ToolFunction, UsageStats
@@ -53,7 +54,7 @@ class OpenAICompatibleProvider(BaseProvider):
         max_tokens: Optional[int] = None,
         extra_params: Optional[Dict[str, Any]] = None
     ) -> LLMResponse:
-        """执行同步/非流式请求"""
+        """执行同步/非流式请求（内置 3 次指数退避网络自动重试）"""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -83,49 +84,58 @@ class OpenAICompatibleProvider(BaseProvider):
                         body["max_tokens"] = 32768
             body.update(ep)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(url, headers=headers, json=body)
-            if resp.status_code != 200:
-                raise RuntimeError(f"OpenAI API Error ({resp.status_code}): {resp.text}")
+        client_timeout = httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=60.0)
+        max_retries = 3
 
-            data = resp.json()
-            choice = data["choices"][0]
-            msg_data = choice.get("message", {})
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=client_timeout) as client:
+                    resp = await client.post(url, headers=headers, json=body)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"OpenAI API Error ({resp.status_code}): {resp.text}")
 
-            # 解析 Tool Calls
-            tool_calls = None
-            if "tool_calls" in msg_data and msg_data["tool_calls"]:
-                tool_calls = []
-                for tc in msg_data["tool_calls"]:
-                    func = tc["function"]
-                    tool_calls.append(
-                        ToolCall(
-                            id=tc["id"],
-                            type=tc.get("type", "function"),
-                            function=ToolFunction(
-                                name=func["name"],
-                                arguments=func.get("arguments", "{}")
+                    data = resp.json()
+                    choice = data["choices"][0]
+                    msg_data = choice.get("message", {})
+
+                    # 解析 Tool Calls
+                    tool_calls = None
+                    if "tool_calls" in msg_data and msg_data["tool_calls"]:
+                        tool_calls = []
+                        for tc in msg_data["tool_calls"]:
+                            func = tc["function"]
+                            tool_calls.append(
+                                ToolCall(
+                                    id=tc["id"],
+                                    type=tc.get("type", "function"),
+                                    function=ToolFunction(
+                                        name=func["name"],
+                                        arguments=func.get("arguments", "{}")
+                                    )
+                                )
                             )
-                        )
+
+                    usage_data = data.get("usage", {})
+                    usage = UsageStats(
+                        prompt_tokens=usage_data.get("prompt_tokens", 0),
+                        completion_tokens=usage_data.get("completion_tokens", 0),
+                        total_tokens=usage_data.get("total_tokens", 0),
+                        prompt_cache_hit_tokens=usage_data.get("prompt_cache_hit_tokens", 0),
+                        prompt_cache_miss_tokens=usage_data.get("prompt_cache_miss_tokens", 0)
                     )
 
-            usage_data = data.get("usage", {})
-            usage = UsageStats(
-                prompt_tokens=usage_data.get("prompt_tokens", 0),
-                completion_tokens=usage_data.get("completion_tokens", 0),
-                total_tokens=usage_data.get("total_tokens", 0),
-                prompt_cache_hit_tokens=usage_data.get("prompt_cache_hit_tokens", 0),
-                prompt_cache_miss_tokens=usage_data.get("prompt_cache_miss_tokens", 0)
-            )
-
-            return LLMResponse(
-                content=msg_data.get("content"),
-                reasoning_content=msg_data.get("reasoning_content"),
-                tool_calls=tool_calls,
-                finish_reason=choice.get("finish_reason", "stop"),
-                usage=usage,
-                raw_response=data
-            )
+                    return LLMResponse(
+                        content=msg_data.get("content"),
+                        reasoning_content=msg_data.get("reasoning_content"),
+                        tool_calls=tool_calls,
+                        finish_reason=choice.get("finish_reason", "stop"),
+                        usage=usage,
+                        raw_response=data
+                    )
+            except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError, httpx.ConnectTimeout, httpx.PoolTimeout) as ne:
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"上游 API 网络连接中断/超时 (已重试 {max_retries} 次): {str(ne)}。请检查网络状态、API Key 或 Base URL。")
+                await asyncio.sleep(1.0 * (attempt + 1))
 
     async def stream_chat(
         self,
@@ -136,7 +146,7 @@ class OpenAICompatibleProvider(BaseProvider):
         max_tokens: Optional[int] = None,
         extra_params: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """执行流式请求并逐帧解析 SSE"""
+        """执行流式请求并逐帧解析 SSE（内置网络重试与大模型深度长链思考超时加固）"""
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -167,38 +177,48 @@ class OpenAICompatibleProvider(BaseProvider):
                         body["max_tokens"] = 32768
             body.update(ep)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            async with client.stream("POST", url, headers=headers, json=body) as response:
-                if response.status_code != 200:
-                    err_body = await response.aread()
-                    raise RuntimeError(f"OpenAI Stream Error ({response.status_code}): {err_body.decode('utf-8')}")
+        client_timeout = httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=60.0)
+        max_retries = 3
 
-                async for line in response.aiter_lines():
-                    line = line.strip()
-                    if not line or not line.startswith("data:"):
-                        continue
-                    data_str = line[5:].strip()
-                    if data_str == "[DONE]":
-                        yield {"type": "done"}
-                        break
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=client_timeout) as client:
+                    async with client.stream("POST", url, headers=headers, json=body) as response:
+                        if response.status_code != 200:
+                            err_body = await response.aread()
+                            raise RuntimeError(f"OpenAI Stream Error ({response.status_code}): {err_body.decode('utf-8', errors='ignore')}")
 
-                    try:
-                        chunk = json.loads(data_str)
-                        if "usage" in chunk and chunk["usage"]:
-                            yield {"type": "usage", "usage": chunk["usage"]}
+                        async for line in response.aiter_lines():
+                            line = line.strip()
+                            if not line or not line.startswith("data:"):
+                                continue
+                            data_str = line[5:].strip()
+                            if data_str == "[DONE]":
+                                yield {"type": "done"}
+                                break
 
-                        choices = chunk.get("choices", [])
-                        if not choices:
-                            continue
-                        delta = choices[0].get("delta", {})
-                        finish_reason = choices[0].get("finish_reason")
+                            try:
+                                chunk = json.loads(data_str)
+                                if "usage" in chunk and chunk["usage"]:
+                                    yield {"type": "usage", "usage": chunk["usage"]}
 
-                        yield {
-                            "type": "delta",
-                            "content": delta.get("content"),
-                            "reasoning_content": delta.get("reasoning_content"),
-                            "tool_calls": delta.get("tool_calls"),
-                            "finish_reason": finish_reason
-                        }
-                    except json.JSONDecodeError:
-                        continue
+                                choices = chunk.get("choices", [])
+                                if not choices:
+                                    continue
+                                delta = choices[0].get("delta", {})
+                                finish_reason = choices[0].get("finish_reason")
+
+                                yield {
+                                    "type": "delta",
+                                    "content": delta.get("content"),
+                                    "reasoning_content": delta.get("reasoning_content"),
+                                    "tool_calls": delta.get("tool_calls"),
+                                    "finish_reason": finish_reason
+                                }
+                            except json.JSONDecodeError:
+                                continue
+                return
+            except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError, httpx.ConnectTimeout, httpx.PoolTimeout) as ne:
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"上游 API 流式连接超时/中断 (已重试 {max_retries} 次): {str(ne)}。请检查网络状态、API Key 或 Base URL。")
+                await asyncio.sleep(1.0 * (attempt + 1))
