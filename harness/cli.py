@@ -58,6 +58,12 @@ def parse_args():
         default=None,
         help="指定使用的模型名称"
     )
+    parser.add_argument(
+        "--token",
+        type=str,
+        default=None,
+        help="启用 Web UI 与 API 访问 Token 认证密码 (防止公网无鉴权暴露)"
+    )
     return parser.parse_args()
 
 
@@ -127,17 +133,39 @@ async def run_repl(config):
             break
 
 
-def start_web_ui(host: str, port: int, config_path: str = None):
+def start_web_ui(host: str, port: int, token: str = None, config_path: str = None):
     """启动 Web UI 服务"""
     import uvicorn
-    from harness.ui.app import create_app
 
+    if token:
+        os.environ["HARNESS_AUTH_TOKEN"] = token
+
+    auth_active = bool(os.getenv("HARNESS_AUTH_TOKEN"))
+
+    # 安全审计告警
+    if host in ("0.0.0.0", "::") and not auth_active:
+        print("\n" + "!" * 64)
+        print("  [⚠️ 安全风险告警] 服务监听地址为 0.0.0.0 且未启用 Token 访问鉴权！")
+        print("  局域网或公网用户均可直接访问您的 Web UI 并执行任意文件读写或终端命令。")
+        print("  强烈建议：")
+        print("    1. 本地安全使用：使用默认 host (127.0.0.1)")
+        print("    2. 远程网络访问：启动时添加 --token <SECRET_TOKEN> 或配置 HARNESS_AUTH_TOKEN")
+        print("!" * 64 + "\n")
+
+    from harness.ui.app import create_app
     app = create_app(config_path)
+
     browser_url = f"http://127.0.0.1:{port}" if host in ("0.0.0.0", "127.0.0.1") else f"http://{host}:{port}"
+    if auth_active:
+        browser_url += f"/?token={os.getenv('HARNESS_AUTH_TOKEN')}"
+
     print(f"\n=======================================================")
     print(f"  Omni Agent Harness - Master Dashboard Web UI 已启动!")
-    print(f"  浏览器访问地址: {browser_url}  (或 http://localhost:{port})")
-    print(f"  (注: 0.0.0.0 为服务监听地址，浏览器请使用 127.0.0.1:{port})")
+    print(f"  浏览器访问地址: {browser_url}")
+    if auth_active:
+        print(f"  🔒 安全鉴权模式: 已启用 (Token 保护中)")
+    else:
+        print(f"  🔓 安全鉴权模式: 本地单机模式 (127.0.0.1)")
     print(f"  最高领导指令编辑中心已就绪，100% 绝对置顶注入生效中")
     print(f"=======================================================\n")
 
@@ -149,7 +177,7 @@ def main():
     config = load_config()
 
     if args.ui:
-        start_web_ui(args.host, args.port)
+        start_web_ui(args.host, args.port, token=args.token)
     elif args.prompt:
         asyncio.run(run_single_task(args, config))
     else:

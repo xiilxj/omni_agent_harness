@@ -35,21 +35,19 @@ class MasterPromptInjector:
             if (self.base_dir / configured_path).exists():
                 return self.base_dir / configured_path
 
-        # 默认全局唯一权威源 ~/.config/dsh/MASTER_SYSTEM_PROMPT.md
-        global_canonical = Path.home() / ".config" / "dsh" / "MASTER_SYSTEM_PROMPT.md"
-        if global_canonical.exists():
-            return global_canonical
-
+        # 优先读取当前目录或工程根目录中的独立文件
         candidates = [
-            global_canonical,
             Path.cwd() / "MASTER_SYSTEM_PROMPT.md",
-            self.base_dir / "MASTER_SYSTEM_PROMPT.md"
+            self.base_dir / "MASTER_SYSTEM_PROMPT.md",
+            Path.home() / ".config" / "dsh" / "MASTER_SYSTEM_PROMPT.md"
         ]
         for c in candidates:
-            if c.exists():
+            if c.exists() and not c.is_symlink():
+                return c
+            elif c.exists():
                 return c
 
-        return global_canonical
+        return self.base_dir / "MASTER_SYSTEM_PROMPT.md"
 
     def read_master_prompt(self, force_reload: bool = False) -> str:
         """读取并获取 Master System Prompt 原始文本（支持热更新检查）"""

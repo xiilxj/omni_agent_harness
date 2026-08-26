@@ -54,13 +54,59 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         description="Omni Agent Harness - 工业级智能体底座与最高层级系统指令控制台"
     )
 
+    # 1. 安全加固 CORS 中间件：限制本地安全来源与可配置域名，严禁对任意来源通配允许 Credentials
+    allowed_cors_origins = [
+        "http://localhost:7890",
+        "http://127.0.0.1:7890",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
+    env_cors = os.getenv("HARNESS_CORS_ORIGINS")
+    if env_cors:
+        allowed_cors_origins.extend([o.strip() for o in env_cors.split(",") if o.strip()])
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_cors_origins,
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    # 2. 安全鉴权中间件 (当配置了 HARNESS_AUTH_TOKEN 时生效)
+    auth_token = os.getenv("HARNESS_AUTH_TOKEN")
+
+    @app.middleware("http")
+    async def token_auth_middleware(request: Request, call_next):
+        if auth_token and auth_token.strip():
+            if request.url.path in ["/favicon.ico", "/healthz"]:
+                return await call_next(request)
+
+            req_auth = request.headers.get("Authorization", "")
+            req_token = ""
+            if req_auth.startswith("Bearer "):
+                req_token = req_auth[7:].strip()
+            elif not req_token:
+                req_token = request.query_params.get("token", "")
+
+            if req_token != auth_token:
+                if request.url.path.startswith("/api/"):
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Unauthorized: Invalid or missing HARNESS_AUTH_TOKEN"}
+                    )
+                elif request.url.path == "/":
+                    return HTMLResponse(
+                        "<div style='font-family:sans-serif;padding:40px;background:#0e1017;color:#fff;min-height:100vh;'>"
+                        "<h2 style='color:#ef4444;'>🔒 401 Unauthorized / 需要访问令牌</h2>"
+                        "<p style='color:#a1a1aa;'>此 Omni Agent Harness 实例已启用安全鉴权保护。请携带有效 Token 访问：</p>"
+                        "<code style='background:#18181b;padding:6px 12px;border-radius:6px;color:#60a5fa;'>http://IP:PORT/?token=YOUR_AUTH_TOKEN</code>"
+                        "</div>",
+                        status_code=401
+                    )
+        return await call_next(request)
 
     templates_dir = Path(__file__).resolve().parent / "templates"
 
@@ -388,11 +434,8 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                     if not model_list:
                         if "deepseek" in req.provider_name.lower():
                             model_list = [
-                                "deepseek-v4-pro",
-                                "deepseek-v4-flash",
                                 "deepseek-chat",
-                                "deepseek-reasoner",
-                                "deepseek-v4-flash-vision-exp"
+                                "deepseek-reasoner"
                             ]
                         else:
                             model_list = ["default-model"]

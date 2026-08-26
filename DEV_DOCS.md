@@ -146,11 +146,9 @@
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 34 轮（输入框双向高度自适应收缩 + 无遮罩纯净侧滑设置 + 网络 3 次重试与 180s 超时防线 + README 体系全面同步）
+- **审核轮数**: 第 35 轮（消除坏符号链接 + 安全加固 CORS 与 Token 鉴权 + 本地密钥 0600 权限加固 + 独立 Master 提示词模板）
 - **测试状态**:
   - `pytest tests/`: **20/20 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
-  - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
-  - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
-  - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
+  - `./dist/Omni_Agent_Harness_Windows_Clean.zip` (或系统桌面 `Desktop/Omni_Agent_Harness_Windows_Clean.zip`)
 - **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（全量最新代码与文档已推送到 main 分支）。

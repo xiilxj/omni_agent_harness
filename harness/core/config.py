@@ -167,6 +167,13 @@ def _load_dotenv_if_exists(base_dir: Path):
     for c in candidates:
         if c.exists() and c.is_file():
             try:
+                # 在 POSIX 环境下自动加固文件权限为 0600 (仅当前用户可读写)
+                if hasattr(os, "chmod") and sys.platform != "win32":
+                    try:
+                        os.chmod(c, 0o600)
+                    except Exception:
+                        pass
+
                 with open(c, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
