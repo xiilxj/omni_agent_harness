@@ -776,11 +776,12 @@
             <!-- Header & View Mode Switcher -->
             <div class="flex items-center justify-between pb-1 border-b border-dark-border">
                 <div class="flex items-center space-x-2">
-                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                     <span class="text-xs font-semibold text-dark-heading font-mono">MASTER_SYSTEM_PROMPT.md</span>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 border border-blue-800/40 text-blue-400 font-mono">🔓 自由编辑状态</span>
                 </div>
                 <div class="flex items-center space-x-1.5 bg-dark-bg p-0.5 rounded border border-dark-border text-[10px]">
-                    <button id="btn-prompt-mode-edit" class="px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition">📝 编辑源码</button>
+                    <button id="btn-prompt-mode-edit" class="px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition">📝 编辑源码 (可打字修改)</button>
                     <button id="btn-prompt-mode-preview" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition">👁️ 实际透视预览</button>
                 </div>
             </div>
@@ -1681,8 +1682,15 @@
             if (activePane) activePane.classList.remove('hidden');
 
             if (tab === 'prompt') {
+                if (btnPromptModeEdit) {
+                    btnPromptModeEdit.className = 'px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition';
+                    if (btnPromptModePreview) btnPromptModePreview.className = 'px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition';
+                    if (containerPromptEditor) containerPromptEditor.classList.remove('hidden');
+                    if (containerPromptPreview) containerPromptPreview.classList.add('hidden');
+                }
                 loadMasterPrompt();
                 loadPromptPresets();
+                setTimeout(() => { if (masterTextarea) masterTextarea.focus(); }, 80);
             } else if (tab === 'skills') {
                 loadSkillsList();
             } else if (tab === 'mcp') {
@@ -2249,6 +2257,13 @@
             masterCharCount.textContent = `${masterTextarea.value.length} chars`;
             updateActivePresetBadge();
             updateLivePromptPreview();
+        });
+
+        masterTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                btnSaveMasterPrompt.click();
+            }
         });
 
         btnPromptModeEdit.addEventListener('click', () => {
