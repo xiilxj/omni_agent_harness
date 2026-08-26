@@ -143,3 +143,40 @@ async def test_skills_and_mcp_api_endpoints():
         assert "artifacts" in data_art
 
 
+def test_billing_cost_calculation():
+    """测试 DSH 1:1 官方标准模型费率与缓存命中折扣核算算法"""
+    from harness.core.billing import calculate_token_cost
+
+    # 1. 测试 deepseek-chat 费率 (输入 ¥1.0/M, 缓存命中 ¥0.1/M, 输出 ¥2.0/M)
+    res_chat = calculate_token_cost(
+        model_name="deepseek-chat",
+        prompt_tokens=10000,
+        prompt_cache_hit_tokens=8000,
+        completion_tokens=2000
+    )
+    assert res_chat["prompt_cache_hit_tokens"] == 8000
+    assert res_chat["prompt_cache_miss_tokens"] == 2000
+    # 未命中: 2000 * 1.0 / 1e6 = 0.002
+    # 命中: 8000 * 0.1 / 1e6 = 0.0008
+    # 输出: 2000 * 2.0 / 1e6 = 0.004
+    # 总计 = 0.0068
+    assert res_chat["cost_input_miss"] == 0.002
+    assert res_chat["cost_input_hit"] == 0.0008
+    assert res_chat["cost_output"] == 0.004
+    assert res_chat["turn_cost"] == 0.0068
+
+    # 2. 测试 deepseek-reasoner 深度思考费率 (输入 ¥4.0/M, 缓存命中 ¥1.0/M, 输出 ¥16.0/M)
+    res_r1 = calculate_token_cost(
+        model_name="deepseek-reasoner",
+        prompt_tokens=10000,
+        prompt_cache_hit_tokens=5000,
+        completion_tokens=1000
+    )
+    # 未命中: 5000 * 4.0 / 1e6 = 0.02
+    # 命中: 5000 * 1.0 / 1e6 = 0.005
+    # 输出: 1000 * 16.0 / 1e6 = 0.016
+    # 总计 = 0.041
+    assert res_r1["turn_cost"] == 0.041
+
+
+

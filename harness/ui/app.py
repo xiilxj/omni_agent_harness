@@ -21,6 +21,7 @@ from harness.core.agent import OmniAgent
 from harness.core.session import SessionManager, SessionItem, TelemetryData, auto_generate_title, global_session_manager
 from harness.core.workspace import WorkspaceManager, global_workspace_manager
 from harness.prompt.master_injector import MasterPromptInjector
+from harness.core.billing import calculate_token_cost
 from harness.tools.registry import global_tools
 from harness.tools.default_tools import register_default_tools
 
@@ -568,6 +569,18 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 cache_tokens = agent.total_usage.prompt_cache_hit_tokens
                 cache_ratio = round((cache_tokens / max(p_tokens, 1)) * 100, 1) if cache_tokens else 0.0
 
+                actual_model = req.model or session.model or "deepseek-chat"
+                cost_info = calculate_token_cost(
+                    model_name=actual_model,
+                    prompt_tokens=p_tokens,
+                    prompt_cache_hit_tokens=cache_tokens,
+                    completion_tokens=c_tokens
+                )
+
+                turn_cost = cost_info["turn_cost"]
+                accumulated_cost = round((getattr(session, "accumulated_cost_cny", 0.0) or 0.0) + turn_cost, 6)
+                session.accumulated_cost_cny = accumulated_cost
+
                 telemetry = TelemetryData(
                     prompt_tokens=p_tokens,
                     completion_tokens=c_tokens,
@@ -575,7 +588,13 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                     latency_ms=int(total_duration * 1000),
                     tokens_per_sec=tps,
                     cache_hit_tokens=cache_tokens,
-                    cache_hit_ratio=cache_ratio
+                    cache_hit_ratio=cache_ratio,
+                    prompt_cache_miss_tokens=cost_info["prompt_cache_miss_tokens"],
+                    turn_cost_cny=turn_cost,
+                    session_cost_cny=accumulated_cost,
+                    formatted_cost=cost_info["formatted_cost"],
+                    model_name=actual_model,
+                    pricing_breakdown=cost_info
                 )
 
                 # 会话持久化记录

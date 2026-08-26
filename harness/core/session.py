@@ -15,7 +15,7 @@ from harness.core.models import Message, UsageStats
 
 
 class TelemetryData(BaseModel):
-    """遥测与计量数据"""
+    """遥测与计量数据 (DSH 对齐)"""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
@@ -23,6 +23,12 @@ class TelemetryData(BaseModel):
     tokens_per_sec: float = 0.0
     cache_hit_tokens: int = 0
     cache_hit_ratio: float = 0.0
+    prompt_cache_miss_tokens: int = 0
+    turn_cost_cny: float = 0.0
+    session_cost_cny: float = 0.0
+    formatted_cost: str = "¥0.00000"
+    model_name: str = "deepseek-chat"
+    pricing_breakdown: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SessionItem(BaseModel):
@@ -37,6 +43,7 @@ class SessionItem(BaseModel):
     model: str = "deepseek-chat"
     messages: List[Dict[str, Any]] = Field(default_factory=list)
     telemetry: TelemetryData = Field(default_factory=TelemetryData)
+    accumulated_cost_cny: float = 0.0
 
 
 def auto_generate_title(prompt: str) -> str:

@@ -373,40 +373,74 @@
                 </div>
             </div>
 
-            <!-- DSH Style Token & Telemetry Dashboard (底部仪表盘) -->
-            <div class="p-2 rounded bg-dark-bg border border-dark-border text-[10px] font-mono text-dark-muted flex items-center justify-between">
-                <div class="flex items-center space-x-3.5">
-                    <div class="flex items-center space-x-1">
-                        <span>Prompt:</span>
-                        <strong class="text-dark-heading" id="meter-prompt-tokens">0</strong>
+            <!-- DSH 官方 1:1 像素级复刻 Telemetry & 实时计费仪表盘 -->
+            <div class="px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-[11px] font-mono text-dark-muted flex flex-wrap items-center justify-between gap-y-1.5 shadow-sm">
+                <!-- Left: Metrics Cluster -->
+                <div class="flex items-center space-x-3 overflow-x-auto custom-scroll pr-2">
+                    <!-- Prompt Tokens & Cache Hit -->
+                    <div class="flex items-center space-x-1" title="输入提示词 Token 总量及缓存命中状态">
+                        <span class="text-zinc-500">Prompt:</span>
+                        <strong class="text-dark-heading font-medium" id="meter-prompt-tokens">0</strong>
+                        <span id="meter-hit-detail" class="text-emerald-400 text-[10px]">(Hit: 0)</span>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <span>Completion:</span>
-                        <strong class="text-dark-heading" id="meter-comp-tokens">0</strong>
+
+                    <!-- Completion Tokens -->
+                    <div class="flex items-center space-x-1" title="模型生成输出 Token 数量">
+                        <span class="text-zinc-500">Comp:</span>
+                        <strong class="text-dark-heading font-medium" id="meter-comp-tokens">0</strong>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <span>Total:</span>
-                        <strong class="text-blue-400" id="meter-total-tokens">0</strong>
+
+                    <!-- Total Tokens -->
+                    <div class="flex items-center space-x-1" title="本轮总计消耗 Token">
+                        <span class="text-zinc-500">Total:</span>
+                        <strong class="text-blue-400 font-semibold" id="meter-total-tokens">0</strong>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <span>Latency:</span>
-                        <strong class="text-dark-heading" id="meter-latency">0.0s</strong>
-                        <span id="meter-tps" class="text-zinc-500">(0.0 t/s)</span>
+
+                    <!-- Latency & Live TPS -->
+                    <div class="flex items-center space-x-1 border-l border-dark-border/80 pl-2.5" title="端到端耗时与实时吐字速率">
+                        <span class="text-zinc-500">Time:</span>
+                        <strong class="text-dark-heading font-medium" id="meter-latency">0.0s</strong>
+                        <span id="meter-tps" class="text-amber-400 font-medium">(0.0 t/s)</span>
                     </div>
-                    <div class="flex items-center space-x-1">
-                        <span>Prompt Cache:</span>
-                        <strong class="text-emerald-400" id="meter-cache-hit">0.0%</strong>
+
+                    <!-- Cache Hit Ratio Badge -->
+                    <div class="flex items-center space-x-1" title="提示词上下文缓存命中率 (90% 折扣加速)">
+                        <span class="text-zinc-500">Cache:</span>
+                        <span id="meter-cache-hit" class="px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 font-semibold border border-emerald-800/40">0.0%</span>
                     </div>
+
+                    <!-- Turn Cost (本次计费) -->
+                    <div class="flex items-center space-x-1 border-l border-dark-border/80 pl-2.5" title="本次单轮实际计费 (精确到分后五位)">
+                        <span class="text-zinc-500">Cost:</span>
+                        <strong class="text-emerald-400 font-semibold" id="meter-turn-cost">¥0.00000</strong>
+                    </div>
+
+                    <!-- Session Total Cost (会话累计计费) -->
+                    <div class="flex items-center space-x-1" title="当前会话全部交互累计费用">
+                        <span class="text-zinc-500">Session:</span>
+                        <strong class="text-zinc-300 font-medium" id="meter-session-cost">¥0.00000</strong>
+                    </div>
+
+                    <!-- Realtime Balance Button (账户实时余额) -->
                     <div class="flex items-center space-x-1 border-l border-dark-border/80 pl-2.5">
-                        <span>Balance:</span>
-                        <strong class="text-emerald-400 font-semibold" id="meter-balance-badge">¥--</strong>
+                        <span class="text-zinc-500">Balance:</span>
+                        <strong class="text-emerald-400 font-semibold cursor-pointer hover:underline" id="meter-balance-badge" title="点击刷新官方实时余额">¥--</strong>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <div class="w-20 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-                        <div id="meter-progress-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div>
+
+                <!-- Right: Billing Breakdown Trigger & 128K Context Bar -->
+                <div class="flex items-center space-x-2.5 flex-shrink-0">
+                    <button id="btn-open-billing-modal" class="px-2 py-0.5 rounded bg-dark-surface hover:bg-zinc-800 border border-dark-border hover:border-emerald-500/60 text-zinc-300 hover:text-emerald-400 text-[10px] flex items-center space-x-1 transition shadow-sm" title="查看 DSH 官方费率标准与本次计费明细清单">
+                        <svg class="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        <span>计费明细</span>
+                    </button>
+
+                    <div class="flex items-center space-x-1.5" title="128K 上下文窗口已占用比例">
+                        <div class="w-16 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                            <div id="meter-progress-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <span id="meter-context-ratio" class="text-[10px] text-zinc-400">0/128k</span>
                     </div>
-                    <span id="meter-context-ratio">0/128k</span>
                 </div>
             </div>
         </div> <!-- End of Center Chat Column -->
@@ -810,6 +844,119 @@
     <!-- Backdrop Overlay -->
     <div id="drawer-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity"></div>
 
+    <!-- DSH 计费明细与成本核算弹窗 (Billing Breakdown Modal) -->
+    <div id="modal-billing-breakdown" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+        <div class="bg-dark-surface border border-dark-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-4 py-3 bg-dark-bg/80 border-b border-dark-border flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="p-1 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    </span>
+                    <div>
+                        <h3 class="text-xs font-semibold text-dark-heading">DSH 实时计费与 Token 成本明细表</h3>
+                        <p class="text-[10px] text-dark-muted font-mono">100% 对齐官方标准费率与缓存命中折扣核算</p>
+                    </div>
+                </div>
+                <button id="btn-close-billing-modal" class="text-dark-muted hover:text-dark-heading p-1 rounded hover:bg-dark-hover transition">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-4 space-y-3.5 text-xs font-mono overflow-y-auto max-h-[75vh] custom-scroll">
+                <!-- 1. Current Model Pricing Card -->
+                <div class="p-3 bg-dark-bg border border-dark-border rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-[11px] border-b border-dark-border/60 pb-1.5">
+                        <span class="text-dark-muted">当前模型费率标准:</span>
+                        <span id="billing-modal-model-badge" class="px-2 py-0.5 rounded font-semibold bg-blue-950/60 text-blue-400 border border-blue-800/40">deepseek-chat</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px]">
+                        <div class="p-2 rounded bg-dark-surface border border-dark-border text-center space-y-0.5">
+                            <div class="text-zinc-500">输入 (未命中)</div>
+                            <div id="pricing-input-miss" class="font-semibold text-dark-heading">¥1.00 / 1M</div>
+                        </div>
+                        <div class="p-2 rounded bg-dark-surface border border-emerald-800/30 text-center space-y-0.5">
+                            <div class="text-emerald-400">输入 (缓存命中)</div>
+                            <div id="pricing-input-hit" class="font-semibold text-emerald-300">¥0.10 / 1M (省90%)</div>
+                        </div>
+                        <div class="p-2 rounded bg-dark-surface border border-dark-border text-center space-y-0.5">
+                            <div class="text-zinc-500">输出 (生成)</div>
+                            <div id="pricing-output" class="font-semibold text-dark-heading">¥2.00 / 1M</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. This Turn Breakdown Table -->
+                <div class="space-y-1.5">
+                    <div class="text-[10px] font-semibold text-dark-muted uppercase">本次交互消耗核算 (Turn Breakdown):</div>
+                    <table class="w-full text-left text-[11px] border-collapse bg-dark-bg rounded-xl overflow-hidden border border-dark-border">
+                        <thead>
+                            <tr class="bg-dark-surface/80 text-zinc-400 border-b border-dark-border text-[10px]">
+                                <th class="p-2 font-medium">计费项</th>
+                                <th class="p-2 font-medium text-right">Tokens 数量</th>
+                                <th class="p-2 font-medium text-right">计费单价</th>
+                                <th class="p-2 font-medium text-right">实扣费用</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-dark-border/40 text-dark-heading">
+                            <tr>
+                                <td class="p-2 text-zinc-400">Prompt (未命中缓存)</td>
+                                <td class="p-2 text-right" id="row-prompt-miss-tokens">0</td>
+                                <td class="p-2 text-right text-zinc-400" id="row-prompt-miss-rate">¥1.00/M</td>
+                                <td class="p-2 text-right font-mono" id="row-prompt-miss-cost">¥0.00000</td>
+                            </tr>
+                            <tr class="bg-emerald-950/20 text-emerald-300">
+                                <td class="p-2 flex items-center space-x-1">
+                                    <span>Prompt (命中缓存)</span>
+                                    <span class="text-[9px] px-1 rounded bg-emerald-900/60 text-emerald-400">90% off</span>
+                                </td>
+                                <td class="p-2 text-right font-semibold" id="row-prompt-hit-tokens">0</td>
+                                <td class="p-2 text-right text-emerald-400/80" id="row-prompt-hit-rate">¥0.10/M</td>
+                                <td class="p-2 text-right font-semibold font-mono" id="row-prompt-hit-cost">¥0.00000</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 text-zinc-400">Completion (模型生成)</td>
+                                <td class="p-2 text-right" id="row-comp-tokens">0</td>
+                                <td class="p-2 text-right text-zinc-400" id="row-comp-rate">¥2.00/M</td>
+                                <td class="p-2 text-right font-mono" id="row-comp-cost">¥0.00000</td>
+                            </tr>
+                            <tr class="bg-dark-surface/90 font-semibold border-t border-dark-border">
+                                <td class="p-2 text-blue-400">本次总计扣费 (Subtotal)</td>
+                                <td class="p-2 text-right text-blue-400" id="row-total-tokens">0</td>
+                                <td class="p-2 text-right text-zinc-500">-</td>
+                                <td class="p-2 text-right text-emerald-400 text-xs font-mono" id="row-total-cost">¥0.00000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 3. Session & Balance Overview -->
+                <div class="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                    <div class="p-2.5 rounded-xl bg-dark-bg border border-dark-border space-y-1">
+                        <div class="text-[10px] text-dark-muted">当前会话累计总支出:</div>
+                        <div id="modal-session-accumulated" class="text-sm font-bold text-zinc-200">¥0.00000</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 space-y-1">
+                        <div class="text-[10px] text-emerald-400">官方账户剩余可用余额:</div>
+                        <div id="modal-account-balance" class="text-sm font-bold text-emerald-300">¥--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 bg-dark-bg/80 border-t border-dark-border flex items-center justify-between">
+                <button id="btn-refresh-balance-modal" class="px-3 py-1.5 bg-dark-surface hover:bg-zinc-800 border border-dark-border text-dark-muted hover:text-emerald-400 rounded-lg text-xs flex items-center space-x-1.5 transition">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>同步官方账户余额</span>
+                </button>
+                <button id="btn-dismiss-billing-modal" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition shadow">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // State
         let activeSessionId = null;
@@ -833,15 +980,26 @@
         const sessionHistoryList = document.getElementById('session-history-list');
         const fileTreeContainer = document.getElementById('file-tree-container');
 
-        // Telemetry Meter Elements
+        // Telemetry & Billing Meter Elements
         const meterPromptTokens = document.getElementById('meter-prompt-tokens');
+        const meterHitDetail = document.getElementById('meter-hit-detail');
         const meterCompTokens = document.getElementById('meter-comp-tokens');
         const meterTotalTokens = document.getElementById('meter-total-tokens');
         const meterLatency = document.getElementById('meter-latency');
         const meterTps = document.getElementById('meter-tps');
         const meterCacheHit = document.getElementById('meter-cache-hit');
+        const meterTurnCost = document.getElementById('meter-turn-cost');
+        const meterSessionCost = document.getElementById('meter-session-cost');
+        const meterBalanceBadge = document.getElementById('meter-balance-badge');
         const meterProgressBar = document.getElementById('meter-progress-bar');
         const meterContextRatio = document.getElementById('meter-context-ratio');
+
+        // Billing Modal Elements
+        const modalBillingBreakdown = document.getElementById('modal-billing-breakdown');
+        const btnOpenBillingModal = document.getElementById('btn-open-billing-modal');
+        const btnCloseBillingModal = document.getElementById('btn-close-billing-modal');
+        const btnDismissBillingModal = document.getElementById('btn-dismiss-billing-modal');
+        const btnRefreshBalanceModal = document.getElementById('btn-refresh-balance-modal');
 
         // Drawer Elements
         const drawer = document.getElementById('settings-drawer');
@@ -2459,21 +2617,114 @@
         }
 
         // 6. Telemetry Meter Updater
+        // ==================== DSH 仪表盘与实时计费控制器 ====================
+        let latestTelemetry = null;
+        let activeTimerInterval = null;
+
         function updateTelemetryUI(telemetry) {
             if (!telemetry) return;
+            latestTelemetry = telemetry;
+
             meterPromptTokens.textContent = (telemetry.prompt_tokens || 0).toLocaleString();
+            const hitTokens = telemetry.cache_hit_tokens || 0;
+            meterHitDetail.textContent = `(Hit: ${hitTokens.toLocaleString()})`;
+            if (hitTokens > 0) {
+                meterHitDetail.className = 'text-emerald-400 text-[10px] font-semibold';
+            } else {
+                meterHitDetail.className = 'text-zinc-500 text-[10px]';
+            }
+
             meterCompTokens.textContent = (telemetry.completion_tokens || 0).toLocaleString();
             meterTotalTokens.textContent = (telemetry.total_tokens || 0).toLocaleString();
             meterLatency.textContent = `${((telemetry.latency_ms || 0) / 1000).toFixed(1)}s`;
             meterTps.textContent = `(${telemetry.tokens_per_sec || 0} t/s)`;
-            meterCacheHit.textContent = `${telemetry.cache_hit_ratio || 0}%`;
+            
+            const hitRatio = telemetry.cache_hit_ratio || 0;
+            meterCacheHit.textContent = `${hitRatio}%`;
+            if (hitRatio > 50) {
+                meterCacheHit.className = 'px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 font-semibold border border-emerald-800/40';
+            } else {
+                meterCacheHit.className = 'px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 font-medium border border-zinc-800';
+            }
 
+            // 实时费用展示 (分后五位)
+            const turnCost = telemetry.turn_cost_cny !== undefined ? telemetry.turn_cost_cny : (telemetry.turn_cost || 0.0);
+            const sessionCost = telemetry.session_cost_cny !== undefined ? telemetry.session_cost_cny : (telemetry.session_cost || 0.0);
+            meterTurnCost.textContent = `¥${turnCost.toFixed(5)}`;
+            meterSessionCost.textContent = `¥${sessionCost.toFixed(5)}`;
+
+            // 128k 上下文窗口占用率进度条
             const maxWindow = 128000;
             const used = telemetry.total_tokens || 0;
             const pct = Math.min(100, Math.round((used / maxWindow) * 100));
             meterProgressBar.style.width = `${pct}%`;
             meterContextRatio.textContent = `${(used / 1000).toFixed(1)}k/128k`;
         }
+
+        function populateBillingModal() {
+            const currentModel = headerModelSelect ? headerModelSelect.value : 'deepseek-chat';
+            const isReasoner = currentModel.includes('reasoner') || currentModel.includes('r1');
+            
+            // 费率标准展示
+            document.getElementById('billing-modal-model-badge').textContent = currentModel;
+            if (isReasoner) {
+                document.getElementById('pricing-input-miss').textContent = '¥4.00 / 1M';
+                document.getElementById('pricing-input-hit').textContent = '¥1.00 / 1M (省75%)';
+                document.getElementById('pricing-output').textContent = '¥16.00 / 1M';
+            } else {
+                document.getElementById('pricing-input-miss').textContent = '¥1.00 / 1M';
+                document.getElementById('pricing-input-hit').textContent = '¥0.10 / 1M (省90%)';
+                document.getElementById('pricing-output').textContent = '¥2.00 / 1M';
+            }
+
+            const t = latestTelemetry || {};
+            const pb = t.pricing_breakdown || {};
+            
+            const promptMissTokens = t.prompt_cache_miss_tokens || Math.max(0, (t.prompt_tokens || 0) - (t.cache_hit_tokens || 0));
+            const promptHitTokens = t.cache_hit_tokens || 0;
+            const compTokens = t.completion_tokens || 0;
+            const totalTokens = t.total_tokens || (promptMissTokens + promptHitTokens + compTokens);
+
+            const costMiss = pb.cost_input_miss !== undefined ? pb.cost_input_miss : (promptMissTokens / 1000000 * (isReasoner ? 4.0 : 1.0));
+            const costHit = pb.cost_input_hit !== undefined ? pb.cost_input_hit : (promptHitTokens / 1000000 * (isReasoner ? 1.0 : 0.1));
+            const costOut = pb.cost_output !== undefined ? pb.cost_output : (compTokens / 1000000 * (isReasoner ? 16.0 : 2.0));
+            const totalTurnCost = pb.turn_cost !== undefined ? pb.turn_cost : (costMiss + costHit + costOut);
+
+            document.getElementById('row-prompt-miss-tokens').textContent = promptMissTokens.toLocaleString();
+            document.getElementById('row-prompt-miss-rate').textContent = isReasoner ? '¥4.00/M' : '¥1.00/M';
+            document.getElementById('row-prompt-miss-cost').textContent = `¥${costMiss.toFixed(5)}`;
+
+            document.getElementById('row-prompt-hit-tokens').textContent = promptHitTokens.toLocaleString();
+            document.getElementById('row-prompt-hit-rate').textContent = isReasoner ? '¥1.00/M' : '¥0.10/M';
+            document.getElementById('row-prompt-hit-cost').textContent = `¥${costHit.toFixed(5)}`;
+
+            document.getElementById('row-comp-tokens').textContent = compTokens.toLocaleString();
+            document.getElementById('row-comp-rate').textContent = isReasoner ? '¥16.00/M' : '¥2.00/M';
+            document.getElementById('row-comp-cost').textContent = `¥${costOut.toFixed(5)}`;
+
+            document.getElementById('row-total-tokens').textContent = totalTokens.toLocaleString();
+            document.getElementById('row-total-cost').textContent = `¥${totalTurnCost.toFixed(5)}`;
+
+            const sessionCost = t.session_cost_cny !== undefined ? t.session_cost_cny : (t.session_cost || totalTurnCost);
+            document.getElementById('modal-session-accumulated').textContent = `¥${sessionCost.toFixed(5)}`;
+            document.getElementById('modal-account-balance').textContent = meterBalanceBadge ? meterBalanceBadge.textContent : '¥--';
+        }
+
+        if (btnOpenBillingModal) {
+            btnOpenBillingModal.addEventListener('click', () => {
+                populateBillingModal();
+                modalBillingBreakdown.classList.remove('hidden');
+            });
+        }
+        if (meterBalanceBadge) {
+            meterBalanceBadge.addEventListener('click', () => {
+                populateBillingModal();
+                modalBillingBreakdown.classList.remove('hidden');
+            });
+        }
+        if (btnCloseBillingModal) btnCloseBillingModal.addEventListener('click', () => modalBillingBreakdown.classList.add('hidden'));
+        if (btnDismissBillingModal) btnDismissBillingModal.addEventListener('click', () => modalBillingBreakdown.classList.add('hidden'));
+        if (btnRefreshBalanceModal) btnRefreshBalanceModal.addEventListener('click', fetchUserBalance);
 
         // 7. Execution Engine (Streaming & Auto-Collapsing)
         btnSubmit.addEventListener('click', executeTask);
@@ -2498,11 +2749,12 @@
 
             appendUserMessage(prompt);
 
+            const chosenModel = (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-pro') || 'deepseek-v4-pro';
             const payload = {
                 session_id: activeSessionId,
                 prompt: prompt,
                 provider: (settingsProviderPreset ? settingsProviderPreset.value : 'deepseek') || 'deepseek',
-                model: (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-pro') || 'deepseek-v4-pro',
+                model: chosenModel,
                 permission_mode: currentPermission || 'unrestricted',
                 reasoning_effort: currentEffort || 'medium',
                 custom_master_prompt: masterTextarea ? masterTextarea.value : ''
@@ -2513,6 +2765,25 @@
             let currentAnswerContainer = null;
             let currentAnswerText = '';
             let startTime = Date.now();
+            let liveStreamChars = 0;
+            const isReasoner = chosenModel.includes('reasoner') || chosenModel.includes('r1');
+
+            // 启动实时毫秒级秒表走秒与 TPS 动态测速器
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            activeTimerInterval = setInterval(() => {
+                const elapsedSec = (Date.now() - startTime) / 1000;
+                meterLatency.textContent = `${elapsedSec.toFixed(1)}s`;
+                if (elapsedSec > 0.2 && liveStreamChars > 0) {
+                    const estTokens = Math.round(liveStreamChars / 2.0);
+                    meterCompTokens.textContent = estTokens.toLocaleString();
+                    const liveTps = (estTokens / elapsedSec).toFixed(1);
+                    meterTps.textContent = `(${liveTps} t/s)`;
+                    
+                    // 实时动态计费滚动计算
+                    const estTurnCost = (estTokens / 1000000) * (isReasoner ? 16.0 : 2.0);
+                    meterTurnCost.textContent = `¥${estTurnCost.toFixed(5)}`;
+                }
+            }, 100);
 
             try {
                 const response = await fetch('/api/agent/stream', {
@@ -2543,14 +2814,14 @@
                             if (ev.type === 'init' && ev.session_id) {
                                 activeSessionId = ev.session_id;
                             } else if (ev.type === 'thought_delta') {
-                                // 1. 毫秒级实时流式吐出思考链内容
+                                liveStreamChars += (ev.delta || '').length;
                                 if (!currentThoughtContainer) {
                                     currentThoughtContainer = createThoughtAccordion();
                                 }
                                 currentThoughtText = ev.accumulated || (currentThoughtText + ev.delta);
                                 updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
                             } else if (ev.type === 'answer_delta') {
-                                // 2. 思考完成，毫秒级实时流式吐出回答内容
+                                liveStreamChars += (ev.delta || '').length;
                                 if (currentThoughtContainer) {
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
@@ -2591,6 +2862,10 @@
                                     appendAssistantMarkdown(ev.final_answer);
                                 }
                             } else if (ev.type === 'complete') {
+                                if (activeTimerInterval) {
+                                    clearInterval(activeTimerInterval);
+                                    activeTimerInterval = null;
+                                }
                                 if (currentThoughtContainer) {
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
@@ -2614,6 +2889,10 @@
             } catch (err) {
                 appendErrorCard(err.message);
             } finally {
+                if (activeTimerInterval) {
+                    clearInterval(activeTimerInterval);
+                    activeTimerInterval = null;
+                }
                 isRunning = false;
                 btnSubmit.disabled = false;
                 statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
