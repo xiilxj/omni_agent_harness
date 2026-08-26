@@ -38,11 +38,14 @@ class OmniAgent:
         self.total_usage = UsageStats()
         self.current_provider_name: Optional[str] = None
         self.current_model_name: Optional[str] = None
+        self.current_todos: List[Dict[str, Any]] = []
+        self.ask_user_resolver: Optional[Callable[[str, Dict[str, Any]], Any]] = None
 
     def reset_conversation(self):
         """重置会话上下文历史"""
         self.messages = []
         self.total_usage = UsageStats()
+        self.current_todos = []
 
     async def step(
         self,
@@ -190,18 +193,60 @@ class OmniAgent:
                         "tool_id": tc.id
                     })
 
-                # 权限控制检查 (DSH Permission Enforcer)
-                if self.permission_mode == "read_only" and t_name in ("run_command", "write_file", "replace_file_content"):
+                # 1. 交互式向用户提问 (ask_user 阻塞等待)
+                if t_name == "ask_user":
+                    parsed_args = json.loads(t_args) if isinstance(t_args, str) else (t_args or {})
+                    if on_step_callback:
+                        await on_step_callback({
+                            "type": "ask_user",
+                            "tool_id": tc.id,
+                            "question": parsed_args.get("question", ""),
+                            "options": parsed_args.get("options", []),
+                            "is_multi_select": parsed_args.get("is_multi_select", False)
+                        })
+                    if self.ask_user_resolver:
+                        observation = await self.ask_user_resolver(tc.id, parsed_args)
+                    else:
+                        observation = await self.tools.execute(t_name, t_args)
+
+                # 2. 动态待办清单更新 (update_todo_list 进度事件)
+                elif t_name == "update_todo_list":
+                    parsed_args = json.loads(t_args) if isinstance(t_args, str) else (t_args or {})
+                    self.current_todos = parsed_args.get("todos", [])
+                    observation = await self.tools.execute(t_name, t_args)
+                    if on_step_callback:
+                        await on_step_callback({
+                            "type": "todo_update",
+                            "todos": self.current_todos
+                        })
+
+                # 3. 权限控制检查 (DSH Permission Enforcer)
+                elif self.permission_mode == "read_only" and t_name in ("run_command", "write_file", "replace_file_content"):
                     observation = f"Permission Denied: Agent is running in 'read_only' mode. Destructive tool '{t_name}' execution is blocked by safety policy."
                 else:
                     observation = await self.tools.execute(t_name, t_args)
+
+                # 4. 生成统一红绿 Diff 补丁 (针对 replace_file_content)
+                diff_text = None
+                if t_name == "replace_file_content":
+                    try:
+                        import difflib
+                        p_args = json.loads(t_args) if isinstance(t_args, str) else (t_args or {})
+                        old_lines = p_args.get("old_content", "").splitlines(keepends=True)
+                        new_lines = p_args.get("new_content", "").splitlines(keepends=True)
+                        f_name = p_args.get("file_path", "modified_file")
+                        diff_lines = list(difflib.unified_diff(old_lines, new_lines, fromfile=f"a/{f_name}", tofile=f"b/{f_name}"))
+                        diff_text = "".join(diff_lines)
+                    except Exception:
+                        diff_text = None
 
                 if on_step_callback:
                     await on_step_callback({
                         "type": "tool_result",
                         "tool_name": t_name,
                         "tool_id": tc.id,
-                        "observation": observation
+                        "observation": observation,
+                        "diff": diff_text
                     })
 
                 # 将工具执行结果装载入历史上下文

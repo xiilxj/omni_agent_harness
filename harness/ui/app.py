@@ -505,6 +505,26 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             if m.get("role") in ["user", "assistant", "tool"]:
                 agent.messages.append(Message(**m))
 
+        # 绑定 ask_user 异步交互等待 Future 解析器
+        active_questions: Dict[str, asyncio.Future] = getattr(app.state, "active_questions", {})
+        app.state.active_questions = active_questions
+
+        async def ask_user_resolver(tool_id: str, parsed_args: Dict[str, Any]):
+            fut = asyncio.get_running_loop().create_future()
+            active_questions[tool_id] = fut
+            try:
+                # 阻塞等待用户在 Web 界面选择提交（默认 5 分钟超时）
+                res = await asyncio.wait_for(fut, timeout=300)
+                return res
+            except asyncio.TimeoutError:
+                opts = parsed_args.get("options", [])
+                default_choice = opts[0] if opts else "Proceed"
+                return f"User confirmation timed out. Automatically chose: {default_choice}"
+            finally:
+                active_questions.pop(tool_id, None)
+
+        agent.ask_user_resolver = ask_user_resolver
+
         start_time = time.time()
 
         async def event_generator():
@@ -578,5 +598,57 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 "X-Accel-Buffering": "no"
             }
         )
+
+    class UserResponseRequest(BaseModel):
+        tool_id: str
+        selected_options: List[str] = []
+        custom_input: Optional[str] = None
+
+    @app.post("/api/agent/user-response")
+    async def handle_user_response(req: UserResponseRequest):
+        """处理前端用户对 ask_user 交互提问的提交并唤醒 Agent 思考流"""
+        active_questions: Dict[str, asyncio.Future] = getattr(app.state, "active_questions", {})
+        fut = active_questions.get(req.tool_id)
+        if not fut or fut.done():
+            return {"status": "error", "message": "未找到待确认的提问或该提问已超时处理。"}
+
+        parts = []
+        if req.selected_options:
+            parts.append(f"用户选择了: {', '.join(req.selected_options)}")
+        if req.custom_input:
+            parts.append(f"补充说明: {req.custom_input}")
+        ans_text = " | ".join(parts) if parts else "用户已确认。"
+        fut.set_result(ans_text)
+        return {"status": "success", "message": "选项已成功同步给 Agent，正在继续执行！"}
+
+    class RollbackRequest(BaseModel):
+        message_index: int
+
+    @app.post("/api/sessions/{session_id}/rollback")
+    async def rollback_session(session_id: str, req: RollbackRequest):
+        """会话时间旅行：回退到指定历史步骤并裁剪后续上下文"""
+        session = session_mgr.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if 0 <= req.message_index < len(session.messages):
+            session.messages = session.messages[:req.message_index + 1]
+            session_mgr.save_session(session)
+            return {"status": "success", "session": session}
+        return {"status": "error", "message": "Invalid message index"}
+
+    from harness.tools.mcp_client import global_mcp_manager
+
+    @app.get("/api/mcp/servers")
+    async def get_mcp_servers():
+        """获取当前已挂载的 MCP 服务器列表与工具"""
+        res = {}
+        for s_name, conn in global_mcp_manager.servers.items():
+            res[s_name] = {
+                "name": s_name,
+                "command": conn.command,
+                "tools_count": len(conn.tools),
+                "tools": [t.get("name") for t in conn.tools]
+            }
+        return {"mcp_servers": res}
 
     return app

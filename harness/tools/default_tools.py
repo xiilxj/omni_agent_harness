@@ -169,4 +169,60 @@ def register_default_tools(registry: Optional[ToolRegistry] = None) -> ToolRegis
     async def _read_url(url: str, max_length: int = 8000) -> str:
         return await _read_url_fn(url, max_length=max_length)
 
+    # 9. 交互式向用户提问与选项卡片 (Interactive Choice Modal)
+    @reg.register(
+        name="ask_user",
+        description="Ask the user a question with selectable options or open input when encountering ambiguity, design decisions, or needing user confirmation. Pauses execution until the user selects an option in the UI.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "The exact question or decision point to present to the user."},
+                "options": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of 2 to 5 actionable options for the user to choose from."
+                },
+                "is_multi_select": {
+                    "type": "boolean",
+                    "description": "Whether the user can select multiple options (default: false)."
+                }
+            },
+            "required": ["question", "options"]
+        }
+    )
+    async def _ask_user(question: str, options: list, is_multi_select: bool = False) -> str:
+        return f"Interactive question presented to user: '{question}'. Awaiting response."
+
+    # 10. 动态任务待办里程碑清单 (Dynamic Todo Checklist)
+    @reg.register(
+        name="update_todo_list",
+        description="Create or update the structured execution todo checklist. Use this to track multi-step task progress, display visual milestones, and mark steps as pending, in_progress, completed, or failed in real-time.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "todos": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "description": "Unique ID for the step (e.g. '1', 'step-recon')."},
+                            "title": {"type": "string", "description": "Clear description of the step (e.g. '探测目标开放端口与服务')."},
+                            "status": {
+                                "type": "string",
+                                "enum": ["pending", "in_progress", "completed", "failed"],
+                                "description": "Current status of this step."
+                            }
+                        },
+                        "required": ["id", "title", "status"]
+                    },
+                    "description": "The complete list of todo steps reflecting current progress."
+                }
+            },
+            "required": ["todos"]
+        }
+    )
+    def _update_todos(todos: list) -> str:
+        completed = sum(1 for t in todos if t.get("status") == "completed")
+        return f"Todo checklist updated: {completed}/{len(todos)} steps completed."
+
     return reg

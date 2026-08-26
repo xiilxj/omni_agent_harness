@@ -36,6 +36,25 @@ class ToolRegistry:
             return func
         return decorator
 
+    def register_raw(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        func: Callable,
+        is_async: bool = False
+    ):
+        """直接注册一个现成的工具函数 (用于 MCP 动态装载)"""
+        self._tools[name] = func
+        self._tool_schemas[name] = {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": description,
+                "parameters": parameters
+            }
+        }
+
     def get_openai_tools(self) -> List[Dict[str, Any]]:
         """获取兼容 OpenAI / DeepSeek 格式的 tools 列表（字典序稳定排序以最大化 Prompt Cache 命中）"""
         return sorted(self._tool_schemas.values(), key=lambda t: t["function"]["name"])
