@@ -2573,7 +2573,7 @@
             toggleDrawer('prompt');
         });
         btnClearInput.addEventListener('click', () => {
-            promptInput.value = '';
+            resetPromptInputHeight();
             promptInput.focus();
         });
 
@@ -2981,8 +2981,30 @@
             slashPopover?.classList.add('hidden');
         }
 
+        // 输入框高度双向动态自适应（展开与收缩）
+        function adjustPromptInputHeight() {
+            if (!promptInput) return;
+            promptInput.style.height = 'auto';
+            const val = promptInput.value;
+            if (!val || val.trim() === '') {
+                promptInput.style.height = '';
+                return;
+            }
+            const minH = 38;
+            const maxH = 220;
+            const nextH = Math.min(maxH, Math.max(minH, promptInput.scrollHeight));
+            promptInput.style.height = `${nextH}px`;
+        }
+
+        function resetPromptInputHeight() {
+            if (!promptInput) return;
+            promptInput.value = '';
+            promptInput.style.height = '';
+        }
+
         // 输入框输入与快捷指令键盘交互
         promptInput.addEventListener('input', () => {
+            adjustPromptInputHeight();
             const val = promptInput.value;
             if (val.startsWith('/')) {
                 const firstWord = val.split(' ')[0];
@@ -3007,6 +3029,7 @@
                 } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
                     e.preventDefault();
                     selectSlashCommand(filteredSlashCommands[selectedSlashIndex]);
+                    adjustPromptInputHeight();
                     return;
                 } else if (e.key === 'Escape') {
                     hideSlashPopover();
@@ -3029,6 +3052,7 @@
                 const promptText = btn.dataset.prompt;
                 if (promptText && !isRunning) {
                     promptInput.value = promptText;
+                    adjustPromptInputHeight();
                     executeTask();
                 }
             });
@@ -3110,7 +3134,7 @@
         async function sendSteerMessage(prompt) {
             if (!prompt) return;
             appendSteerUserMessage(prompt);
-            promptInput.value = '';
+            resetPromptInputHeight();
             hideSlashPopover();
             try {
                 const res = await fetch('/api/agent/steer', {
@@ -3135,14 +3159,14 @@
             if (prompt === '/clear') {
                 timeline.innerHTML = '';
                 if (emptyState) emptyState.classList.remove('hidden');
-                promptInput.value = '';
+                resetPromptInputHeight();
                 return;
             }
 
             hideSlashPopover();
             setRunningState(true);
             emptyState?.classList.add('hidden');
-            promptInput.value = '';
+            resetPromptInputHeight();
 
             appendUserMessage(prompt);
 
@@ -4035,8 +4059,7 @@
                     promptInput.value = fullQuote;
                 }
                 promptInput.focus();
-                promptInput.style.height = 'auto';
-                promptInput.style.height = Math.min(240, Math.max(70, promptInput.scrollHeight)) + 'px';
+                adjustPromptInputHeight();
                 promptInput.scrollTop = promptInput.scrollHeight;
                 
                 // 滚动底部保证输入卡片完全可见
