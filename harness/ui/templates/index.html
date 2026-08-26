@@ -852,6 +852,7 @@
 
         // Settings Elements
         const settingsProviderPreset = document.getElementById('settings-provider-preset');
+        const settingsProvider = settingsProviderPreset;
         const settingsBaseUrl = document.getElementById('settings-base-url');
         const settingsApiKey = document.getElementById('settings-api-key');
         const settingsModelSelect = document.getElementById('settings-model-select');
@@ -2500,11 +2501,11 @@
             const payload = {
                 session_id: activeSessionId,
                 prompt: prompt,
-                provider: settingsProvider.value,
-                model: headerModelSelect.value,
-                permission_mode: currentPermission,
-                reasoning_effort: currentEffort,
-                custom_master_prompt: masterTextarea.value
+                provider: (settingsProviderPreset ? settingsProviderPreset.value : 'deepseek') || 'deepseek',
+                model: (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-pro') || 'deepseek-v4-pro',
+                permission_mode: currentPermission || 'unrestricted',
+                reasoning_effort: currentEffort || 'medium',
+                custom_master_prompt: masterTextarea ? masterTextarea.value : ''
             };
 
             let currentThoughtContainer = null;

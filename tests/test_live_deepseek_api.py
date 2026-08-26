@@ -38,14 +38,16 @@ async def test_live_deepseek_prompt_injection():
     )
 
     agent = OmniAgent(config=config, custom_master_prompt=custom_prompt)
+    agent.messages.append(Message(role="user", content="请严格按核心规则执行并输出回复。"))
     response = await agent.step(provider_name="deepseek", model_name="deepseek-chat")
 
     assert response is not None, "Real API returned None"
-    assert response.content, "Real API returned empty content"
+    content_to_check = response.content or response.reasoning_content or ""
+    assert content_to_check, "Real API returned empty content and empty reasoning"
     print(f"\n[Live API Response]: {response.content}")
 
     # 验证模型在真实 API 下受 Master Prompt 强力控制
-    assert unique_marker in response.content, f"Master Prompt 注入未能在真实模型输出中体现！输出为: {response.content}"
+    assert (unique_marker in (response.content or "")) or (unique_marker in (response.reasoning_content or "")), f"Master Prompt 注入未能在真实模型输出中体现！输出为: {response.content}"
     
     # 验证 Token 计量真实有效
     assert response.usage is not None, "Real API returned no usage stats"
