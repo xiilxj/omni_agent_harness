@@ -651,4 +651,183 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             }
         return {"mcp_servers": res}
 
+    # ==================== Skills 技能管理 API ====================
+
+    @app.get("/api/skills")
+    async def list_skills():
+        """扫描并获取所有可用 Skills 技能列表与描述"""
+        search_dirs = [
+            Path("/home/maker/.gemini/antigravity/skills"),
+            Path.home() / ".gemini/antigravity/skills",
+            Path.home() / ".gemini/config/skills",
+            Path("./skills"),
+            Path(workspace_mgr.cwd) / "skills"
+        ]
+        skills_found = {}
+
+        for s_dir in search_dirs:
+            if not s_dir.exists() or not s_dir.is_dir():
+                continue
+            try:
+                for entry in s_dir.iterdir():
+                    try:
+                        resolved = entry.resolve()
+                        if resolved.is_dir():
+                            skill_md = resolved / "SKILL.md"
+                            desc = "No description"
+                            content = ""
+                            if skill_md.exists():
+                                try:
+                                    with open(skill_md, "r", encoding="utf-8", errors="ignore") as f:
+                                        content = f.read(4000)
+                                        # 提取简述
+                                        lines = [l.strip() for l in content.splitlines() if l.strip() and not l.startswith("#")]
+                                        if lines:
+                                            desc = lines[0][:150]
+                                except Exception:
+                                    pass
+                            skills_found[entry.name] = {
+                                "name": entry.name,
+                                "path": str(resolved),
+                                "description": desc,
+                                "has_skill_md": skill_md.exists(),
+                                "content_preview": content[:1000]
+                            }
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+
+        return {"skills": list(skills_found.values())}
+
+    class CreateSkillRequest(BaseModel):
+        name: str
+        description: str
+        prompt: str
+
+    @app.post("/api/skills/create")
+    async def create_custom_skill(req: CreateSkillRequest):
+        """新建自定义 Skill 技能并保存到工程 skills 目录"""
+        clean_name = req.name.strip().replace(" ", "-").lower()
+        target_dir = Path(workspace_mgr.cwd) / "skills" / clean_name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        skill_file = target_dir / "SKILL.md"
+
+        content = f"# Skill: {clean_name}\n\n{req.description}\n\n## Instructions\n\n{req.prompt}\n"
+        with open(skill_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        return {"status": "success", "message": f"Skill '{clean_name}' created successfully at {skill_file}."}
+
+    # ==================== MCP 配置与热加载 API ====================
+
+    @app.get("/api/mcp/config")
+    async def get_mcp_config():
+        """读取 MCP 服务的 JSON 配置文件"""
+        paths = [
+            Path("/home/maker/.gemini/config/mcp_config.json"),
+            Path.home() / ".gemini/config/mcp_config.json",
+            Path("./mcp_config.json")
+        ]
+        for p in paths:
+            if p.exists():
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    return {"status": "success", "config": data, "path": str(p)}
+                except Exception as e:
+                    return {"status": "error", "message": str(e), "path": str(p)}
+
+        # 默认模版
+        default_cfg = {
+            "mcpServers": {
+                "chrome-devtools": {
+                    "command": "npx",
+                    "args": ["-y", "chrome-devtools-mcp@latest"]
+                },
+                "filesystem": {
+                    "command": "npx",
+                    "args": ["-y", "@modelcontextprotocol/server-filesystem", str(workspace_mgr.cwd)]
+                }
+            }
+        }
+        return {"status": "default", "config": default_cfg, "path": "default"}
+
+    class SaveMCPConfigRequest(BaseModel):
+        config: Dict[str, Any]
+
+    @app.post("/api/mcp/config")
+    async def save_mcp_config(req: SaveMCPConfigRequest):
+        """保存并热重载 MCP 配置文件"""
+        target_path = Path("/home/maker/.gemini/config/mcp_config.json")
+        try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_path, "w", encoding="utf-8") as f:
+                json.dump(req.config, f, indent=2, ensure_ascii=False)
+            
+            # 本地工程也同步保存一份
+            with open(Path("./mcp_config.json"), "w", encoding="utf-8") as f:
+                json.dump(req.config, f, indent=2, ensure_ascii=False)
+
+            # 重新加载 MCP 连接
+            reloaded = global_mcp_manager.load_config(target_path)
+            return {"status": "success", "message": f"MCP 配置文件已更新，成功挂载 {len(reloaded)} 个服务！"}
+        except Exception as e:
+            return {"status": "error", "message": f"保存 MCP 配置失败: {e}"}
+
+    # ==================== 产物与实时预览 API ====================
+
+    @app.get("/api/artifacts/list")
+    async def list_artifacts():
+        """列出工作区中可供实时透视预览的产物文件 (HTML, Markdown, 代码, 图片)"""
+        root = Path(workspace_mgr.cwd)
+        artifacts = []
+        ext_map = {
+            ".html": "web", ".htm": "web",
+            ".md": "markdown", ".markdown": "markdown",
+            ".png": "image", ".jpg": "image", ".jpeg": "image", ".svg": "image",
+            ".py": "code", ".js": "code", ".ts": "code", ".json": "code", ".css": "code"
+        }
+
+        for p in root.rglob("*"):
+            if any(ign in p.parts for ign in [".git", "node_modules", "__pycache__", ".venv", "dist", "build"]):
+                continue
+            if p.is_file():
+                ext = p.suffix.lower()
+                if ext in ext_map:
+                    try:
+                        stat = p.stat()
+                        artifacts.append({
+                            "name": p.name,
+                            "rel_path": str(p.relative_to(root)),
+                            "type": ext_map[ext],
+                            "size": stat.st_size,
+                            "mtime": int(stat.st_mtime)
+                        })
+                    except Exception:
+                        continue
+
+        # 按最新修改时间倒序排列
+        artifacts.sort(key=lambda x: x["mtime"], reverse=True)
+        return {"artifacts": artifacts[:60]}
+
+    @app.get("/api/artifacts/raw")
+    async def get_raw_artifact(path: str):
+        """直接获取产物文件的原始内容用于 Iframe 实时预览或 Markdown 渲染"""
+        target = Path(workspace_mgr.cwd) / path
+        if not target.exists() or not target.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        try:
+            ext = target.suffix.lower()
+            if ext in [".html", ".htm"]:
+                with open(target, "r", encoding="utf-8", errors="ignore") as f:
+                    return HTMLResponse(f.read())
+            else:
+                with open(target, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                return {"status": "success", "content": content, "path": path, "type": ext}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     return app

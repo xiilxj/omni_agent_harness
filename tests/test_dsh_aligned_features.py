@@ -112,3 +112,34 @@ async def test_task_manager_lifecycle():
     kill_msg = await tm.kill_task("task-001")
     assert "terminated" in kill_msg
 
+
+@pytest.mark.asyncio
+async def test_skills_and_mcp_api_endpoints():
+    """测试 Skills 技能列表、MCP 配置文件与 Artifacts 产物列表 API 接口"""
+    from harness.ui.app import create_app
+    from httpx import ASGITransport, AsyncClient
+
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. 测试 Skills 列表扫描接口
+        res_skills = await client.get("/api/skills")
+        assert res_skills.status_code == 200
+        data_skills = res_skills.json()
+        assert "skills" in data_skills
+        assert isinstance(data_skills["skills"], list)
+
+        # 2. 测试 MCP 配置读取接口
+        res_mcp = await client.get("/api/mcp/config")
+        assert res_mcp.status_code == 200
+        data_mcp = res_mcp.json()
+        assert "config" in data_mcp
+        assert "mcpServers" in data_mcp["config"]
+
+        # 3. 测试 Artifacts 产物列表扫描接口
+        res_art = await client.get("/api/artifacts/list")
+        assert res_art.status_code == 200
+        data_art = res_art.json()
+        assert "artifacts" in data_art
+
+
