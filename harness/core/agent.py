@@ -96,6 +96,7 @@ class OmniAgent:
             self.total_usage.total_tokens += response.usage.total_tokens
             self.total_usage.prompt_cache_hit_tokens += response.usage.prompt_cache_hit_tokens
             self.total_usage.prompt_cache_miss_tokens += response.usage.prompt_cache_miss_tokens
+            self.total_usage.current_context_tokens = response.usage.prompt_tokens + response.usage.completion_tokens
 
         return response
 
@@ -193,11 +194,14 @@ class OmniAgent:
 
             if chunk.get("usage"):
                 u = chunk["usage"]
-                self.total_usage.prompt_tokens += u.get("prompt_tokens", 0)
-                self.total_usage.completion_tokens += u.get("completion_tokens", 0)
-                self.total_usage.total_tokens += u.get("total_tokens", 0)
+                p_tok = u.get("prompt_tokens", 0)
+                c_tok = u.get("completion_tokens", 0)
+                self.total_usage.prompt_tokens += p_tok
+                self.total_usage.completion_tokens += c_tok
+                self.total_usage.total_tokens += u.get("total_tokens", (p_tok + c_tok))
                 self.total_usage.prompt_cache_hit_tokens += u.get("prompt_cache_hit_tokens", 0)
                 self.total_usage.prompt_cache_miss_tokens += u.get("prompt_cache_miss_tokens", 0)
+                self.total_usage.current_context_tokens = p_tok + c_tok
 
         # 整理构建完整的 ToolCalls 列表
         assembled_tool_calls = None
@@ -225,6 +229,7 @@ class OmniAgent:
             self.total_usage.prompt_tokens += p_tok
             self.total_usage.completion_tokens += c_tok
             self.total_usage.total_tokens += (p_tok + c_tok)
+            self.total_usage.current_context_tokens = p_tok + c_tok
 
         return LLMResponse(
             content=content_accumulator,

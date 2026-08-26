@@ -43,12 +43,13 @@ class ToolDefinition(BaseModel):
 
 
 class UsageStats(BaseModel):
-    """Token 消耗与精确遥测统计（支持 DeepSeek 缓存命中率）"""
+    """Token 消耗与精确遥测统计（支持 DeepSeek 缓存命中率与上下文窗口计量）"""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
     prompt_cache_hit_tokens: int = 0
     prompt_cache_miss_tokens: int = 0
+    current_context_tokens: int = 0
 
 
 class LLMResponse(BaseModel):

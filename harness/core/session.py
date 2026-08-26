@@ -24,6 +24,7 @@ class TelemetryData(BaseModel):
     cache_hit_tokens: int = 0
     cache_hit_ratio: float = 0.0
     prompt_cache_miss_tokens: int = 0
+    context_tokens: int = 0
     turn_cost_cny: float = 0.0
     session_cost_cny: float = 0.0
     formatted_cost: str = "¥0.00000"

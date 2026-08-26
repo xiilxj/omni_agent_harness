@@ -2705,12 +2705,14 @@
             meterTurnCost.textContent = `¥${turnCost.toFixed(5)}`;
             meterSessionCost.textContent = `¥${sessionCost.toFixed(5)}`;
 
-            // 128k 上下文窗口占用率进度条
+            // 128k 上下文窗口占用率进度条 (精准反映当前活动上下文大小，避免多步工具调用总量累加溢出)
             const maxWindow = 128000;
-            const used = telemetry.total_tokens || 0;
-            const pct = Math.min(100, Math.round((used / maxWindow) * 100));
+            const currentContext = telemetry.context_tokens !== undefined && telemetry.context_tokens > 0
+                ? telemetry.context_tokens
+                : (telemetry.prompt_tokens ? Math.min(telemetry.prompt_tokens, maxWindow) : (telemetry.total_tokens || 0));
+            const pct = Math.min(100, Math.max(0, Math.round((currentContext / maxWindow) * 100)));
             meterProgressBar.style.width = `${pct}%`;
-            meterContextRatio.textContent = `${(used / 1000).toFixed(1)}k/128k`;
+            meterContextRatio.textContent = `${(currentContext / 1000).toFixed(1)}k/128k`;
         }
 
         function populateBillingModal() {

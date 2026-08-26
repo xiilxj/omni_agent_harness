@@ -581,6 +581,8 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 accumulated_cost = round((getattr(session, "accumulated_cost_cny", 0.0) or 0.0) + turn_cost, 6)
                 session.accumulated_cost_cny = accumulated_cost
 
+                context_tokens = agent.total_usage.current_context_tokens or min(p_tokens, 128000)
+
                 telemetry = TelemetryData(
                     prompt_tokens=p_tokens,
                     completion_tokens=c_tokens,
@@ -590,6 +592,7 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                     cache_hit_tokens=cache_tokens,
                     cache_hit_ratio=cache_ratio,
                     prompt_cache_miss_tokens=cost_info["prompt_cache_miss_tokens"],
+                    context_tokens=context_tokens,
                     turn_cost_cny=turn_cost,
                     session_cost_cny=accumulated_cost,
                     formatted_cost=cost_info["formatted_cost"],
