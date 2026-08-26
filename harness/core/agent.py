@@ -299,13 +299,6 @@ class OmniAgent:
             if thought_text and "<think>" not in assistant_content:
                 self.messages[-1].content = f"<think>\n{thought_text}\n</think>\n\n{clean_answer}".strip()
 
-            # 推送思考事件给前端，实时渲染动态思考折叠盒
-            if thought_text and on_step_callback:
-                await on_step_callback({
-                    "type": "assistant_thought",
-                    "content": thought_text
-                })
-
             # 若无工具调用，说明本轮对话已完成，推送最终文本答案
             if not tool_calls:
                 final_answer = clean_answer or assistant_content

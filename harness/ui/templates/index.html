@@ -1546,6 +1546,17 @@
             vision: { model: 'deepseek-v4-flash-vision-exp', icon: '👁️', name: 'deepseek-v4-vision' }
         };
 
+        function getTierFromModel(modelName) {
+            if (!modelName) return 'pro';
+            for (const [tier, info] of Object.entries(tierModelMap)) {
+                if (info.model === modelName) return tier;
+            }
+            if (modelName.includes('reasoner') || modelName.includes('r1')) return 'reasoner';
+            if (modelName.includes('flash')) return 'flash';
+            if (modelName.includes('vision')) return 'vision';
+            return 'pro';
+        }
+
         const effortDetailsMap = {
             none: { label: 'Off', budget: '0K Budget', hint: '关闭深度推理链，以毫秒级延迟直接生成答案' },
             low: { label: 'Low', budget: '2K Budget', hint: '轻量思考 (预算 2K Tokens)，适合快速问答与简单代码' },
@@ -1563,6 +1574,7 @@
         const btnClosePopover = document.getElementById('btn-close-popover');
         const btnInputPlus = document.getElementById('btn-input-plus');
         const btnClearInput = document.getElementById('btn-clear-input');
+        const headerPermSelect = document.getElementById('header-permission-select');
 
         btnModelEffortPopover.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1585,12 +1597,14 @@
             promptInput.focus();
         });
 
-        function setModelTierUI(tier) {
+        function setModelTierUI(tier, specificModel = null) {
             currentTier = tier;
             const tInfo = tierModelMap[tier] || tierModelMap['pro'];
+            const targetModel = specificModel || tInfo.model;
             
+            // 1. 同步底部胶囊与弹层
             document.getElementById('pill-model-icon').textContent = tInfo.icon;
-            document.getElementById('pill-model-name').textContent = tInfo.name;
+            document.getElementById('pill-model-name').textContent = targetModel;
 
             document.querySelectorAll('.pop-tier-btn').forEach(btn => {
                 if (btn.dataset.tier === tier) {
@@ -1602,12 +1616,24 @@
                 }
             });
 
-            headerModelSelect.value = tInfo.model;
-            settingsModelSelect.value = tInfo.model;
+            // 2. 同步顶部导航栏 Tier Pills 药丸按钮高亮
+            document.querySelectorAll('.tier-pill').forEach(pill => {
+                if (pill.dataset.tier === tier) {
+                    pill.className = 'tier-pill px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition';
+                } else {
+                    pill.className = 'tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition';
+                }
+            });
+
+            // 3. 同步顶部与设置抽屉内的下拉选单
+            if (headerModelSelect) headerModelSelect.value = targetModel;
+            if (settingsModelSelect) settingsModelSelect.value = targetModel;
+
             localStorage.setItem('omni_selected_tier', tier);
-            localStorage.setItem('omni_selected_model', tInfo.model);
+            localStorage.setItem('omni_selected_model', targetModel);
         }
 
+        // 绑定底部弹层 Tier 点击
         document.querySelectorAll('.pop-tier-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const tier = btn.dataset.tier;
@@ -1621,6 +1647,33 @@
                 } catch (e) {}
             });
         });
+
+        // 绑定顶部导航栏 Tier 药丸点击
+        document.querySelectorAll('.tier-pill').forEach(pill => {
+            pill.addEventListener('click', async () => {
+                const tier = pill.dataset.tier;
+                setModelTierUI(tier);
+                try {
+                    await fetch('/api/modes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model_tier: tier })
+                    });
+                } catch (e) {}
+            });
+        });
+
+        // 绑定下拉选单变动同步
+        function handleDropdownModelChange(modelName) {
+            const tier = getTierFromModel(modelName);
+            setModelTierUI(tier, modelName);
+        }
+        if (headerModelSelect) {
+            headerModelSelect.addEventListener('change', () => handleDropdownModelChange(headerModelSelect.value));
+        }
+        if (settingsModelSelect) {
+            settingsModelSelect.addEventListener('change', () => handleDropdownModelChange(settingsModelSelect.value));
+        }
 
         function setReasoningEffortUI(effort) {
             currentEffort = effort;
@@ -1671,6 +1724,7 @@
                 authLabel.textContent = 'Read-Only';
             }
 
+            // 1. 同步底部 Popover 权限按钮
             document.querySelectorAll('.pop-auth-btn').forEach(btn => {
                 if (btn.dataset.auth === mode) {
                     btn.className = `pop-auth-btn flex-1 py-1 rounded ${
@@ -1683,7 +1737,26 @@
                 }
             });
 
+            // 2. 同步顶部导航栏权限下拉框
+            if (headerPermSelect) {
+                headerPermSelect.value = mode;
+            }
+
             localStorage.setItem('omni_permission_mode', mode);
+        }
+
+        if (headerPermSelect) {
+            headerPermSelect.addEventListener('change', async () => {
+                const mode = headerPermSelect.value;
+                setPermissionModeUI(mode);
+                try {
+                    await fetch('/api/modes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ permission_mode: mode })
+                    });
+                } catch (e) {}
+            });
         }
 
         document.querySelectorAll('.pop-auth-btn').forEach(btn => {
@@ -2335,23 +2408,14 @@
         });
         setSidebarState(sidebarCollapsed);
 
-        // Remember Last Selected Model
-        headerModelSelect.addEventListener('change', () => {
-            localStorage.setItem('omni_selected_model', headerModelSelect.value);
-            settingsModelSelect.value = headerModelSelect.value;
-        });
-        settingsModelSelect.addEventListener('change', () => {
-            localStorage.setItem('omni_selected_model', settingsModelSelect.value);
-            headerModelSelect.value = settingsModelSelect.value;
-        });
-
         // Initialize on page load
         loadSystemData().then(() => {
-            const savedModel = localStorage.getItem('omni_selected_model');
-            if (savedModel) {
-                headerModelSelect.value = savedModel;
-                settingsModelSelect.value = savedModel;
-            }
+            const savedModel = localStorage.getItem('omni_selected_model') || 'deepseek-v4-pro';
+            handleDropdownModelChange(savedModel);
+            const savedEffort = localStorage.getItem('omni_reasoning_effort') || 'medium';
+            setReasoningEffortUI(savedEffort);
+            const savedPerm = localStorage.getItem('omni_permission_mode') || 'unrestricted';
+            setPermissionModeUI(savedPerm);
         });
         loadSessions();
         loadUserBalance();
