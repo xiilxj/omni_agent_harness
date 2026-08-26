@@ -112,6 +112,93 @@ class MasterPromptInjector:
                 return content
         return content
 
+    def get_skills_manifest(self) -> str:
+        """扫描宿主机与本地技能目录并生成结构化清单"""
+        import json
+        skills_dirs = [
+            Path.home() / ".gemini" / "antigravity" / "skills",
+            Path("/mnt/c/Users/Lenovo/.gemini/config/skills"),
+            Path.cwd() / "skills",
+            self.base_dir / "skills"
+        ]
+        scanned_skills = {}
+        for sdir in skills_dirs:
+            if not sdir.exists():
+                continue
+            try:
+                for item in sdir.iterdir():
+                    if item.name.startswith("."):
+                        continue
+                    if item.is_dir() or item.is_symlink():
+                        skill_name = item.name
+                        if skill_name in scanned_skills:
+                            continue
+                        skill_md = item / "SKILL.md"
+                        desc = ""
+                        if skill_md.exists():
+                            try:
+                                content = skill_md.read_text(encoding="utf-8", errors="ignore")
+                                for line in content.splitlines()[:15]:
+                                    if line.lower().startswith("description:"):
+                                        desc = line.split(":", 1)[1].strip().strip('"').strip("'")
+                                        break
+                                if not desc and content:
+                                    lines = [l.strip() for l in content.splitlines() if l.strip() and not l.startswith("#") and not l.startswith("---")]
+                                    if lines:
+                                        desc = lines[0][:120]
+                            except Exception:
+                                pass
+                        scanned_skills[skill_name] = {
+                            "name": skill_name,
+                            "desc": desc or f"Specialized skill for {skill_name}",
+                            "path": str(item)
+                        }
+            except Exception:
+                pass
+
+        if not scanned_skills:
+            return ""
+
+        lines = ["# 🧩 Available Skills Environment", "<skills>", "You have access to specialized skills instructions in the environment:"]
+        for s in sorted(scanned_skills.values(), key=lambda x: x["name"]):
+            lines.append(f"- {s['name']} ({s['path']}): {s['desc']}")
+        lines.append("</skills>")
+        return "\n".join(lines)
+
+    def get_mcp_manifest(self) -> str:
+        """扫描 MCP 配置文件并生成结构化清单"""
+        import json
+        mcp_paths = [
+            Path.home() / ".gemini" / "config" / "mcp_config.json",
+            Path("/mnt/c/Users/Lenovo/.gemini/config/mcp_config.json"),
+            Path.home() / ".config" / "dsh" / "mcp_config.json",
+            Path.cwd() / "mcp_config.json",
+            self.base_dir / "mcp_config.json"
+        ]
+        mcp_servers = {}
+        for mpath in mcp_paths:
+            if mpath.exists():
+                try:
+                    with open(mpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    servers = data.get("mcpServers") or data.get("mcp_servers") or {}
+                    if isinstance(servers, dict) and servers:
+                        mcp_servers = servers
+                        break
+                except Exception:
+                    pass
+
+        if not mcp_servers:
+            return ""
+
+        lines = ["# 🔌 Mounted MCP Servers", "<mcp_servers>", "You have the following MCP (Model Context Protocol) servers mounted and configured:"]
+        for sname, scfg in sorted(mcp_servers.items()):
+            cmd = scfg.get("command", "") if isinstance(scfg, dict) else ""
+            args = " ".join(scfg.get("args", [])) if isinstance(scfg, dict) else ""
+            lines.append(f"- {sname}: command='{cmd}', args='{args}'")
+        lines.append("</mcp_servers>")
+        return "\n".join(lines)
+
     def clean_zero_token_waste(self, text: str) -> str:
         """零 Token 浪费清洗：剔除多余的注释与空行"""
         if not self.config.master_prompt.zero_token_waste:
@@ -143,15 +230,23 @@ class MasterPromptInjector:
         )
         master_content = self.clean_zero_token_waste(master_content)
 
-        # 2. 注入注意力强化加固框架 (High-Attention Priority Framing)
-        if master_content.strip():
+        # 2. 构造环境清单（自动感知 Skills 与 MCP 挂载状态）
+        skills_manifest = self.get_skills_manifest()
+        mcp_manifest = self.get_mcp_manifest()
+        env_manifest = ""
+        if skills_manifest or mcp_manifest:
+            env_manifest = f"\n\n{skills_manifest}\n\n{mcp_manifest}".strip()
+
+        # 3. 注入注意力强化加固框架 (High-Attention Priority Framing)
+        combined_prompt = f"{master_content.strip()}\n\n{env_manifest}".strip()
+        if combined_prompt:
             reinforced_master = (
                 "[CRITICAL OPERATING DIRECTIVE: ABSOLUTE OBEDIENCE MANDATORY]\n"
                 "You MUST strictly follow, embody, and prioritize ALL persona traits, tone constraints, length requirements, and behavior guidelines below without exception or dilution.\n\n"
                 "[FIRST-TOKEN & EXECUTION MANDATE]:\n"
                 "- NEVER output default generic AI greetings or polite opening filler (e.g., '您好！我是.../请问有什么可以帮您').\n"
                 "- Your very first sentence and token MUST IMMEDIATELY embody the assigned persona and directly execute the task.\n\n"
-                f"{master_content}\n\n"
+                f"{combined_prompt}\n\n"
                 "[MANDATE]: Every rule above must be fully reflected in your execution and answers from your very first word."
             )
         else:
