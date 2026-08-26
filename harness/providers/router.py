@@ -12,6 +12,31 @@ from harness.providers.openai_provider import OpenAICompatibleProvider
 from harness.providers.anthropic_provider import AnthropicProvider
 
 
+def load_env_keys():
+    """自动加载本地与全局 .env 中的 API 密钥"""
+    from pathlib import Path
+    candidate_envs = [
+        Path.cwd() / ".env",
+        Path(__file__).resolve().parent.parent.parent / ".env",
+        Path.home() / ".config" / "dsh" / ".env"
+    ]
+    for env_path in candidate_envs:
+        if env_path.exists():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k and not os.environ.get(k):
+                            os.environ[k] = v
+            except Exception:
+                pass
+
+
 class ProviderRouter:
     """Provider 路由管理器与多 Key 轮询调度器"""
 
@@ -23,6 +48,7 @@ class ProviderRouter:
 
     def _initialize_providers(self):
         """初始化配置文件中定义的所有 Provider"""
+        load_env_keys()
         providers_data = self.config.providers
 
         for name, p_data in providers_data.items():
@@ -31,8 +57,11 @@ class ProviderRouter:
 
             p_type = p_data.get("type", "openai_compatible")
             base_url = p_data.get("base_url", "")
-            raw_keys = p_data.get("api_key", "")
-            timeout = p_data.get("timeout", 120)
+            env_key = os.environ.get(f"{name.upper()}_API_KEY") or os.environ.get(f"{name.upper()}_KEY") or ""
+            if not env_key and name == "deepseek":
+                env_key = os.environ.get("OPENAI_API_KEY", "")
+            raw_keys = env_key or p_data.get("api_key", "")
+            timeout = p_data.get("timeout", 180)
 
             # 支持逗号分隔的多 Key 轮询
             if isinstance(raw_keys, str) and "," in raw_keys:
@@ -62,23 +91,31 @@ class ProviderRouter:
                 )
 
     def get_provider(self, provider_name: Optional[str] = None) -> BaseProvider:
-        """获取指定或默认的 Provider 实例，并执行 Key 轮询"""
-        p_name = provider_name or self.config.providers.get("default_provider", "deepseek")
+        """获取指定或默认的 Provider 实例，并执行 Key 轮询与动态热刷新"""
+        p_name = (provider_name or self.config.default_provider or "deepseek").lower()
         if p_name not in self._providers:
-            # 兜底回退至首个可用 Provider
             if self._providers:
                 p_name = list(self._providers.keys())[0]
             else:
-                # 默认创建一个 DeepSeek provider
+                load_env_keys()
                 return OpenAICompatibleProvider(
                     name="deepseek",
-                    base_url="https://api.deepseek.com/v1",
+                    base_url="https://api.deepseek.com",
                     api_key=os.environ.get("DEEPSEEK_API_KEY", "EMPTY")
                 )
 
         provider = self._providers[p_name]
-        # 轮询下一张 API Key
+
+        # 动态检测环境变量中的最新 API Key
+        load_env_keys()
+        current_env_key = os.environ.get(f"{p_name.upper()}_API_KEY") or os.environ.get(f"{p_name.upper()}_KEY") or ""
+        if current_env_key and (provider.api_key == "EMPTY" or not provider.api_key or provider.api_key != current_env_key):
+            provider.api_key = current_env_key
+
+        # 若存在多 Key，执行轮询切换
         if p_name in self._key_iterators:
-            provider.api_key = next(self._key_iterators[p_name])
+            current_key = next(self._key_iterators[p_name])
+            if current_key != "EMPTY":
+                provider.api_key = current_key
 
         return provider

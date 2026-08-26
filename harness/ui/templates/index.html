@@ -3746,6 +3746,18 @@
                                 } else if (ev.final_answer) {
                                     appendAssistantMarkdown(ev.final_answer);
                                 }
+                            } else if (ev.type === 'error') {
+                                if (activeTimerInterval) {
+                                    clearInterval(activeTimerInterval);
+                                    activeTimerInterval = null;
+                                }
+                                if (currentThoughtContainer) {
+                                    finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
+                                    currentThoughtContainer = null;
+                                }
+                                currentAnswerContainer = null;
+                                appendAbortCard(`❌ 调用异常: ${ev.error || '请求大模型失败，请检查 API Key 或网络'}`);
+                                setRunningState(false);
                             } else if (ev.type === 'complete') {
                                 if (activeTimerInterval) {
                                     clearInterval(activeTimerInterval);
