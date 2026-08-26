@@ -133,10 +133,11 @@ def start_web_ui(host: str, port: int, config_path: str = None):
     from harness.ui.app import create_app
 
     app = create_app(config_path)
-    url = f"http://{host}:{port}"
+    browser_url = f"http://127.0.0.1:{port}" if host in ("0.0.0.0", "127.0.0.1") else f"http://{host}:{port}"
     print(f"\n=======================================================")
     print(f"  Omni Agent Harness - Master Dashboard Web UI 已启动!")
-    print(f"  访问地址: {url}")
+    print(f"  浏览器访问地址: {browser_url}  (或 http://localhost:{port})")
+    print(f"  (注: 0.0.0.0 为服务监听地址，浏览器请使用 127.0.0.1:{port})")
     print(f"  最高领导指令编辑中心已就绪，100% 绝对置顶注入生效中")
     print(f"=======================================================\n")
 

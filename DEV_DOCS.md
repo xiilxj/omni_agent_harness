@@ -2,6 +2,12 @@
 
 ## 1. 项目定位与核心愿景
 本项目是基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度改造演进的工业级智能体底座（Agent Harness），具备以下核心特性：
+- **首轮首字反套话绝对锁死机制 (First-Token Anti-Greeting & Turn-1 Hard Lock)**：
+  - 彻底击碎主流大模型在第 1 轮交互中容易陷入出厂 RLHF 客套问候语（如*“您好！我是AI助手/有什么可以帮您”*）的神经元反射陷阱。
+  - 在头部加固框与尾部用户回声指令中强制注入 `[FIRST-TOKEN & EXECUTION MANDATE]`，严禁一切客套前言，要求自第一个字符起 100% 立即激活指定人设并直奔任务实操。
+- **双端物理锚定引擎 (Dual-Anchor Enforcement)**：
+  - 头部：index 0 原生 `system` 消息置顶锁死；
+  - 尾部：动态在最新一条 `user` 消息末尾追加 `[MANDATE ENFORCEMENT]`，彻底消除 Transformer 长上下文距离衰减与单句提问抢权。
 - **开源公开仓库与版本发布 (Open Source Public Release)**：
   - 公开仓库地址：`https://github.com/xiilxj/omni_agent_harness`
   - Release v1.0.0：`https://github.com/xiilxj/omni_agent_harness/releases/tag/v1.0.0`
@@ -62,14 +68,13 @@
 
 | 路径 / 模块 | 用途与职责说明 | 状态 |
 | :--- | :--- | :--- |
-| `https://github.com/xiilxj/omni_agent_harness` | GitHub 公开开源主仓库。 | ✅ 已成功上线 |
+| `harness/prompt/master_injector.py` | 纯净协议级 Master 注入引擎（双端物理锚定 + 首轮反套话首字硬锁死）。 | ✅ 已全面升级 |
 | `start_windows.bat` | Windows 纯原生一键启动脚本（自动环境检查、依赖安装与拉起浏览器）。 | ✅ 已就绪 |
 | `install_windows.bat` | Windows 独立依赖安装脚本。 | ✅ 已就绪 |
 | `README_WINDOWS.md` | 面向 Windows 用户的零门槛极速使用文档。 | ✅ 已就绪 |
 | `package_windows_clean.py` | 纯净 Windows 独立分发打包工具（安全审计，自动剔除所有私有数据）。 | ✅ 已就绪 |
 | `harness/prompt/presets.py` | 纯净用户自定义预设管理器（支持 preset_id 精确覆盖与命名创建）。 | ✅ 已就绪 |
 | `harness/ui/templates/index.html` | 前端单页应用（当前生效预设动态指示器、覆盖已有预设二级菜单、双视图编辑器）。 | ✅ 已就绪 |
-| `harness/prompt/master_injector.py` | 纯净协议级 Master 注入引擎（非空时 100% 加固注入，为空时保持纯白）。 | ✅ 已就绪 |
 | `harness/core/config.py` | 全局配置与 DSH 模型档位、5 档推理强度（Off/Low/Med/High/Max）及 3 大权限模式定义。 | ✅ 已就绪 |
 | `harness/providers/openai_provider.py` | OpenAI/DeepSeek 适配器（支持将 5 档 reasoning_effort 与 thinking 预算参数注入上游）。 | ✅ 已就绪 |
 | `harness/core/agent.py` | ReAct 循环状态机（支持 Read-Only 沙箱只读拦截与 5 档推理强度透传）。 | ✅ 已就绪 |
@@ -87,9 +92,11 @@
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 24 轮（GitHub 公开开源仓库创建、代码推送与 Release v1.0.0 发布 100% 验收）
+- **审核轮数**: 第 25 轮（首轮首字反套话锁死、双端物理锚定升级与全平台同步 100% 验收）
 - **测试状态**:
   - `pytest tests/`: 8/8 全部通过。
-  - Git 仓库状态：`https://github.com/xiilxj/omni_agent_harness`（Public 状态正常）。
-  - Release 发布状态：`v1.0.0` 发布成功并已将 `Omni_Agent_Harness_Windows_Clean.zip` 成功挂载为附件。
-  - 安全审查：确认 GitHub 仓库及提交记录中 0 密钥泄露、0 历史对话数据。
+  - 首轮机制验证：首条用户输入自动获得 `[FIRST-TOKEN & EXECUTION MANDATE]` 严密锁死，严禁一切客服问候语与拒绝托词，首个字符起 100% 激活人设与执行。
+- **纯净 Windows 分发包导出路径**: 
+  - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
+  - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
+  - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
