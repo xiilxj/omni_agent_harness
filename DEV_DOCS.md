@@ -128,12 +128,29 @@
 
 ---
 
+### 📏 输入框双向动态自适应与瞬间收缩机制 (Bidirectional Auto-Resize)
+- **动态高度自适应计算**：
+  * 精准算法 `adjustPromptInputHeight()`：多行文本输入、粘贴或插入长引用时向下平滑撑开；
+  * 退格删除缩减时实时向下收缩，绝不残留多余空白；
+- **清空与发送瞬间复位**：
+  * 消息发送、点击清除图标或执行 `/clear` 时，自动调用 `resetPromptInputHeight()`，瞬间归位至初始单行紧凑状态。
+
+---
+
+### 🌐 网络弹性防护与长思考超时宽限 (3x Exponential Retry & 180s Timeout)
+- **3 次指数退避网络重试**：
+  * 捕获 `ConnectError`, `ReadTimeout`, `RemoteProtocolError`, `ConnectTimeout` 并自动以 1s / 2s / 3s 间隔重试，杜绝偶发网络闪断报错；
+- **180s 深度思考宽限**：
+  * 适配 DeepSeek-R1 与 Subagent 长程复杂调用链，彻底消除超时断连。
+
+---
+
 ## 3. 审核与验证记录
-- **审核轮数**: 第 33 轮（上下文引用系统 + 区分用户/AI来源 + 整条引用 + 选中文本选择性局部引用全量验收）
+- **审核轮数**: 第 34 轮（输入框双向高度自适应收缩 + 无遮罩纯净侧滑设置 + 网络 3 次重试与 180s 超时防线 + README 体系全面同步）
 - **测试状态**:
   - `pytest tests/`: **20/20 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
-- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（最新 Commit 已推送）。
+- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（全量最新代码与文档已推送到 main 分支）。
