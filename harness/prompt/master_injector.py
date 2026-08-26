@@ -64,6 +64,70 @@ class MasterPromptInjector:
         # 纯净模式：默认无任何隐藏提示词，完全由用户自主定义
         return ""
 
+    def resolve_master_suffix_path(self) -> Path:
+        """寻找 MASTER_RESPONSE_SUFFIX.md 物理文件路径"""
+        suffix_conf = getattr(self.config, "master_suffix", None)
+        file_name = suffix_conf.file_path if suffix_conf else "MASTER_RESPONSE_SUFFIX.md"
+        configured_path = Path(file_name)
+        if file_name != "MASTER_RESPONSE_SUFFIX.md":
+            if configured_path.is_absolute() and configured_path.exists():
+                return configured_path
+            if (Path.cwd() / configured_path).exists():
+                return Path.cwd() / configured_path
+            if (self.base_dir / configured_path).exists():
+                return self.base_dir / configured_path
+
+        candidates = [
+            Path.cwd() / "MASTER_RESPONSE_SUFFIX.md",
+            self.base_dir / "MASTER_RESPONSE_SUFFIX.md",
+            Path.home() / ".config" / "dsh" / "MASTER_RESPONSE_SUFFIX.md"
+        ]
+        for c in candidates:
+            if c.exists() and not c.is_symlink():
+                return c
+            elif c.exists():
+                return c
+
+        return self.base_dir / "MASTER_RESPONSE_SUFFIX.md"
+
+    def read_master_suffix(self, custom_suffix: Optional[str] = None, force_reload: bool = False) -> str:
+        """读取最高回答词 (Master Assistant Suffix) 原始文本"""
+        if custom_suffix is not None:
+            return custom_suffix
+
+        suffix_file = self.resolve_master_suffix_path()
+        if suffix_file.exists():
+            try:
+                with open(suffix_file, "r", encoding="utf-8") as f:
+                    return f.read()
+            except Exception:
+                pass
+        return ""
+
+    def save_master_suffix(self, content: str) -> Path:
+        """保存最高回答词内容到持久化文件"""
+        target = self.resolve_master_suffix_path()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as f:
+            f.write(content)
+        return target
+
+    def apply_master_suffix(self, assistant_content: str, custom_suffix: Optional[str] = None) -> str:
+        """将最高回答词无缝拼接到 AI 回答末尾，并作为历史事实记录在上下文中"""
+        suffix = self.read_master_suffix(custom_suffix=custom_suffix)
+        if not suffix or not suffix.strip():
+            return assistant_content
+        
+        clean_suffix = suffix.strip()
+        base_content = (assistant_content or "").rstrip()
+        if not base_content:
+            return clean_suffix
+        
+        if base_content.endswith(clean_suffix):
+            return base_content
+        
+        return f"{base_content}\n\n{clean_suffix}"
+
     def render_prompt(
         self,
         raw_prompt: Optional[str] = None,

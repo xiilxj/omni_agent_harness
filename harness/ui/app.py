@@ -287,9 +287,48 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                     pass
 
             injector.read_master_prompt(force_reload=True)
-            return {"status": "success", "message": "Master System Prompt updated and synchronized successfully."}
+            return {"status": "success", "message": "Master System Prompt updated successfully", "path": str(prompt_path)}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to write prompt file: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to write Master System Prompt: {e}")
+
+    # ==================== Master Response Suffix (最高回答词) API ====================
+
+    @app.get("/api/master-suffix")
+    async def get_master_suffix():
+        """获取当前 MASTER_RESPONSE_SUFFIX.md 物理文件内容与路径"""
+        suffix_path = injector.resolve_master_suffix_path()
+        content = injector.read_master_suffix(force_reload=True)
+        return {
+            "path": str(suffix_path),
+            "content": content,
+            "char_count": len(content)
+        }
+
+    class UpdateSuffixRequest(BaseModel):
+        content: str
+
+    @app.post("/api/master-suffix")
+    async def update_master_suffix(req: UpdateSuffixRequest):
+        """保存并更新 MASTER_RESPONSE_SUFFIX.md 物理文件，实现全局热生效"""
+        suffix_path = injector.resolve_master_suffix_path()
+        try:
+            suffix_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(suffix_path, "w", encoding="utf-8") as f:
+                f.write(req.content)
+
+            # 同步全局目录
+            global_path = Path.home() / ".config" / "dsh" / "MASTER_RESPONSE_SUFFIX.md"
+            if suffix_path != global_path:
+                try:
+                    global_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(global_path, "w", encoding="utf-8") as f:
+                        f.write(req.content)
+                except Exception:
+                    pass
+
+            return {"status": "success", "message": "最高回答词 (Master Response Suffix) 已成功保存并热生效！", "path": str(suffix_path)}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"保存最高回答词失败: {e}")
 
     # ==================== 系统与模型提供商 API ====================
 
@@ -519,6 +558,7 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         permission_mode: Optional[str] = None
         reasoning_effort: Optional[str] = None
         custom_master_prompt: Optional[str] = None
+        custom_master_suffix: Optional[str] = None
 
     @app.post("/api/agent/stream")
     async def run_agent_stream(req: RunTaskRequest):
@@ -541,6 +581,7 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             config=config,
             tools=tools,
             custom_master_prompt=req.custom_master_prompt,
+            custom_master_suffix=req.custom_master_suffix,
             permission_mode=req.permission_mode or config.permission_mode,
             reasoning_effort=req.reasoning_effort or getattr(config, "reasoning_effort", "medium")
         )

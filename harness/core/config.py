@@ -25,6 +25,12 @@ class MasterPromptConfig(BaseModel):
     enable_template_vars: bool = True
 
 
+class MasterSuffixConfig(BaseModel):
+    file_path: str = "MASTER_RESPONSE_SUFFIX.md"
+    enabled: bool = True
+    default_content: str = ""
+
+
 class ProviderConfig(BaseModel):
     type: str = "openai_compatible"
     base_url: str = "https://api.deepseek.com/v1"
@@ -137,6 +143,7 @@ class AppConfig(BaseModel):
     reasoning_effort: str = "medium"
     workspace: WorkspaceConfig = Field(default_factory=WorkspaceConfig)
     master_prompt: MasterPromptConfig = Field(default_factory=MasterPromptConfig)
+    master_suffix: MasterSuffixConfig = Field(default_factory=MasterSuffixConfig)
     providers: Dict[str, Any] = Field(default_factory=dict)
     server: ServerConfig = Field(default_factory=ServerConfig)
 

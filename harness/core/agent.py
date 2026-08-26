@@ -28,6 +28,7 @@ class OmniAgent:
         config: AppConfig,
         tools: Optional[ToolRegistry] = None,
         custom_master_prompt: Optional[str] = None,
+        custom_master_suffix: Optional[str] = None,
         permission_mode: Optional[str] = None,
         reasoning_effort: Optional[str] = None
     ):
@@ -36,6 +37,7 @@ class OmniAgent:
         self.permission_mode = permission_mode or config.permission_mode or "unrestricted"
         self.reasoning_effort = reasoning_effort or getattr(config, "reasoning_effort", "medium")
         self.custom_master_prompt = custom_master_prompt
+        self.custom_master_suffix = custom_master_suffix
         self.router = ProviderRouter(config)
         self.injector = MasterPromptInjector()
         self.pruner = ContextPruner()
@@ -360,6 +362,20 @@ class OmniAgent:
             # 若无工具调用，说明本轮对话已完成，推送最终文本答案
             if not tool_calls:
                 final_answer = clean_answer or assistant_content
+                # 融入最高回答词 (Master Response Suffix)
+                final_answer = self.injector.apply_master_suffix(
+                    assistant_content=final_answer,
+                    custom_suffix=self.custom_master_suffix
+                )
+                if self.messages and self.messages[-1].role == "assistant":
+                    if thought_text and "<think>" not in self.messages[-1].content:
+                        self.messages[-1].content = f"<think>\n{thought_text}\n</think>\n\n{final_answer}".strip()
+                    else:
+                        self.messages[-1].content = self.injector.apply_master_suffix(
+                            assistant_content=self.messages[-1].content or "",
+                            custom_suffix=self.custom_master_suffix
+                        )
+
                 if on_step_callback:
                     await on_step_callback({
                         "type": "task_completed",
