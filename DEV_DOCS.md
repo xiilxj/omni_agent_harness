@@ -2,6 +2,12 @@
 
 ## 1. 项目定位与核心愿景
 本项目是基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度改造演进的工业级智能体底座（Agent Harness），具备以下核心特性：
+- **全面对齐并超越 DSH 5 大高级工程子系统 (DSH Feature Alignment)**：
+  1. **`ask_user` 交互式决策提问卡片**：当大模型遇到设计分支或需用户确认时，调用 `ask_user` 在网页端弹出单选/多选/自定义输入交互卡片，异步阻塞等待用户点击选择后唤醒继续执行。
+  2. **`update_todo_list` 动态任务进度 Checklist**：大模型可自主生成并维护多步骤待办清单，前端实时渲染进度百分比与 `待执行`、`执行中 (呼吸动效)`、`已完成 (划线打勾)` 状态。
+  3. **代码修改红绿 Diff 可视化查看器**：在执行 `replace_file_content` 时自动计算并高亮渲染统一 Diff 补丁（绿色新增、红色删除、青色行号），代码变更一目了然。
+  4. **会话时间旅行回退 (Time-Travel Rollback)**：每条历史消息支持 `⏪ 回退到此步`，一键安全裁剪后续污染上下文并从快照节点重新分叉。
+  5. **标准 Model Context Protocol (MCP) 客户端支持**：新增 `harness/tools/mcp_client.py`，支持加载 STDIO MCP 服务器并动态向工具中心注册外部插件。
 - **首轮首字反套话绝对锁死机制 (First-Token Anti-Greeting & Turn-1 Hard Lock)**：
   - 彻底击碎主流大模型在第 1 轮交互中容易陷入出厂 RLHF 客套问候语（如*“您好！我是AI助手/有什么可以帮您”*）的神经元反射陷阱。
   - 在头部加固框与尾部用户回声指令中强制注入 `[FIRST-TOKEN & EXECUTION MANDATE]`，严禁一切客套前言，要求自第一个字符起 100% 立即激活指定人设并直奔任务实操。
@@ -68,35 +74,30 @@
 
 | 路径 / 模块 | 用途与职责说明 | 状态 |
 | :--- | :--- | :--- |
-| `harness/prompt/master_injector.py` | 纯净协议级 Master 注入引擎（双端物理锚定 + 首轮反套话首字硬锁死）。 | ✅ 已全面升级 |
+| `harness/tools/default_tools.py` | 注册 10 项核心工具（新增 `ask_user` 交互提问与 `update_todo_list` 待办进度）。 | ✅ 已全面就绪 |
+| `harness/tools/mcp_client.py` | Model Context Protocol (MCP) 客户端管理器（支持 STDIO 外部服务连入与动态工具挂载）。 | ✅ 已全新构建 |
+| `harness/ui/templates/index.html` | 前端单页（新增提问卡片渲染、动态待办 Checklist、Diff 高亮、时间旅行回退）。 | ✅ 已全面升级 |
+| `harness/ui/app.py` | FastAPI 后端服务（新增 `/api/agent/user-response`、`/api/sessions/{id}/rollback` 与 MCP 状态接口）。 | ✅ 已全面升级 |
+| `tests/test_dsh_aligned_features.py` | 针对 DSH 对齐特性的全量自动化单元与集成测试。 | ✅ 11/11 全部通过 |
 | `start_windows.bat` | Windows 纯原生一键启动脚本（自动环境检查、依赖安装与拉起浏览器）。 | ✅ 已就绪 |
-| `install_windows.bat` | Windows 独立依赖安装脚本。 | ✅ 已就绪 |
 | `README_WINDOWS.md` | 面向 Windows 用户的零门槛极速使用文档。 | ✅ 已就绪 |
 | `package_windows_clean.py` | 纯净 Windows 独立分发打包工具（安全审计，自动剔除所有私有数据）。 | ✅ 已就绪 |
-| `harness/prompt/presets.py` | 纯净用户自定义预设管理器（支持 preset_id 精确覆盖与命名创建）。 | ✅ 已就绪 |
-| `harness/ui/templates/index.html` | 前端单页应用（当前生效预设动态指示器、覆盖已有预设二级菜单、双视图编辑器）。 | ✅ 已就绪 |
+| `harness/prompt/master_injector.py` | 纯净协议级 Master 注入引擎（双端物理锚定 + 首轮反套话首字硬锁死）。 | ✅ 已就绪 |
 | `harness/core/config.py` | 全局配置与 DSH 模型档位、5 档推理强度（Off/Low/Med/High/Max）及 3 大权限模式定义。 | ✅ 已就绪 |
 | `harness/providers/openai_provider.py` | OpenAI/DeepSeek 适配器（支持将 5 档 reasoning_effort 与 thinking 预算参数注入上游）。 | ✅ 已就绪 |
 | `harness/core/agent.py` | ReAct 循环状态机（支持 Read-Only 沙箱只读拦截与 5 档推理强度透传）。 | ✅ 已就绪 |
 | `harness/core/session.py` | 多会话管理、自动取名、自主重命名与归档持久化引擎。 | ✅ 已就绪 |
 | `harness/tools/registry.py` | 工具注册中心（工具定义字典序排序，最大化 Prompt Cache 命中）。 | ✅ 已就绪 |
-| `harness/ui/app.py` | FastAPI 后端服务（`/api/modes`、预设 CRUD 与覆盖、会话重命名、归档端点、余额查询）。 | ✅ 已就绪 |
-| `harness/core/workspace.py` | 全机工作区目录切换与文件树创建引擎。 | ✅ 已就绪 |
-| `config/config.yaml` | 全局配置文件。使用 `${DEEPSEEK_API_KEY}` 环境变量，杜绝明文硬编码。 | ✅ 安全规范 |
-| `.env` / `.env.example` | 本地私有密钥隔离配置（已加入 `.gitignore`，打包自动剔除）。 | ✅ 安全隔离 |
-| `harness/tools/` | 跨平台全套 8 项工具箱（Shell/PowerShell/StrReplace/Grep/Find/WebFetch）。 | ✅ 已就绪 |
-| `harness/providers/` | 多模型适配层（DeepSeek-V3/R1/V4, OpenAI GPT-4o, Anthropic Claude, vLLM/Ollama）。 | ✅ 实测通过 |
-| `package_dist.py` | 跨平台独立绿色分发包打包工具（自动排除 .env 密钥）。 | ✅ 已就绪 |
-| `tests/` | 自动化测试集（100% 测试通过率，含真实 DeepSeek 官方 API 测试）。 | ✅ 8/8 Passed |
+| `tests/` | 自动化测试集（100% 测试通过率，共 11 项用例）。 | ✅ 11/11 Passed |
 
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 25 轮（首轮首字反套话锁死、双端物理锚定升级与全平台同步 100% 验收）
+- **审核轮数**: 第 26 轮（DSH 核心特性 ask_user、todo 清单、Diff 渲染、快照回退与 MCP 客户端 100% 验收）
 - **测试状态**:
-  - `pytest tests/`: 8/8 全部通过。
-  - 首轮机制验证：首条用户输入自动获得 `[FIRST-TOKEN & EXECUTION MANDATE]` 严密锁死，严禁一切客服问候语与拒绝托词，首个字符起 100% 激活人设与执行。
+  - `pytest tests/`: **11/11 全部通过**。
 - **纯净 Windows 分发包导出路径**: 
   - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
+- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（Commit: `ee58a4a`）。

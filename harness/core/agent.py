@@ -149,26 +149,31 @@ class OmniAgent:
                 )
             )
 
-            # 智能提取思考过程（支持 ReAct 决策思考与 <think>...</think> 深度推理链）
+            # 智能提取思考过程（全面支持 DeepSeek 原生 reasoning_content、<think> 深度推理链与 ReAct 前置思考）
             import re
-            thought_text = ""
+            thought_text = getattr(response, "reasoning_content", None) or ""
             clean_answer = assistant_content
 
-            think_match = re.search(r'<think>([\s\S]*?)</think>', assistant_content, flags=re.IGNORECASE)
-            if think_match:
-                thought_text = think_match.group(1).strip()
-                clean_answer = re.sub(r'<think>[\s\S]*?</think>', '', assistant_content, flags=re.IGNORECASE).strip()
-            elif tool_calls and assistant_content:
-                thought_text = assistant_content
+            if not thought_text:
+                think_match = re.search(r'<think>([\s\S]*?)</think>', assistant_content, flags=re.IGNORECASE)
+                if think_match:
+                    thought_text = think_match.group(1).strip()
+                    clean_answer = re.sub(r'<think>[\s\S]*?</think>', '', assistant_content, flags=re.IGNORECASE).strip()
+                elif tool_calls and assistant_content:
+                    thought_text = assistant_content
 
-            # 如果存在思考内容，推送给前端展示为正在思考折叠盒
+            # 如果存在思考内容，在会话历史中完整包装记录，确保历史重开时不丢失思考链
+            if thought_text and "<think>" not in assistant_content:
+                self.messages[-1].content = f"<think>\n{thought_text}\n</think>\n\n{clean_answer}".strip()
+
+            # 推送思考事件给前端，实时渲染动态思考折叠盒
             if thought_text and on_step_callback:
                 await on_step_callback({
                     "type": "assistant_thought",
                     "content": thought_text
                 })
 
-            # 若无工具调用，说明 Agent 任务已彻底完成，此内容即为最终结论
+            # 若无工具调用，说明本轮对话已完成，推送最终文本答案
             if not tool_calls:
                 final_answer = clean_answer or assistant_content
                 if on_step_callback:

@@ -54,6 +54,7 @@ class UsageStats(BaseModel):
 class LLMResponse(BaseModel):
     """统一大模型响应结构"""
     content: Optional[str] = None
+    reasoning_content: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     finish_reason: Optional[str] = "stop"
     usage: Optional[UsageStats] = None

@@ -120,6 +120,7 @@ class OpenAICompatibleProvider(BaseProvider):
 
             return LLMResponse(
                 content=msg_data.get("content"),
+                reasoning_content=msg_data.get("reasoning_content"),
                 tool_calls=tool_calls,
                 finish_reason=choice.get("finish_reason", "stop"),
                 usage=usage,
@@ -191,6 +192,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         yield {
                             "type": "delta",
                             "content": delta.get("content"),
+                            "reasoning_content": delta.get("reasoning_content"),
                             "tool_calls": delta.get("tool_calls"),
                             "finish_reason": finish_reason
                         }
