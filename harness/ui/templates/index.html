@@ -3246,6 +3246,21 @@
                                 if (ev.telemetry) {
                                     updateTelemetryUI(ev.telemetry);
                                 }
+
+                                const targetSid = ev.session_id || activeSessionId;
+                                if (targetSid) {
+                                    activeSessionId = targetSid;
+                                    try {
+                                        const sRes = await fetch(`/api/sessions/${targetSid}`);
+                                        const sData = await sRes.json();
+                                        if (sData.session && sData.session.messages && sData.session.messages.length > 0) {
+                                            renderSessionMessages(sData.session.messages);
+                                        }
+                                    } catch (e) {
+                                        console.error('Failed to sync session messages:', e);
+                                    }
+                                }
+
                                 loadSessions();
                                 fetchUserBalance();
                                 loadWorkspaceArtifacts();
@@ -3303,33 +3318,134 @@
             scrollBottom();
         }
 
-        // Accordion Helpers: User Message with Rollback Action
+        // Accordion Helpers: User Message with Rollback & Inline Edit Action
         function appendUserMessage(text, msgIndex = null) {
             const div = document.createElement('div');
             div.className = 'group p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 text-dark-heading relative transition hover:border-zinc-700';
             
+            let currentContent = text;
+
             let rollbackHtml = '';
             if (msgIndex !== null && activeSessionId) {
                 rollbackHtml = `
-                    <button onclick="rollbackToStep(${msgIndex})" class="opacity-0 group-hover:opacity-100 transition px-2 py-0.5 rounded bg-dark-surface border border-dark-border text-[10px] text-dark-muted hover:text-amber-400 hover:border-amber-500/50 flex items-center space-x-1" title="回退到此步并裁剪清除后续所有交互">
-                        <span>⏪ 回退到此步</span>
+                    <button onclick="rollbackToStep(${msgIndex})" class="px-2 py-0.5 rounded bg-dark-surface border border-dark-border text-[10px] text-dark-muted hover:text-amber-400 hover:border-amber-500/50 flex items-center space-x-1 transition" title="回退到此步并裁剪清除后续所有交互">
+                        <span>⏪ 回退</span>
                     </button>
                 `;
             }
 
-            div.innerHTML = `
-                <div class="text-[11px] font-mono text-dark-muted mb-1 flex items-center justify-between">
-                    <span class="text-blue-400 font-semibold flex items-center gap-1.5">
-                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        User Request
-                    </span>
-                    <div class="flex items-center space-x-2">
-                        ${rollbackHtml}
-                        <span>${new Date().toLocaleTimeString()}</span>
-                    </div>
+            const headerBar = document.createElement('div');
+            headerBar.className = 'text-[11px] font-mono text-dark-muted mb-1.5 pb-1 border-b border-zinc-800/60 flex items-center justify-between select-none';
+            headerBar.innerHTML = `
+                <span class="text-blue-400 font-semibold flex items-center gap-1.5 user-title-badge">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>User Request</span>
+                </span>
+                <div class="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+                    ${rollbackHtml}
+                    <button class="btn-copy-user p-1 hover:text-zinc-200 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="复制提问文本">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                    <button class="btn-edit-user p-1 hover:text-blue-400 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="修改提问内容 (同步更新上下文)">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <span class="text-[10px] text-zinc-600 pl-1 font-mono">${new Date().toLocaleTimeString()}</span>
                 </div>
-                <div class="font-mono text-xs whitespace-pre-wrap">${escapeHtml(text)}</div>
             `;
+
+            const viewContainer = document.createElement('div');
+            viewContainer.className = 'font-mono text-xs whitespace-pre-wrap select-text leading-relaxed';
+            viewContainer.textContent = currentContent;
+
+            const editContainer = document.createElement('div');
+            editContainer.className = 'hidden space-y-2 pt-1';
+            editContainer.innerHTML = `
+                <textarea class="edit-user-textarea w-full min-h-[90px] p-2.5 rounded-lg bg-zinc-950 border border-blue-500/80 focus:border-blue-400 focus:outline-none text-zinc-200 font-mono text-xs leading-relaxed resize-y shadow-inner"></textarea>
+                <div class="flex items-center justify-end space-x-2">
+                    <button class="btn-cancel-user-edit px-2.5 py-1 rounded bg-dark-hover hover:bg-zinc-800 border border-dark-border text-zinc-400 hover:text-zinc-200 text-xs font-mono transition">
+                        取消
+                    </button>
+                    <button class="btn-save-user-edit px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold font-mono flex items-center space-x-1 transition shadow-sm">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>保存修改</span>
+                    </button>
+                </div>
+            `;
+
+            div.appendChild(headerBar);
+            div.appendChild(viewContainer);
+            div.appendChild(editContainer);
+
+            // Bind Actions
+            const btnCopy = headerBar.querySelector('.btn-copy-user');
+            if (btnCopy) {
+                btnCopy.addEventListener('click', () => {
+                    navigator.clipboard.writeText(currentContent);
+                    btnCopy.innerHTML = `<span class="text-emerald-400 text-[10px]">已复制!</span>`;
+                    setTimeout(() => {
+                        btnCopy.innerHTML = `<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                    }, 1500);
+                });
+            }
+
+            const btnEdit = headerBar.querySelector('.btn-edit-user');
+            const textarea = editContainer.querySelector('.edit-user-textarea');
+            const btnSave = editContainer.querySelector('.btn-save-user-edit');
+            const btnCancel = editContainer.querySelector('.btn-cancel-user-edit');
+
+            if (btnEdit) {
+                btnEdit.addEventListener('click', () => {
+                    textarea.value = currentContent;
+                    viewContainer.classList.add('hidden');
+                    editContainer.classList.remove('hidden');
+                    textarea.focus();
+                });
+            }
+
+            if (btnCancel) {
+                btnCancel.addEventListener('click', () => {
+                    editContainer.classList.add('hidden');
+                    viewContainer.classList.remove('hidden');
+                });
+            }
+
+            if (btnSave) {
+                btnSave.addEventListener('click', async () => {
+                    const newText = textarea.value;
+                    if (!newText.trim()) return alert('提问内容不能为空！');
+                    btnSave.disabled = true;
+                    btnSave.textContent = '保存中...';
+                    try {
+                        if (msgIndex !== null && activeSessionId) {
+                            const res = await fetch(`/api/sessions/${activeSessionId}/messages/${msgIndex}/edit`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ content: newText })
+                            });
+                            const data = await res.json();
+                            if (res.ok && data.status === 'success') {
+                                currentContent = newText;
+                                viewContainer.textContent = currentContent;
+                                editContainer.classList.add('hidden');
+                                viewContainer.classList.remove('hidden');
+                            } else {
+                                alert('保存失败: ' + (data.detail || data.error || 'Unknown error'));
+                            }
+                        } else {
+                            currentContent = newText;
+                            viewContainer.textContent = currentContent;
+                            editContainer.classList.add('hidden');
+                            viewContainer.classList.remove('hidden');
+                        }
+                    } catch (e) {
+                        alert('保存失败: ' + e.message);
+                    } finally {
+                        btnSave.disabled = false;
+                        btnSave.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span>保存修改</span>`;
+                    }
+                });
+            }
+
             timeline.appendChild(div);
             scrollBottom();
         }
