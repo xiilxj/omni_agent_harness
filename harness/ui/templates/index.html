@@ -952,6 +952,34 @@
                 </div>
             </div>
         </div>
+    <!-- Context Menu for Messages (上下文引用与消息操作右键菜单) -->
+    <div id="message-context-menu" class="hidden fixed z-50 bg-dark-surface/95 backdrop-blur-md border border-dark-border rounded-xl shadow-2xl p-1.5 text-xs font-sans text-zinc-300 w-52 select-none">
+        <div id="ctx-menu-header" class="px-2.5 py-1 text-[10px] font-mono text-zinc-500 border-b border-dark-border/60 mb-1 flex items-center justify-between">
+            <span id="ctx-role-title">💬 消息操作</span>
+            <span id="ctx-selection-status" class="text-blue-400 font-semibold hidden text-[9px]">已选中文本</span>
+        </div>
+        <button id="ctx-quote-selection" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white flex items-center space-x-2 text-blue-300 font-medium transition hidden">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path></svg>
+            <span>引用选中局部内容</span>
+        </button>
+        <button id="ctx-quote-all" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-dark-hover hover:text-white flex items-center space-x-2 text-zinc-200 transition">
+            <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>引用整条消息</span>
+        </button>
+        <button id="ctx-copy-msg" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-dark-hover hover:text-white flex items-center space-x-2 text-zinc-300 transition">
+            <svg class="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="ctx-copy-label">复制整条文本</span>
+        </button>
+        <button id="ctx-edit-msg" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-dark-hover hover:text-blue-400 flex items-center space-x-2 text-zinc-300 transition">
+            <svg class="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>编辑修改此条</span>
+        </button>
+    </div>
+
+    <!-- Floating Quick Selection Quote Pill (选中文字浮动快捷引用胶囊) -->
+    <div id="floating-quote-pill" class="hidden fixed z-50 bg-blue-600 hover:bg-blue-500 text-white font-medium px-2.5 py-1 rounded-full shadow-2xl flex items-center space-x-1.5 text-[11px] cursor-pointer select-none transition transform -translate-x-1/2 -translate-y-full hover:scale-105 active:scale-95">
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path></svg>
+        <span>💬 引用选中</span>
     </div>
 
     <!-- Backdrop Overlay -->
@@ -3318,10 +3346,10 @@
             scrollBottom();
         }
 
-        // Accordion Helpers: User Message with Rollback & Inline Edit Action
+        // Accordion Helpers: User Message with Rollback & Inline Edit & Quote Action
         function appendUserMessage(text, msgIndex = null) {
             const div = document.createElement('div');
-            div.className = 'group p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 text-dark-heading relative transition hover:border-zinc-700';
+            div.className = 'group p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 text-dark-heading relative transition hover:border-zinc-700 select-text';
             
             let currentContent = text;
 
@@ -3343,6 +3371,10 @@
                 </span>
                 <div class="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
                     ${rollbackHtml}
+                    <button class="btn-quote-user p-1 hover:text-blue-400 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="引用此提问到输入框">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span class="text-[10px]">引用</span>
+                    </button>
                     <button class="btn-copy-user p-1 hover:text-zinc-200 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="复制提问文本">
                         <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     </button>
@@ -3375,6 +3407,20 @@
             div.appendChild(headerBar);
             div.appendChild(viewContainer);
             div.appendChild(editContainer);
+
+            // Bind Quote Button
+            const btnQuote = headerBar.querySelector('.btn-quote-user');
+            if (btnQuote) {
+                btnQuote.addEventListener('click', () => {
+                    const sel = window.getSelection();
+                    const selStr = sel ? sel.toString().trim() : '';
+                    if (selStr && div.contains(sel.anchorNode)) {
+                        insertQuoteToInput('user', selStr, true);
+                    } else {
+                        insertQuoteToInput('user', currentContent, false);
+                    }
+                });
+            }
 
             // Bind Actions
             const btnCopy = headerBar.querySelector('.btn-copy-user');
@@ -3428,6 +3474,7 @@
                                 viewContainer.textContent = currentContent;
                                 editContainer.classList.add('hidden');
                                 viewContainer.classList.remove('hidden');
+                                bindMessageCardContextMenu(div, 'user', currentContent, msgIndex, () => { btnEdit.click(); });
                             } else {
                                 alert('保存失败: ' + (data.detail || data.error || 'Unknown error'));
                             }
@@ -3436,6 +3483,7 @@
                             viewContainer.textContent = currentContent;
                             editContainer.classList.add('hidden');
                             viewContainer.classList.remove('hidden');
+                            bindMessageCardContextMenu(div, 'user', currentContent, msgIndex, () => { btnEdit.click(); });
                         }
                     } catch (e) {
                         alert('保存失败: ' + e.message);
@@ -3445,6 +3493,9 @@
                     }
                 });
             }
+
+            // Bind Context Menu (右键引用与操作)
+            bindMessageCardContextMenu(div, 'user', currentContent, msgIndex, () => { if (btnEdit) btnEdit.click(); });
 
             timeline.appendChild(div);
             scrollBottom();
@@ -3787,7 +3838,7 @@
 
         function appendAssistantMarkdown(markdown, msgIndex = null) {
             const div = document.createElement('div');
-            div.className = 'group relative p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text transition hover:border-zinc-700/80';
+            div.className = 'group relative p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text transition hover:border-zinc-700/80 select-text';
             
             let currentContent = markdown;
 
@@ -3799,6 +3850,10 @@
                     <span>Assistant Response</span>
                 </div>
                 <div class="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+                    <button class="btn-quote-msg p-1 hover:text-blue-400 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="引用此回答到输入框">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span class="text-[10px]">引用</span>
+                    </button>
                     <button class="btn-copy-msg p-1 hover:text-zinc-200 rounded hover:bg-dark-hover transition flex items-center space-x-1" title="复制原始文本">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         <span class="text-[10px]">复制</span>
@@ -3839,6 +3894,20 @@
             div.appendChild(headerBar);
             div.appendChild(viewContainer);
             div.appendChild(editContainer);
+
+            // Bind Quote Button
+            const btnQuote = headerBar.querySelector('.btn-quote-msg');
+            if (btnQuote) {
+                btnQuote.addEventListener('click', () => {
+                    const sel = window.getSelection();
+                    const selStr = sel ? sel.toString().trim() : '';
+                    if (selStr && div.contains(sel.anchorNode)) {
+                        insertQuoteToInput('assistant', selStr, true);
+                    } else {
+                        insertQuoteToInput('assistant', currentContent, false);
+                    }
+                });
+            }
 
             // Bind Copy Button
             const btnCopy = headerBar.querySelector('.btn-copy-msg');
@@ -3890,6 +3959,7 @@
                             viewContainer.innerHTML = marked.parse(currentContent);
                             editContainer.classList.add('hidden');
                             viewContainer.classList.remove('hidden');
+                            bindMessageCardContextMenu(div, 'assistant', currentContent, msgIndex, () => { btnEdit.click(); });
                             
                             // Show badge
                             const badge = document.createElement('span');
@@ -3906,6 +3976,7 @@
                         viewContainer.innerHTML = marked.parse(currentContent);
                         editContainer.classList.add('hidden');
                         viewContainer.classList.remove('hidden');
+                        bindMessageCardContextMenu(div, 'assistant', currentContent, msgIndex, () => { btnEdit.click(); });
                     }
                 } catch (err) {
                     alert('保存失败: ' + err.message);
@@ -3915,8 +3986,199 @@
                 }
             });
 
+            // Bind Context Menu (右键引用与操作)
+            bindMessageCardContextMenu(div, 'assistant', currentContent, msgIndex, () => { if (btnEdit) btnEdit.click(); });
+
             timeline.appendChild(div);
             scrollBottom();
+        }
+
+        // ==================== Context Quote & Message Operations Controller ====================
+        const messageContextMenu = document.getElementById('message-context-menu');
+        const ctxRoleTitle = document.getElementById('ctx-role-title');
+        const ctxSelectionStatus = document.getElementById('ctx-selection-status');
+        const ctxQuoteSelection = document.getElementById('ctx-quote-selection');
+        const ctxQuoteAll = document.getElementById('ctx-quote-all');
+        const ctxCopyMsg = document.getElementById('ctx-copy-msg');
+        const ctxCopyLabel = document.getElementById('ctx-copy-label');
+        const ctxEditMsg = document.getElementById('ctx-edit-msg');
+        const floatingQuotePill = document.getElementById('floating-quote-pill');
+
+        let currentContextTarget = {
+            role: 'assistant', // 'user' or 'assistant'
+            fullContent: '',
+            selectedText: '',
+            msgIndex: null,
+            triggerEditFn: null
+        };
+
+        function insertQuoteToInput(senderRole, quoteText, isPartial = false) {
+            const roleLabel = senderRole === 'user' ? '用户提问' : 'AI 回答';
+            const cleanText = (quoteText || '').trim();
+            if (!cleanText) return;
+
+            // 格式化 Markdown 块引用
+            const quotedLines = cleanText.split('\n').map(line => `> ${line}`).join('\n');
+            const quoteHeader = `> 💬 [引用 ${roleLabel}${isPartial ? '片段' : ''}]:\n`;
+            const fullQuote = `${quoteHeader}${quotedLines}\n\n`;
+
+            if (promptInput) {
+                const curVal = promptInput.value;
+                if (curVal && curVal.trim()) {
+                    promptInput.value = curVal.trimEnd() + '\n\n' + fullQuote;
+                } else {
+                    promptInput.value = fullQuote;
+                }
+                promptInput.focus();
+                promptInput.style.height = 'auto';
+                promptInput.style.height = Math.min(240, Math.max(70, promptInput.scrollHeight)) + 'px';
+                promptInput.scrollTop = promptInput.scrollHeight;
+                
+                // 滚动底部保证输入卡片完全可见
+                scrollBottom();
+            }
+        }
+
+        function hideMessageContextMenu() {
+            if (messageContextMenu) messageContextMenu.classList.add('hidden');
+        }
+
+        function hideFloatingQuotePill() {
+            if (floatingQuotePill) floatingQuotePill.classList.add('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#message-context-menu')) {
+                hideMessageContextMenu();
+            }
+            if (!e.target.closest('#floating-quote-pill')) {
+                hideFloatingQuotePill();
+            }
+        });
+
+        // 监听选中文本浮出快捷引用气泡
+        document.addEventListener('mouseup', (e) => {
+            if (e.target.closest('#message-context-menu') || e.target.closest('#floating-quote-pill')) return;
+            
+            setTimeout(() => {
+                const selection = window.getSelection();
+                const selectedStr = selection ? selection.toString().trim() : '';
+                if (selectedStr && selectedStr.length > 0) {
+                    const messageCard = e.target.closest('.user-msg-card, .assistant-msg-card');
+                    if (messageCard) {
+                        const role = messageCard.dataset.msgRole || (messageCard.classList.contains('user-msg-card') ? 'user' : 'assistant');
+                        currentContextTarget.role = role;
+                        currentContextTarget.selectedText = selectedStr;
+                        currentContextTarget.fullContent = messageCard._rawContent || selectedStr;
+                        currentContextTarget.msgIndex = messageCard.dataset.msgIndex !== undefined ? parseInt(messageCard.dataset.msgIndex) : null;
+                        currentContextTarget.triggerEditFn = messageCard._triggerEdit;
+
+                        // 显示浮动气泡
+                        if (floatingQuotePill) {
+                            floatingQuotePill.style.left = `${e.pageX}px`;
+                            floatingQuotePill.style.top = `${e.pageY - 12}px`;
+                            floatingQuotePill.classList.remove('hidden');
+                        }
+                        return;
+                    }
+                }
+                hideFloatingQuotePill();
+            }, 50);
+        });
+
+        if (floatingQuotePill) {
+            floatingQuotePill.addEventListener('click', () => {
+                if (currentContextTarget.selectedText) {
+                    insertQuoteToInput(currentContextTarget.role, currentContextTarget.selectedText, true);
+                    hideFloatingQuotePill();
+                    window.getSelection()?.removeAllRanges();
+                }
+            });
+        }
+
+        // 右键菜单交互
+        if (ctxQuoteSelection) {
+            ctxQuoteSelection.addEventListener('click', () => {
+                if (currentContextTarget.selectedText) {
+                    insertQuoteToInput(currentContextTarget.role, currentContextTarget.selectedText, true);
+                }
+                hideMessageContextMenu();
+            });
+        }
+
+        if (ctxQuoteAll) {
+            ctxQuoteAll.addEventListener('click', () => {
+                if (currentContextTarget.fullContent) {
+                    insertQuoteToInput(currentContextTarget.role, currentContextTarget.fullContent, false);
+                }
+                hideMessageContextMenu();
+            });
+        }
+
+        if (ctxCopyMsg) {
+            ctxCopyMsg.addEventListener('click', () => {
+                const textToCopy = currentContextTarget.selectedText || currentContextTarget.fullContent;
+                if (textToCopy) {
+                    navigator.clipboard.writeText(textToCopy);
+                }
+                hideMessageContextMenu();
+            });
+        }
+
+        if (ctxEditMsg) {
+            ctxEditMsg.addEventListener('click', () => {
+                if (typeof currentContextTarget.triggerEditFn === 'function') {
+                    currentContextTarget.triggerEditFn();
+                }
+                hideMessageContextMenu();
+            });
+        }
+
+        function bindMessageCardContextMenu(cardElement, role, fullContent, msgIndex, triggerEditFn) {
+            cardElement.dataset.msgRole = role;
+            if (msgIndex !== null && msgIndex !== undefined) cardElement.dataset.msgIndex = msgIndex;
+            cardElement._rawContent = fullContent;
+            cardElement._triggerEdit = triggerEditFn;
+            cardElement.classList.add(role === 'user' ? 'user-msg-card' : 'assistant-msg-card');
+
+            cardElement.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                hideFloatingQuotePill();
+
+                const selection = window.getSelection();
+                const selectedStr = (selection && selection.toString()) ? selection.toString().trim() : '';
+
+                currentContextTarget.role = role;
+                currentContextTarget.fullContent = fullContent;
+                currentContextTarget.selectedText = selectedStr;
+                currentContextTarget.msgIndex = msgIndex;
+                currentContextTarget.triggerEditFn = triggerEditFn;
+
+                const roleLabel = role === 'user' ? '👤 用户提问' : '🤖 AI 回答';
+                if (ctxRoleTitle) ctxRoleTitle.textContent = `${roleLabel} 操作`;
+
+                if (selectedStr) {
+                    if (ctxSelectionStatus) ctxSelectionStatus.classList.remove('hidden');
+                    if (ctxQuoteSelection) ctxQuoteSelection.classList.remove('hidden');
+                    if (ctxCopyLabel) ctxCopyLabel.textContent = '复制所选文本';
+                } else {
+                    if (ctxSelectionStatus) ctxSelectionStatus.classList.add('hidden');
+                    if (ctxQuoteSelection) ctxQuoteSelection.classList.add('hidden');
+                    if (ctxCopyLabel) ctxCopyLabel.textContent = '复制整条文本';
+                }
+
+                // 边界防溢出定位
+                let posX = e.pageX;
+                let posY = e.pageY;
+                const menuWidth = 210;
+                const menuHeight = 170;
+                if (posX + menuWidth > window.innerWidth) posX = window.innerWidth - menuWidth - 10;
+                if (posY + menuHeight > window.innerHeight) posY = window.innerHeight - menuHeight - 10;
+
+                messageContextMenu.style.left = `${posX}px`;
+                messageContextMenu.style.top = `${posY}px`;
+                messageContextMenu.classList.remove('hidden');
+            });
         }
 
         function appendErrorCard(errText) {
