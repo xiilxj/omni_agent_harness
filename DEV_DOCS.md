@@ -3,10 +3,24 @@
 ## 1. 项目定位与核心愿景
 本项目是基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度重构融合的工业级终极智能体底座（Agent Harness），具备以下核心系统：
 
-### 🎯 右侧产物透视与实时预览系统 (Right-Side Overview & Live Preview Panel)
-- **可自由展开/收回的右侧专属工作区面板**：
-  * 点击顶部导航栏 **`👁️ 产物预览 (Overview)`** 按钮、使用快捷键 **`Ctrl+P`** 或 **`Alt+O`**，即可无缝侧滑展开/收回；
-  * Agent 执行任务创建或修改 HTML/MD 等产物时，自动联动刷新产物列表。
+### 🎯 DSH 1:1 官方像素级复刻仪表盘与实时计费系统
+- **实时 Telemetry 仪表盘 (Bottom Telemetry Meter)**：
+  * `Prompt Tokens`：提示词总量与 `(Hit: xxx)` 绿色缓存命中数；
+  * `Completion Tokens`：生成输出 Token 数量；
+  * `Total Tokens`：本轮总消耗 Token；
+  * `Latency & Live TPS`：毫秒级秒表走秒与生成速率动态测速；
+  * `Cache Hit Ratio`：提示词缓存命中率徽章（>50% 高亮绿色，节省 90% 成本）；
+  * `Turn Cost (本次计费)`：基于官方标准费率精准核算至分后五位（`¥0.000xx`）；
+  * `Session Cost (会话累计)`：多轮交互累计消耗总金额（`¥0.0xxxx`）；
+  * `Account Balance`：官方账户实时可用余额（`¥XX.XX`）；
+  * `128K Context Bar`：上下文窗口已占用比例与进度条。
+- **实时计费与 Token 成本明细表弹窗 (`#modal-billing-breakdown`)**：
+  * 点击仪表盘中的 **`📊 计费明细`** 按钮或点击余额，即弹出计费清单；
+  * 展示当前模型费率标准（输入未命中、缓存命中、输出单价）；
+  * 逐项拆解本次交互各计费项（Prompt 未命中、缓存命中、Completion 输出）的 Token 数量、计费单价与实扣费用；
+  * 会话累计总支出与账户余额实时同步。
+
+### 👁️ 右侧产物透视与实时预览系统 (Right-Side Overview & Live Preview Panel)
 - **三大透视模式**：
   1. `🌐 实时 Web / UI 渲染`: 内嵌 `<iframe id="preview-live-iframe">`，支持下拉选择工作区内的任何 HTML 页面实时交互渲染、重新载入与在新浏览器窗口全屏打开；
   2. `📄 交付文档 (Artifacts)`: Markdown 渲染器，实时展示系统生成的开发文档、规划与报告；
@@ -47,11 +61,11 @@
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 29 轮（右侧产物实时透视面板 + Skills/MCP 深度配置管理中心全量交付验收）
+- **审核轮数**: 第 30 轮（DSH 1:1 仪表盘全量复刻 + 实时计费核算引擎与明细表全量验收）
 - **测试状态**:
-  - `pytest tests/`: **15/15 全部通过 (100% Passed)**。
+  - `pytest tests/`: **16/16 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
-- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（Commit: `4304bcd`）。
+- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（Commit: `b88912f`）。
