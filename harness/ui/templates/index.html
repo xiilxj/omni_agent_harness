@@ -1651,23 +1651,39 @@
         }
 
         // 4. Drawer & Settings
+        let currentDrawerTab = 'models';
+        function isDrawerOpen() {
+            return !drawer.classList.contains('translate-x-full');
+        }
+
         function openDrawer(tabName = 'models') {
             drawer.classList.remove('translate-x-full');
             backdrop.classList.remove('hidden');
             switchTab(tabName);
         }
+
         function closeDrawer() {
             drawer.classList.add('translate-x-full');
             backdrop.classList.add('hidden');
         }
 
-        btnOpenSettings.addEventListener('click', () => openDrawer('models'));
-        btnQuickPrompt.addEventListener('click', () => openDrawer('prompt'));
-        btnCloseSettings.addEventListener('click', closeDrawer);
-        backdrop.addEventListener('click', closeDrawer);
+        function toggleDrawer(tabName = 'models') {
+            if (isDrawerOpen() && currentDrawerTab === tabName) {
+                closeDrawer();
+            } else {
+                openDrawer(tabName);
+            }
+        }
+
+        if (btnOpenSettings) btnOpenSettings.addEventListener('click', (e) => { e.stopPropagation(); toggleDrawer('models'); });
+        if (btnQuickPrompt) btnQuickPrompt.addEventListener('click', (e) => { e.stopPropagation(); toggleDrawer('prompt'); });
+        if (btnCloseSettings) btnCloseSettings.addEventListener('click', (e) => { e.stopPropagation(); closeDrawer(); });
+        if (backdrop) backdrop.addEventListener('click', closeDrawer);
+        if (drawer) drawer.addEventListener('click', (e) => e.stopPropagation());
 
         // 5-Tab Settings Drawer Switcher
         function switchTab(tab) {
+            currentDrawerTab = tab;
             const tabs = ['models', 'prompt', 'skills', 'mcp', 'tools'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
@@ -1701,7 +1717,10 @@
 
         ['models', 'prompt', 'skills', 'mcp', 'tools'].forEach(t => {
             const el = document.getElementById(`tab-btn-${t}`);
-            if (el) el.addEventListener('click', () => switchTab(t));
+            if (el) el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                switchTab(t);
+            });
         });
 
         // ==================== Skills Management Controller ====================
@@ -2581,7 +2600,10 @@
             }
         });
 
-        btnInputPlus.addEventListener('click', () => openDrawer('prompt'));
+        btnInputPlus.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDrawer('prompt');
+        });
         btnClearInput.addEventListener('click', () => {
             promptInput.value = '';
             promptInput.focus();
