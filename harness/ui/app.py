@@ -855,7 +855,10 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         }
 
         for p in root.rglob("*"):
-            if any(ign in p.parts for ign in [".git", "node_modules", "__pycache__", ".venv", "dist", "build"]):
+            if any(ign in p.parts for ign in [".git", "node_modules", "__pycache__", ".venv", "dist", "build", ".gemini", ".pytest_cache", "brain"]):
+                continue
+            if "harness" in p.parts and "ui" in p.parts and "templates" in p.parts:
+                # 排除自身主界面模板，避免在 Overview 中递归嵌套自身网页
                 continue
             if p.is_file():
                 ext = p.suffix.lower()

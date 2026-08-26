@@ -40,6 +40,36 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        /* Universal Dark Scrollbars for all elements across Windows/Mac/Linux */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #2b3044 #0e1017;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #08090d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232738;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4f46e5;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+
         body {
             background-color: #08090d;
             background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
@@ -49,10 +79,6 @@
             letter-spacing: -0.01em;
         }
         .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #232738; border-radius: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #6366f1; }
         .glass-panel { background: rgba(14, 16, 23, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.07); }
         .glass-card { background: rgba(19, 22, 32, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .drawer-slide { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -447,7 +473,7 @@
             </div>
 
             <!-- DSH 官方 1:1 像素级复刻 Telemetry & 实时计费仪表盘 (自适应单行 HUD 布局) -->
-            <div class="px-3 py-1.5 rounded-lg bg-dark-bg border border-dark-border text-[11px] font-mono text-dark-muted flex items-center justify-between overflow-x-auto custom-scroll whitespace-nowrap gap-3 shadow-sm select-none">
+            <div class="px-3 py-1.5 rounded-lg bg-dark-bg/90 border border-dark-border/80 text-[11px] font-mono text-dark-muted flex items-center justify-between overflow-x-auto no-scrollbar whitespace-nowrap gap-3 shadow-sm select-none">
                 <!-- Left: Metrics Cluster -->
                 <div class="flex items-center space-x-3 overflow-x-auto no-scrollbar">
                     <!-- Prompt Tokens & Cache Hit -->
@@ -539,14 +565,14 @@
             <!-- Overview Segmented Sub-Tabs -->
             <div class="px-3 py-2 border-b border-dark-border flex items-center justify-between bg-dark-bg/40 text-xs flex-shrink-0">
                 <div class="flex items-center space-x-1 p-0.5 bg-dark-bg rounded-lg border border-dark-border/70 flex-1">
-                    <button id="overview-tab-web" class="flex-1 py-1 rounded text-center font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition flex items-center justify-center space-x-1">
-                        <span>🌐 实时 Web</span>
-                    </button>
-                    <button id="overview-tab-doc" class="flex-1 py-1 rounded text-center font-medium text-dark-muted hover:text-dark-heading transition flex items-center justify-center space-x-1">
+                    <button id="overview-tab-doc" class="flex-1 py-1 rounded text-center font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition flex items-center justify-center space-x-1">
                         <span>📄 交付文档</span>
                     </button>
                     <button id="overview-tab-code" class="flex-1 py-1 rounded text-center font-medium text-dark-muted hover:text-dark-heading transition flex items-center justify-center space-x-1">
                         <span>🔍 代码补丁</span>
+                    </button>
+                    <button id="overview-tab-web" class="flex-1 py-1 rounded text-center font-medium text-dark-muted hover:text-dark-heading transition flex items-center justify-center space-x-1">
+                        <span>🌐 实时 Web</span>
                     </button>
                 </div>
             </div>
@@ -554,7 +580,7 @@
             <!-- Overview Content Panes -->
             <div class="flex-1 flex flex-col min-h-0 overflow-hidden bg-dark-surface/50">
                 <!-- Pane 1: Live Web / HTML Iframe View -->
-                <div id="pane-overview-web" class="flex-1 flex flex-col min-h-0 p-3 space-y-2.5">
+                <div id="pane-overview-web" class="hidden flex-1 flex flex-col min-h-0 p-3 space-y-2.5">
                     <div class="flex items-center space-x-1.5 bg-dark-bg p-1 rounded-lg border border-dark-border text-xs shadow-inner">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 ml-1.5 flex-shrink-0"></span>
                         <select id="select-web-artifact" class="flex-1 bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer truncate px-1">
@@ -567,20 +593,25 @@
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                         </button>
                     </div>
-                    <div class="flex-1 bg-white rounded-lg overflow-hidden border border-dark-border relative shadow-lg">
-                        <iframe id="preview-live-iframe" src="about:blank" class="w-full h-full border-0"></iframe>
+                    <div class="flex-1 bg-dark-bg rounded-lg overflow-hidden border border-dark-border relative shadow-lg flex flex-col">
+                        <iframe id="preview-live-iframe" src="about:blank" class="w-full h-full border-0 hidden"></iframe>
+                        <div id="web-preview-empty" class="flex-1 flex flex-col items-center justify-center p-6 text-center text-zinc-500 font-mono space-y-2">
+                            <svg class="w-8 h-8 text-zinc-600 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                            <span class="text-xs text-zinc-400">请选择要预览的 HTML 页面产物</span>
+                            <span class="text-[10px] text-zinc-600">智能体生成的 Web 应用或图表将在此实时渲染</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Pane 2: Rendered Markdown Document View -->
-                <div id="pane-overview-doc" class="hidden flex-1 flex flex-col min-h-0 p-3 space-y-2.5">
+                <div id="pane-overview-doc" class="flex-1 flex flex-col min-h-0 p-3 space-y-2.5">
                     <div class="flex items-center space-x-2 p-1.5 bg-dark-bg rounded-lg border border-dark-border shadow-inner">
                         <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         <select id="select-doc-artifact" class="flex-1 bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer truncate">
                             <option value="DEV_DOCS.md">DEV_DOCS.md</option>
                         </select>
                     </div>
-                    <div id="preview-doc-rendered" class="flex-1 overflow-y-auto p-4 bg-dark-bg/70 border border-dark-border rounded-lg prose prose-invert prose-sm max-w-none custom-scroll text-xs leading-relaxed select-text space-y-3 shadow-inner">
+                    <div id="preview-doc-rendered" class="flex-1 overflow-y-auto p-4 bg-dark-bg/70 border border-dark-border rounded-lg prose prose-invert prose-sm max-w-none no-scrollbar text-xs leading-relaxed select-text space-y-3 shadow-inner">
                         <!-- Rendered Markdown Content -->
                     </div>
                 </div>
@@ -597,7 +628,7 @@
                             <span>复制</span>
                         </button>
                     </div>
-                    <pre id="preview-code-content" class="flex-1 overflow-y-auto p-3.5 bg-dark-bg border border-dark-border rounded-lg font-mono text-[11px] text-zinc-300 custom-scroll whitespace-pre-wrap select-text leading-relaxed shadow-inner"></pre>
+                    <pre id="preview-code-content" class="flex-1 overflow-y-auto p-3.5 bg-dark-bg border border-dark-border rounded-lg font-mono text-[11px] text-zinc-300 no-scrollbar whitespace-pre-wrap select-text leading-relaxed shadow-inner"></pre>
                 </div>
             </div>
         </div>
@@ -1837,6 +1868,7 @@
                 btnToggleOverview.classList.add('bg-blue-600', 'text-white');
                 btnToggleOverview.classList.remove('bg-blue-950/50', 'text-blue-400');
                 loadWorkspaceArtifacts();
+                switchOverviewTab('doc');
             } else {
                 appOverviewPanel.classList.add('hidden');
                 btnToggleOverview.classList.remove('bg-blue-600', 'text-white');
@@ -1881,6 +1913,8 @@
             if (tab === 'web') {
                 overviewTabWeb.className = 'flex-1 py-1 rounded text-center font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition flex items-center justify-center space-x-1';
                 paneOverviewWeb.classList.remove('hidden');
+                if (selectWebArtifact.value) renderWebArtifact(selectWebArtifact.value);
+                else renderWebArtifact('');
             } else if (tab === 'doc') {
                 overviewTabDoc.className = 'flex-1 py-1 rounded text-center font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition flex items-center justify-center space-x-1';
                 paneOverviewDoc.classList.remove('hidden');
@@ -1922,9 +1956,10 @@
                     selectCodeArtifact.appendChild(opt.cloneNode(true));
                 });
 
-                if (hasWeb && !selectWebArtifact.value && selectWebArtifact.options.length > 1) {
-                    selectWebArtifact.selectedIndex = 1;
+                if (selectWebArtifact.value) {
                     renderWebArtifact(selectWebArtifact.value);
+                } else {
+                    renderWebArtifact('');
                 }
                 if (selectDocArtifact.options.length > 0) {
                     loadDocumentArtifact(selectDocArtifact.value);
@@ -1938,10 +1973,15 @@
         }
 
         function renderWebArtifact(relPath) {
+            const emptyState = document.getElementById('web-preview-empty');
             if (!relPath) {
                 previewLiveIframe.src = 'about:blank';
+                previewLiveIframe.classList.add('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
                 return;
             }
+            if (emptyState) emptyState.classList.add('hidden');
+            previewLiveIframe.classList.remove('hidden');
             previewLiveIframe.src = `/api/artifacts/raw?path=${encodeURIComponent(relPath)}`;
         }
 
