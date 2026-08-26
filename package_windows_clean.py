@@ -88,38 +88,10 @@ def create_clean_windows_package():
 
     print("  ✓ 安全审计通过: 零私有密钥、零个人提示词、零历史会话残留。")
 
-    # 4. 导出到宿主机与本地桌面
-    print("[4/4] 正在导出分发包到宿主机与桌面...")
-    export_targets = []
-    user_prof = os.environ.get("USERPROFILE")
-    if user_prof:
-        export_targets.append(Path(user_prof) / "Desktop" / zip_filename)
-        export_targets.append(Path(user_prof) / "桌面" / zip_filename)
-
-    desktop_dirs = [
-        Path.home() / "Desktop",
-        Path.home() / "桌面",
-        Path("/mnt/d/Desktop"),
-        Path("/mnt/d"),
-        Path("/mnt/c/Users/Lenovo/Desktop")
-    ]
-    for d in desktop_dirs:
-        if d.exists():
-            export_targets.append(d / zip_filename)
-
-    # 去重
-    unique_targets = list(dict.fromkeys(export_targets))
-    exported_count = 0
-    for target in unique_targets:
-        try:
-            if target.parent.exists():
-                shutil.copy2(local_zip_path, target)
-                print(f"  ✓ 成功导出至: {target}")
-                exported_count += 1
-        except Exception as e:
-            pass
-
-    print(f"\n[完成] 纯净分发包已成功生成 (dist/{zip_filename})，并同步导出 {exported_count} 处桌面备份。")
+    # 4. 完成生成通知
+    print(f"\n[完成] 纯净分发包已成功生成并保存在工程目录: dist/{zip_filename}")
+    print(f"  ✓ 物理路径: {local_zip_path.resolve()}")
+    print("  ✓ 已遵循用户指令：不向 Arch 系统桌面投递任何临时或导出文件。")
 
 
 if __name__ == "__main__":
