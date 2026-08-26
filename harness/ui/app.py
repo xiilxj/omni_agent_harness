@@ -701,6 +701,35 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             return {"status": "success", "session": session}
         return {"status": "error", "message": "Invalid message index"}
 
+    class EditMessageRequest(BaseModel):
+        content: str
+
+    @app.post("/api/sessions/{session_id}/messages/{message_index}/edit")
+    async def edit_session_message(session_id: str, message_index: int, req: EditMessageRequest):
+        """修改会话中指定步骤的回答/提示词，持久化存储并替换后续多轮对话上下文"""
+        session = session_mgr.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if not (0 <= message_index < len(session.messages)):
+            raise HTTPException(status_code=400, detail="Invalid message index")
+        
+        session.messages[message_index]["content"] = req.content
+        session_mgr.save_session(session)
+
+        # 同步更新内存中的活跃 Agent 实例上下文
+        active_agents: Dict[str, OmniAgent] = getattr(app.state, "active_agents", {})
+        if session_id in active_agents:
+            agent = active_agents[session_id]
+            if 0 <= message_index < len(agent.messages):
+                agent.messages[message_index].content = req.content
+
+        return {
+            "status": "success",
+            "message_index": message_index,
+            "content": req.content,
+            "session": session.model_dump()
+        }
+
     from harness.tools.mcp_client import global_mcp_manager
 
     @app.get("/api/mcp/servers")

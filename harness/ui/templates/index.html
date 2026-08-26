@@ -1539,10 +1539,10 @@
                             renderRestoredThought(thinkMatch[1].trim());
                             const cleanContent = m.content.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
                             if (cleanContent) {
-                                appendAssistantMarkdown(cleanContent);
+                                appendAssistantMarkdown(cleanContent, idx);
                             }
                         } else {
-                            appendAssistantMarkdown(m.content);
+                            appendAssistantMarkdown(m.content, idx);
                         }
                     }
                 }
@@ -3638,21 +3638,167 @@
 
         function createAssistantStreamBlock() {
             const div = document.createElement('div');
-            div.className = 'p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text markdown-body';
+            div.className = 'group relative p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text transition hover:border-zinc-700/80';
+            
+            const headerBar = document.createElement('div');
+            headerBar.className = 'flex items-center justify-between mb-2 pb-1.5 border-b border-dark-border/40 text-[11px] font-mono text-zinc-500 select-none';
+            headerBar.innerHTML = `
+                <div class="flex items-center space-x-1.5 text-emerald-400 font-semibold">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>
+                    <span>Assistant Response</span>
+                </div>
+            `;
+
+            const viewContainer = document.createElement('div');
+            viewContainer.className = 'markdown-body text-xs leading-relaxed select-text';
+            div.appendChild(headerBar);
+            div.appendChild(viewContainer);
+            div._viewContainer = viewContainer;
+
             timeline.appendChild(div);
             scrollBottom();
             return div;
         }
 
         function updateAssistantStreamBlock(container, text) {
-            container.innerHTML = marked.parse(text);
+            if (container && container._viewContainer) {
+                container._viewContainer.innerHTML = marked.parse(text);
+            } else if (container) {
+                container.innerHTML = marked.parse(text);
+            }
             scrollBottom();
         }
 
-        function appendAssistantMarkdown(markdown) {
+        function appendAssistantMarkdown(markdown, msgIndex = null) {
             const div = document.createElement('div');
-            div.className = 'p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text markdown-body';
-            div.innerHTML = marked.parse(markdown);
+            div.className = 'group relative p-4 rounded-lg bg-dark-surface border border-dark-border text-dark-text transition hover:border-zinc-700/80';
+            
+            let currentContent = markdown;
+
+            const headerBar = document.createElement('div');
+            headerBar.className = 'flex items-center justify-between mb-2 pb-1.5 border-b border-dark-border/40 text-[11px] font-mono text-zinc-500 select-none';
+            headerBar.innerHTML = `
+                <div class="flex items-center space-x-1.5 text-emerald-400 font-semibold assistant-title-badge">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>
+                    <span>Assistant Response</span>
+                </div>
+                <div class="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+                    <button class="btn-copy-msg p-1 hover:text-zinc-200 rounded hover:bg-dark-hover transition flex items-center space-x-1" title="复制原始文本">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span class="text-[10px]">复制</span>
+                    </button>
+                    <button class="btn-edit-msg p-1 hover:text-blue-400 rounded hover:bg-dark-hover transition flex items-center space-x-1 text-zinc-400" title="编辑修改模型回答 (替换后续对话上下文)">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <span class="text-[10px]">修改回答</span>
+                    </button>
+                </div>
+            `;
+
+            const viewContainer = document.createElement('div');
+            viewContainer.className = 'markdown-body text-xs leading-relaxed select-text';
+            viewContainer.innerHTML = marked.parse(currentContent);
+
+            const editContainer = document.createElement('div');
+            editContainer.className = 'hidden space-y-2.5 pt-1';
+            editContainer.innerHTML = `
+                <div class="text-[10px] text-amber-400 font-mono flex items-center space-x-1">
+                    <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span>提示：修改后的内容将直接保存到会话历史中，并在下一轮对话中作为模型的真实历史回答参与推理。</span>
+                </div>
+                <textarea class="edit-textarea w-full min-h-[140px] p-3 rounded-lg bg-zinc-950 border border-blue-500/80 focus:border-blue-400 focus:outline-none text-zinc-200 font-mono text-xs leading-relaxed resize-y shadow-inner"></textarea>
+                <div class="flex items-center justify-between pt-1">
+                    <span class="save-status-msg text-[10px] text-emerald-400 font-mono"></span>
+                    <div class="flex items-center space-x-2">
+                        <button class="btn-cancel-edit px-3 py-1 rounded bg-dark-hover hover:bg-zinc-800 border border-dark-border text-zinc-400 hover:text-zinc-200 text-xs font-mono transition">
+                            取消 (Cancel)
+                        </button>
+                        <button class="btn-save-edit px-3 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold font-mono flex items-center space-x-1.5 transition shadow-md">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span>保存并更新上下文</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            div.appendChild(headerBar);
+            div.appendChild(viewContainer);
+            div.appendChild(editContainer);
+
+            // Bind Copy Button
+            const btnCopy = headerBar.querySelector('.btn-copy-msg');
+            btnCopy.addEventListener('click', () => {
+                navigator.clipboard.writeText(currentContent);
+                btnCopy.innerHTML = `<span class="text-emerald-400 text-[10px]">已复制!</span>`;
+                setTimeout(() => {
+                    btnCopy.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="text-[10px]">复制</span>`;
+                }, 1500);
+            });
+
+            // Bind Edit Button
+            const btnEdit = headerBar.querySelector('.btn-edit-msg');
+            const textarea = editContainer.querySelector('.edit-textarea');
+            const btnSave = editContainer.querySelector('.btn-save-edit');
+            const btnCancel = editContainer.querySelector('.btn-cancel-edit');
+
+            btnEdit.addEventListener('click', () => {
+                textarea.value = currentContent;
+                viewContainer.classList.add('hidden');
+                editContainer.classList.remove('hidden');
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(120, textarea.scrollHeight + 10) + 'px';
+                textarea.focus();
+            });
+
+            btnCancel.addEventListener('click', () => {
+                editContainer.classList.add('hidden');
+                viewContainer.classList.remove('hidden');
+            });
+
+            btnSave.addEventListener('click', async () => {
+                const newText = textarea.value;
+                if (!newText.trim()) return alert('回答内容不能为空！');
+                
+                btnSave.disabled = true;
+                btnSave.innerHTML = `<span>保存中...</span>`;
+                
+                try {
+                    if (msgIndex !== null && activeSessionId) {
+                        const res = await fetch(`/api/sessions/${activeSessionId}/messages/${msgIndex}/edit`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content: newText })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            currentContent = newText;
+                            viewContainer.innerHTML = marked.parse(currentContent);
+                            editContainer.classList.add('hidden');
+                            viewContainer.classList.remove('hidden');
+                            
+                            // Show badge
+                            const badge = document.createElement('span');
+                            badge.className = 'ml-2 text-[10px] text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800 font-mono';
+                            badge.textContent = '✓ 已修改上下文';
+                            const titleBadge = headerBar.querySelector('.assistant-title-badge');
+                            if (titleBadge) titleBadge.appendChild(badge);
+                            setTimeout(() => { badge.remove(); }, 4000);
+                        } else {
+                            alert('保存失败: ' + (data.detail || data.error || 'Unknown error'));
+                        }
+                    } else {
+                        currentContent = newText;
+                        viewContainer.innerHTML = marked.parse(currentContent);
+                        editContainer.classList.add('hidden');
+                        viewContainer.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    alert('保存失败: ' + err.message);
+                } finally {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span>保存并更新上下文</span>`;
+                }
+            });
+
             timeline.appendChild(div);
             scrollBottom();
         }

@@ -105,10 +105,20 @@
 
 ---
 
+### ✏️ 模型历史回答自主修改与上下文无缝替换引擎 (Assistant Message Inline Editor)
+- **内联交互编辑卡片**：
+  * 每个模型输出（Assistant Response）卡片右上角配备 **`✏️ 修改回答`** 与 **`📋 复制`** 快捷小图标；
+  * 点击小图标即可展开深色文本编辑框，用户可直接修正或修改模型的回答内容；
+- **会话持久化与下轮上下文即时替换**：
+  * 点击 **`[✓ 保存并更新上下文]`** 后，后端 `/api/sessions/{session_id}/messages/{msg_index}/edit` 立即更新磁盘会话记录与活跃 Agent 内存；
+  * 下一轮对话触发时，大模型接收到的上下文历史将完全以用户修改后的新内容为准，确保逻辑纠偏无缝生效。
+
+---
+
 ## 3. 审核与验证记录
-- **审核轮数**: 第 31 轮（一键急停 + 工作中实时穿插纠偏追问 + 全套斜杠快捷指令系统全量验收）
+- **审核轮数**: 第 32 轮（模型回答小图标内联编辑 + 磁盘持久化 + 下一轮会话上下文无缝替换全量验收）
 - **测试状态**:
-  - `pytest tests/`: **18/18 全部通过 (100% Passed)**。
+  - `pytest tests/`: **20/20 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
