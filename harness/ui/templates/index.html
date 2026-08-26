@@ -3303,20 +3303,25 @@
         });
 
         // Load & Update API Account Balance
-        async function loadUserBalance() {
+        async function fetchUserBalance() {
             try {
                 const res = await fetch('/api/user/balance');
                 const data = await res.json();
                 if (data.is_available && data.total_balance !== undefined) {
                     const symbol = data.currency === 'USD' ? '$' : '¥';
                     const text = `${symbol}${data.total_balance}`;
-                    document.getElementById('header-balance-badge').textContent = text;
-                    document.getElementById('meter-balance-badge').textContent = text;
+                    const hb = document.getElementById('header-balance-badge');
+                    const mb = document.getElementById('meter-balance-badge');
+                    const ab = document.getElementById('modal-account-balance');
+                    if (hb) hb.textContent = text;
+                    if (mb) mb.textContent = text;
+                    if (ab) ab.textContent = text;
                 }
             } catch (err) {
                 console.error('Failed to load balance:', err);
             }
         }
+        const loadUserBalance = fetchUserBalance;
 
         // Sidebar Toggle & Persistence
         const sidebar = document.getElementById('app-sidebar');
