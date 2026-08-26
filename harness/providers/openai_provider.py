@@ -184,6 +184,9 @@ class OpenAICompatibleProvider(BaseProvider):
 
                     try:
                         chunk = json.loads(data_str)
+                        if "usage" in chunk and chunk["usage"]:
+                            yield {"type": "usage", "usage": chunk["usage"]}
+
                         choices = chunk.get("choices", [])
                         if not choices:
                             continue
