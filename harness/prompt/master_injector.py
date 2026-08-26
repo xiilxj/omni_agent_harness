@@ -91,17 +91,39 @@ class MasterPromptInjector:
         return self.base_dir / "MASTER_RESPONSE_SUFFIX.md"
 
     def read_master_suffix(self, custom_suffix: Optional[str] = None, force_reload: bool = False) -> str:
-        """读取最高回答词 (Master Assistant Suffix) 原始文本"""
-        if custom_suffix is not None:
+        """读取最高回答词 (Master Assistant Suffix) 原始文本，支持固定选定与随机号池联动"""
+        if custom_suffix is not None and custom_suffix.strip() and custom_suffix != "__POOL__":
             return custom_suffix
+
+        if custom_suffix == "__POOL__":
+            try:
+                from harness.prompt.presets import SuffixPresetManager
+                suffix_mgr = SuffixPresetManager()
+                effective = suffix_mgr.get_effective_suffix()
+                if effective and effective.strip():
+                    return effective
+            except Exception:
+                pass
 
         suffix_file = self.resolve_master_suffix_path()
         if suffix_file.exists():
             try:
                 with open(suffix_file, "r", encoding="utf-8") as f:
-                    return f.read()
+                    content = f.read()
+                    if content.strip() and not (content.strip().startswith("<!--") and content.strip().endswith("-->")):
+                        return content
             except Exception:
                 pass
+
+        try:
+            from harness.prompt.presets import SuffixPresetManager
+            suffix_mgr = SuffixPresetManager()
+            effective = suffix_mgr.get_effective_suffix()
+            if effective and effective.strip():
+                return effective
+        except Exception:
+            pass
+
         return ""
 
     def save_master_suffix(self, content: str) -> Path:

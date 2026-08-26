@@ -143,18 +143,21 @@
 - **180s 深度思考宽限**：
   * 适配 DeepSeek-R1 与 Subagent 长程复杂调用链，彻底消除超时断连。
 
-### 👑 最高回答词自动融入与持久化机制 (Master Response Suffix)
+### 👑 最高回答词预设库与随机号池引擎 (Master Response Suffix & Random Pool)
 - **末尾无缝拼接**：`MasterPromptInjector.apply_master_suffix()` 将配置的最高回答词无缝拼接到大模型每轮回答的最末尾；
 - **真实上下文融入**：不仅在前端渲染，更作为 `role: "assistant"` 的持久化事实存入磁盘会话 `SessionItem.messages`；
 - **下轮对话完美继承**：后续多轮交互中，大模型将该回答词作为自身先前的回答历史读取，实现行为状态锚定与严谨签结；
-- **全套 API 与 UI 闭环**：提供 `/api/master-suffix` (GET/POST)、设置抽屉双子选项卡切换、常用模板快捷填入及 `Ctrl+S` 即时热保存。
+- **多预设管理与覆盖保存**：`SuffixPresetManager` 支持创建、保存、覆盖与删除多条回答词预设；
+- **🎲 随机号池模式 (Random Pool Mode)**：支持自由勾选多个预设入池，每轮 AI 回复时从池中**随机抽取**一条无缝融入末尾，为对话增添生动的丰富度与多维度核验能力；
+- **📌 固定预设模式 (Fixed Preset Mode)**：选定指定预设持续生效，精准稳定；
+- **全套 API 与 UI 闭环**：提供 `/api/master-suffix/presets` (GET/POST/DELETE) 及 `/api/master-suffix/settings`，设置抽屉全套交互卡片与 `Ctrl+S` 即时热保存。
 
 ---
 
 ## 3. 审核与验证记录
-- **审核轮数**: 第 36 轮（最高回答词 MASTER_RESPONSE_SUFFIX.md 架构设计 + 上下文持久化注入 + 23 项全量测试 100% 通过）
+- **审核轮数**: 第 37 轮（最高回答词多预设管理 + 随机号池模式 SuffixPresetManager + 24 项全量测试 100% 通过）
 - **测试状态**:
-  - `pytest tests/`: **23/23 全部通过 (100% Passed)**。
+  - `pytest tests/`: **24/24 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `./dist/Omni_Agent_Harness_Windows_Clean.zip` (或系统桌面 `Desktop/Omni_Agent_Harness_Windows_Clean.zip`)
 - **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（全量最新代码与文档已推送到 main 分支）。

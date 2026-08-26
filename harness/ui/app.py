@@ -293,6 +293,52 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
 
     # ==================== Master Response Suffix (最高回答词) API ====================
 
+    from harness.prompt.presets import SuffixPresetManager
+    suffix_preset_mgr = SuffixPresetManager()
+
+    @app.get("/api/master-suffix/presets")
+    async def get_suffix_presets():
+        """获取最高回答词所有预设及当前模式状态（固定 / 随机号池）"""
+        return suffix_preset_mgr.get_state()
+
+    class SaveSuffixPresetRequest(BaseModel):
+        name: Optional[str] = ""
+        content: str
+        description: Optional[str] = ""
+        preset_id: Optional[str] = None
+
+    @app.post("/api/master-suffix/presets")
+    async def save_suffix_preset(req: SaveSuffixPresetRequest):
+        """保存或覆盖最高回答词自定义预设"""
+        item = suffix_preset_mgr.save_preset(
+            name=req.name or "",
+            content=req.content,
+            description=req.description or "",
+            preset_id=req.preset_id
+        )
+        return {"status": "success", "preset": item}
+
+    @app.delete("/api/master-suffix/presets/{preset_id}")
+    async def delete_suffix_preset(preset_id: str):
+        """删除最高回答词预设"""
+        success = suffix_preset_mgr.delete_preset(preset_id)
+        return {"status": "success" if success else "failed"}
+
+    class SuffixSettingsRequest(BaseModel):
+        mode: Optional[str] = None
+        active_preset_id: Optional[str] = None
+        enabled_pool_ids: Optional[List[str]] = None
+
+    @app.post("/api/master-suffix/settings")
+    async def update_suffix_settings(req: SuffixSettingsRequest):
+        """更新最高回答词模式（固定 / 随机号池）与激活项"""
+        res = suffix_preset_mgr.update_settings(
+            mode=req.mode,
+            active_preset_id=req.active_preset_id,
+            enabled_pool_ids=req.enabled_pool_ids
+        )
+        return {"status": "success", "state": res}
+
     @app.get("/api/master-suffix")
     async def get_master_suffix():
         """获取当前 MASTER_RESPONSE_SUFFIX.md 物理文件内容与路径"""

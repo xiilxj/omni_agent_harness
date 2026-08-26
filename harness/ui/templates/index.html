@@ -875,43 +875,55 @@
 
             <!-- Subtab Pane 2: Master Response Suffix (最高回答词) -->
             <div id="subtab-content-suffix" class="hidden flex-1 flex flex-col min-h-0 space-y-2.5">
-                <!-- Header & File Info -->
+                <!-- Header & Mode Switcher -->
                 <div class="flex items-center justify-between pb-1 border-b border-dark-border">
                     <div class="flex items-center space-x-2">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                         <span class="text-xs font-semibold text-dark-heading font-mono">MASTER_RESPONSE_SUFFIX.md</span>
                     </div>
-                    <span class="text-[10px] text-emerald-400 font-medium px-2 py-0.5 bg-emerald-950/40 border border-emerald-800/40 rounded-full">🟢 自动融入 AI 回复末尾</span>
-                </div>
-
-                <!-- Feature Principle Banner -->
-                <div class="p-2.5 bg-blue-950/25 border border-blue-800/40 rounded-lg text-[11px] text-blue-300 leading-relaxed flex items-start space-x-2">
-                    <span class="text-sm mt-0.5">💡</span>
-                    <div>
-                        <span class="font-semibold text-blue-200">最高回答词工作原理：</span>
-                        <span>大模型每次生成回答完毕后，系统会自动将您在此配置的回答词<b>直接无缝附加在 AI 回复的最末尾</b>，并作为真实事实存入上下文历史。下一次对话时，大模型在上下文读取中会完全将该内容视为自己先前的正式回复。</span>
+                    <div class="flex items-center space-x-1 bg-dark-bg p-0.5 rounded border border-dark-border text-[10px]">
+                        <button id="btn-suffix-mode-fixed" class="px-2 py-0.5 rounded font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 transition">📌 固定预设模式</button>
+                        <button id="btn-suffix-mode-random" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition">🎲 随机号池模式 (Pool)</button>
                     </div>
                 </div>
 
-                <!-- Quick Suffix Templates -->
+                <!-- Custom Presets / Pool Library -->
                 <div class="space-y-1">
-                    <div class="text-[10px] font-semibold text-dark-muted uppercase">常用回答词模板 (点击快速填入):</div>
-                    <div class="flex flex-wrap gap-1.5">
-                        <button class="suffix-template-btn px-2 py-1 bg-dark-bg border border-dark-border hover:border-emerald-500 rounded text-[10px] text-zinc-300 hover:text-emerald-300 font-mono transition" data-template="&#10;&#10;---&#10;**执行状态**：当前步骤已完成，请确认或下发下一指令。">📋 执行状态签结</button>
-                        <button class="suffix-template-btn px-2 py-1 bg-dark-bg border border-dark-border hover:border-emerald-500 rounded text-[10px] text-zinc-300 hover:text-emerald-300 font-mono transition" data-template="&#10;&#10;[回答规范已核验完成，各项输出符合约束要求]">🔒 规范核验标识</button>
-                        <button class="suffix-template-btn px-2 py-1 bg-dark-bg border border-dark-border hover:border-emerald-500 rounded text-[10px] text-zinc-300 hover:text-emerald-300 font-mono transition" data-template="&#10;&#10;---&#10;**下一步建议**：如有需要可随时下发延伸指令。">⚡ 下一步建议</button>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold text-dark-muted uppercase" id="suffix-gallery-title">回答词预设库 / 号池 (点击卡片切换 / 勾选加入随机池):</span>
+                        <div class="flex items-center space-x-2 relative">
+                            <!-- 覆盖已有预设二级菜单按钮 -->
+                            <button id="btn-overwrite-suffix-toggle" class="text-[10px] text-amber-400 hover:text-amber-300 font-mono flex items-center space-x-1 px-1.5 py-0.5 rounded bg-dark-bg border border-amber-900/60 hover:border-amber-500/80 transition" title="覆盖保存到已有的回答词预设">
+                                <span>🔄 覆盖预设</span>
+                                <span class="text-[8px]">▼</span>
+                            </button>
+                            <!-- 二级弹出菜单 -->
+                            <div id="menu-overwrite-suffix" class="hidden absolute right-16 top-6 w-56 bg-dark-surface border border-dark-border rounded-lg shadow-2xl p-1.5 z-50 space-y-1 max-h-48 overflow-y-auto custom-scroll">
+                                <div class="text-[9px] font-semibold text-dark-muted px-1.5 py-0.5 border-b border-dark-border">选择要覆盖的目标预设:</div>
+                                <div id="list-overwrite-suffix-options" class="space-y-0.5">
+                                    <!-- Dynamic Options Injected Here -->
+                                </div>
+                            </div>
+                            <button id="btn-save-as-suffix-preset" class="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-mono">+ 存为新预设</button>
+                        </div>
+                    </div>
+                    <div id="suffix-preset-gallery" class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto custom-scroll p-1.5 bg-dark-bg/80 border border-dark-border rounded-lg">
+                        <!-- Dynamic Suffix Presets & Pool Checkboxes Injected Here -->
                     </div>
                 </div>
 
-                <!-- Current Character Count -->
+                <!-- Current Active Suffix Indicator -->
                 <div class="flex items-center justify-between text-[10px] pt-0.5 border-t border-dark-border/40">
-                    <span class="text-dark-muted font-sans">回答词字数统计:</span>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-dark-muted font-sans">当前生效状态:</span>
+                        <span id="active-suffix-badge" class="px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/40 border border-emerald-500/60 text-emerald-400 transition">未选择 (空白)</span>
+                    </div>
                     <span class="text-[10px] font-mono text-dark-muted" id="master-suffix-char-count">0 chars</span>
                 </div>
 
                 <!-- Textarea Editor -->
                 <div class="flex-1 flex flex-col min-h-0">
-                    <textarea id="master-suffix-drawer-textarea" class="flex-1 w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-xs font-mono text-dark-text leading-relaxed resize-none focus:outline-none focus:border-emerald-500 custom-scroll select-text" placeholder="在此输入最高回答词... 例如：&#10;&#10;---&#10;**执行状态**：代码已严谨测试并落盘，请指示下一步。"></textarea>
+                    <textarea id="master-suffix-drawer-textarea" class="flex-1 w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-xs font-mono text-dark-text leading-relaxed resize-none focus:outline-none focus:border-emerald-500 custom-scroll select-text" placeholder="在此直接编写、编辑当前选中的最高回答词... 例如：&#10;&#10;---&#10;**执行状态**：代码已严谨测试并落盘，请指示下一步。"></textarea>
                 </div>
 
                 <!-- Action Buttons Row -->
@@ -1242,6 +1254,14 @@
         const btnSubtabMasterSuffix = document.getElementById('btn-subtab-master-suffix');
         const subtabContentPrompt = document.getElementById('subtab-content-prompt');
         const subtabContentSuffix = document.getElementById('subtab-content-suffix');
+        const btnSuffixModeFixed = document.getElementById('btn-suffix-mode-fixed');
+        const btnSuffixModeRandom = document.getElementById('btn-suffix-mode-random');
+        const suffixPresetGallery = document.getElementById('suffix-preset-gallery');
+        const activeSuffixBadge = document.getElementById('active-suffix-badge');
+        const btnSaveAsSuffixPreset = document.getElementById('btn-save-as-suffix-preset');
+        const btnOverwriteSuffixToggle = document.getElementById('btn-overwrite-suffix-toggle');
+        const menuOverwriteSuffix = document.getElementById('menu-overwrite-suffix');
+        const listOverwriteSuffixOptions = document.getElementById('list-overwrite-suffix-options');
         const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
 
         // Multi-Provider Matrix Templates
@@ -2557,19 +2577,290 @@
             }
         });
 
-        // ==================== Master Response Suffix (最高回答词) 前端交互 ====================
+        // ==================== Master Response Suffix (最高回答词 & 随机号池) 前端交互 ====================
+
+        let suffixState = {
+            mode: 'fixed',
+            active_preset_id: null,
+            enabled_pool_ids: [],
+            presets: []
+        };
 
         async function loadMasterSuffix() {
             try {
-                const res = await fetch('/api/master-suffix');
+                const res = await fetch('/api/master-suffix/presets');
                 const data = await res.json();
-                if (data && data.content !== undefined) {
-                    masterSuffixTextarea.value = data.content;
-                    masterSuffixCharCount.textContent = `${data.content.length} chars`;
+                if (data) {
+                    suffixState = {
+                        mode: data.mode || 'fixed',
+                        active_preset_id: data.active_preset_id || null,
+                        enabled_pool_ids: data.enabled_pool_ids || [],
+                        presets: data.presets || []
+                    };
+                    renderSuffixGallery();
+                    updateSuffixModeUI();
+                    updateActiveSuffixBadge();
                 }
             } catch (err) {
-                console.error('Failed to load master response suffix:', err);
+                console.error('Failed to load suffix presets state:', err);
             }
+        }
+
+        function updateSuffixModeUI() {
+            if (suffixState.mode === 'random') {
+                btnSuffixModeRandom.className = 'px-2 py-0.5 rounded font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-600 shadow-sm transition';
+                btnSuffixModeFixed.className = 'px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition';
+            } else {
+                btnSuffixModeFixed.className = 'px-2 py-0.5 rounded font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-600 shadow-sm transition';
+                btnSuffixModeRandom.className = 'px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition';
+            }
+        }
+
+        function updateActiveSuffixBadge() {
+            if (suffixState.mode === 'random') {
+                const poolCount = suffixState.enabled_pool_ids ? suffixState.enabled_pool_ids.length : suffixState.presets.length;
+                activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-purple-950/60 border border-purple-500/80 text-purple-400 transition shadow-sm';
+                activeSuffixBadge.textContent = `🎲 随机号池中 (${poolCount} 个预设轮换)`;
+            } else {
+                const activeP = suffixState.presets.find(p => p.id === suffixState.active_preset_id);
+                if (activeP) {
+                    activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/60 border border-emerald-500/80 text-emerald-400 transition shadow-sm';
+                    activeSuffixBadge.textContent = `📌 固定生效: ${activeP.name}`;
+                } else if (masterSuffixTextarea.value.trim()) {
+                    activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-amber-950/60 border border-amber-500/80 text-amber-400 transition shadow-sm';
+                    activeSuffixBadge.textContent = `⚡ 自定义临时回答词`;
+                } else {
+                    activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-dark-bg border border-dark-border text-dark-muted transition';
+                    activeSuffixBadge.textContent = `未设置 (留白)`;
+                }
+            }
+        }
+
+        function renderSuffixGallery() {
+            suffixPresetGallery.innerHTML = '';
+            if (suffixState.presets.length === 0) {
+                suffixPresetGallery.innerHTML = `
+                    <div class="col-span-2 p-3 text-center text-dark-muted text-xs font-sans">
+                        💡 暂无回答词预设。在下方编辑框填写后，点击右上角【+ 存为新预设】即可加入号池。
+                    </div>
+                `;
+                return;
+            }
+
+            const currentVal = masterSuffixTextarea.value.trim();
+
+            suffixState.presets.forEach(p => {
+                const isSelected = suffixState.active_preset_id === p.id;
+                const inPool = suffixState.enabled_pool_ids.includes(p.id);
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded bg-dark-surface hover:bg-zinc-800/90 border transition flex items-center justify-between group ${
+                    isSelected && suffixState.mode === 'fixed'
+                        ? 'border-emerald-500 bg-emerald-950/30'
+                        : inPool && suffixState.mode === 'random'
+                        ? 'border-purple-500/80 bg-purple-950/20'
+                        : 'border-dark-border hover:border-emerald-500/80'
+                }`;
+
+                let checkboxHtml = '';
+                if (suffixState.mode === 'random') {
+                    checkboxHtml = `
+                        <input type="checkbox" class="suffix-pool-checkbox w-3.5 h-3.5 rounded bg-dark-bg border-dark-border text-purple-600 focus:ring-0 mr-2 cursor-pointer" ${inPool ? 'checked' : ''} title="勾选加入随机号池">
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center flex-1 min-w-0 pr-2">
+                        ${checkboxHtml}
+                        <div class="flex-1 min-w-0 cursor-pointer flex flex-col justify-center" title="点击载入内容并在固定模式下激活">
+                            <div class="flex items-center space-x-1 font-medium text-xs text-dark-heading group-hover:text-emerald-400 transition truncate">
+                                <span>💬</span>
+                                <span class="truncate">${p.name}</span>
+                            </div>
+                            <div class="text-[10px] text-dark-muted font-mono mt-0.5">${(p.content || '').length} chars</div>
+                        </div>
+                    </div>
+                    <button class="btn-del-suffix-preset p-1 text-dark-muted hover:text-red-400 rounded hover:bg-dark-hover transition" title="删除此预设">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                `;
+
+                // 点击卡片主体：载入到编辑框并在固定模式下设为激活
+                card.querySelector('.cursor-pointer').addEventListener('click', async () => {
+                    masterSuffixTextarea.value = p.content;
+                    masterSuffixCharCount.textContent = `${p.content.length} chars`;
+                    if (suffixState.mode === 'fixed') {
+                        suffixState.active_preset_id = p.id;
+                        await fetch('/api/master-suffix/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ active_preset_id: p.id, mode: 'fixed' })
+                        });
+                        // 同步持久化物理文件
+                        await fetch('/api/master-suffix', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content: p.content })
+                        });
+                    }
+                    renderSuffixGallery();
+                    updateActiveSuffixBadge();
+                });
+
+                // 勾选/取消随机池
+                const cb = card.querySelector('.suffix-pool-checkbox');
+                if (cb) {
+                    cb.addEventListener('change', async (e) => {
+                        e.stopPropagation();
+                        if (cb.checked) {
+                            if (!suffixState.enabled_pool_ids.includes(p.id)) suffixState.enabled_pool_ids.push(p.id);
+                        } else {
+                            suffixState.enabled_pool_ids = suffixState.enabled_pool_ids.filter(id => id !== p.id);
+                        }
+                        await fetch('/api/master-suffix/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ enabled_pool_ids: suffixState.enabled_pool_ids, mode: 'random' })
+                        });
+                        renderSuffixGallery();
+                        updateActiveSuffixBadge();
+                    });
+                }
+
+                // 删除预设
+                card.querySelector('.btn-del-suffix-preset').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定要删除回答词预设【${p.name}】吗？`)) {
+                        try {
+                            await fetch(`/api/master-suffix/presets/${p.id}`, { method: 'DELETE' });
+                            await loadMasterSuffix();
+                        } catch (err) {
+                            alert('删除预设失败: ' + err.message);
+                        }
+                    }
+                });
+
+                suffixPresetGallery.appendChild(card);
+            });
+        }
+
+        // 模式切换按钮
+        if (btnSuffixModeFixed && btnSuffixModeRandom) {
+            btnSuffixModeFixed.addEventListener('click', async () => {
+                suffixState.mode = 'fixed';
+                updateSuffixModeUI();
+                await fetch('/api/master-suffix/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'fixed' })
+                });
+                renderSuffixGallery();
+                updateActiveSuffixBadge();
+            });
+
+            btnSuffixModeRandom.addEventListener('click', async () => {
+                suffixState.mode = 'random';
+                updateSuffixModeUI();
+                await fetch('/api/master-suffix/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'random' })
+                });
+                renderSuffixGallery();
+                updateActiveSuffixBadge();
+            });
+        }
+
+        // 新建回答词预设
+        if (btnSaveAsSuffixPreset) {
+            btnSaveAsSuffixPreset.addEventListener('click', async () => {
+                const currentContent = masterSuffixTextarea.value.trim();
+                if (!currentContent) {
+                    alert('请先在下方编辑框中填写回答词内容，再存为预设！');
+                    return;
+                }
+                const name = prompt('请输入该回答词预设的名称 (例如: 状态签结 / 极客签名):');
+                if (name && name.trim()) {
+                    const desc = prompt('输入简要描述 (可选):') || '';
+                    try {
+                        const res = await fetch('/api/master-suffix/presets', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: name.trim(),
+                                content: currentContent,
+                                description: desc.trim()
+                            })
+                        });
+                        const data = await res.json();
+                        await loadMasterSuffix();
+                        alert(`回答词预设【${name.trim()}】已保存成功！`);
+                    } catch (err) {
+                        alert('保存回答词预设失败: ' + err.message);
+                    }
+                }
+            });
+        }
+
+        // 覆盖已有回答词预设
+        if (btnOverwriteSuffixToggle && menuOverwriteSuffix) {
+            btnOverwriteSuffixToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menuOverwriteSuffix.classList.toggle('hidden');
+                if (!menuOverwriteSuffix.classList.contains('hidden')) {
+                    renderOverwriteSuffixMenu();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!menuOverwriteSuffix.contains(e.target) && e.target !== btnOverwriteSuffixToggle) {
+                    menuOverwriteSuffix.classList.add('hidden');
+                }
+            });
+        }
+
+        function renderOverwriteSuffixMenu() {
+            listOverwriteSuffixOptions.innerHTML = '';
+            const currentVal = masterSuffixTextarea.value.trim();
+            if (!currentVal) {
+                listOverwriteSuffixOptions.innerHTML = `<div class="text-[10px] text-dark-muted p-1.5">当前编辑框为空，无法覆盖</div>`;
+                return;
+            }
+
+            if (suffixState.presets.length === 0) {
+                listOverwriteSuffixOptions.innerHTML = `<div class="text-[10px] text-dark-muted p-1.5">暂无已有预设</div>`;
+                return;
+            }
+
+            suffixState.presets.forEach(p => {
+                const itemBtn = document.createElement('button');
+                itemBtn.className = 'w-full text-left p-1.5 rounded hover:bg-dark-hover flex items-center justify-between text-xs text-dark-heading group transition';
+                itemBtn.innerHTML = `
+                    <span class="font-mono text-emerald-400 group-hover:underline truncate">${p.name}</span>
+                    <span class="text-[9px] text-dark-muted ml-2">覆盖</span>
+                `;
+                itemBtn.addEventListener('click', async () => {
+                    menuOverwriteSuffix.classList.add('hidden');
+                    if (confirm(`确定要用当前内容覆盖回答词预设【${p.name}】吗？`)) {
+                        try {
+                            await fetch('/api/master-suffix/presets', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    preset_id: p.id,
+                                    name: p.name,
+                                    content: currentVal
+                                })
+                            });
+                            await loadMasterSuffix();
+                            alert(`已成功覆盖回答词预设【${p.name}】！`);
+                        } catch (err) {
+                            alert('覆盖失败: ' + err.message);
+                        }
+                    }
+                });
+                listOverwriteSuffixOptions.appendChild(itemBtn);
+            });
         }
 
         if (btnSubtabMasterPrompt && btnSubtabMasterSuffix) {
@@ -2592,6 +2883,7 @@
         if (masterSuffixTextarea) {
             masterSuffixTextarea.addEventListener('input', () => {
                 masterSuffixCharCount.textContent = `${masterSuffixTextarea.value.length} chars`;
+                updateActiveSuffixBadge();
             });
 
             masterSuffixTextarea.addEventListener('keydown', (e) => {
@@ -2635,16 +2927,6 @@
                 }
             });
         }
-
-        document.querySelectorAll('.suffix-template-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tmpl = btn.getAttribute('data-template');
-                if (tmpl) {
-                    masterSuffixTextarea.value = tmpl;
-                    masterSuffixCharCount.textContent = `${masterSuffixTextarea.value.length} chars`;
-                }
-            });
-        });
 
         async function loadSystemData() {
             try {
@@ -3339,7 +3621,11 @@
 
             appendUserMessage(prompt);
 
-            const chosenModel = (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-pro') || 'deepseek-v4-pro';
+            let suffixToSend = masterSuffixTextarea ? masterSuffixTextarea.value : '';
+            if (suffixState && suffixState.mode === 'random') {
+                suffixToSend = '__POOL__';
+            }
+
             const payload = {
                 session_id: activeSessionId,
                 prompt: prompt,
@@ -3348,7 +3634,7 @@
                 permission_mode: currentPermission || 'unrestricted',
                 reasoning_effort: currentEffort || 'medium',
                 custom_master_prompt: masterTextarea ? masterTextarea.value : '',
-                custom_master_suffix: masterSuffixTextarea ? masterSuffixTextarea.value : ''
+                custom_master_suffix: suffixToSend
             };
 
             let currentThoughtContainer = null;

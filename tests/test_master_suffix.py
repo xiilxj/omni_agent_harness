@@ -92,3 +92,60 @@ def test_api_master_suffix_endpoints(tmp_path):
     assert get_res.status_code == 200
     assert get_res.json()["content"] == new_suffix
     assert get_res.json()["char_count"] == len(new_suffix)
+
+    # 3. 预设库 CRUD 与随机号池 API 测试
+    # 获取初始预设列表
+    presets_res = client.get("/api/master-suffix/presets")
+    assert presets_res.status_code == 200
+    data = presets_res.json()
+    assert "presets" in data
+    assert "mode" in data
+
+    # 新建预设
+    save_p_res = client.post("/api/master-suffix/presets", json={
+        "name": "🧪 测试号池预设 A",
+        "content": "\n\n[TEST_SUFFIX_POOL_A]",
+        "description": "用于号池自动化测试"
+    })
+    assert save_p_res.status_code == 200
+    new_pid = save_p_res.json()["preset"]["id"]
+
+    # 切换为随机号池模式
+    set_mode_res = client.post("/api/master-suffix/settings", json={
+        "mode": "random",
+        "enabled_pool_ids": [new_pid]
+    })
+    assert set_mode_res.status_code == 200
+    assert set_mode_res.json()["state"]["mode"] == "random"
+
+    # 删除预设
+    del_res = client.delete(f"/api/master-suffix/presets/{new_pid}")
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "success"
+
+
+def test_suffix_preset_manager_random_pool(tmp_path):
+    """测试 SuffixPresetManager 在固定模式与随机号池模式下的行为"""
+    from harness.prompt.presets import SuffixPresetManager
+    custom_file = tmp_path / "test_suffix_presets.json"
+    mgr = SuffixPresetManager(custom_file=custom_file)
+
+    # 保存两个预设
+    p1 = mgr.save_preset("预设 1", "SUFFIX_1", preset_id="p1")
+    p2 = mgr.save_preset("预设 2", "SUFFIX_2", preset_id="p2")
+
+    # 1. 固定模式
+    mgr.update_settings(mode="fixed", active_preset_id="p1")
+    assert mgr.get_effective_suffix() == "SUFFIX_1"
+
+    mgr.update_settings(mode="fixed", active_preset_id="p2")
+    assert mgr.get_effective_suffix() == "SUFFIX_2"
+
+    # 2. 随机号池模式（只包含 p1）
+    mgr.update_settings(mode="random", enabled_pool_ids=["p1"])
+    assert mgr.get_effective_suffix() == "SUFFIX_1"
+
+    # 3. 随机号池模式（包含 p1 与 p2）
+    mgr.update_settings(mode="random", enabled_pool_ids=["p1", "p2"])
+    picked_suffixes = set(mgr.get_effective_suffix() for _ in range(30))
+    assert "SUFFIX_1" in picked_suffixes or "SUFFIX_2" in picked_suffixes
