@@ -15,6 +15,8 @@ from harness.providers.router import ProviderRouter
 from harness.tools.registry import ToolRegistry, global_tools
 from harness.tools.default_tools import register_default_tools
 
+from harness.core.slash_commands import parse_and_transform_slash_command
+
 logger = logging.getLogger("OmniAgent")
 
 
@@ -44,12 +46,24 @@ class OmniAgent:
         self.current_model_name: Optional[str] = None
         self.current_todos: List[Dict[str, Any]] = []
         self.ask_user_resolver: Optional[Callable[[str, Dict[str, Any]], Any]] = None
+        self._abort_requested: bool = False
+        self._steer_queue: List[str] = []
+
+    def request_abort(self):
+        """用户触发紧急制动打断 (Emergency Stop / Abort)"""
+        self._abort_requested = True
+
+    def steer_message(self, text: str):
+        """用户在工作中实时穿插追问、补充约束与纠偏 (Mid-flight Steer)"""
+        self._steer_queue.append(text)
 
     def reset_conversation(self):
         """重置会话上下文历史"""
         self.messages = []
         self.total_usage = UsageStats()
         self.current_todos = []
+        self._abort_requested = False
+        self._steer_queue = []
 
     async def step(
         self,
@@ -250,16 +264,38 @@ class OmniAgent:
     ) -> str:
         """
         运行完整 Agent 任务闭环 (ReAct 思考循环)
-        接收用户指令 -> 实时流式思考决策 -> 调用工具 -> 观察输出 -> 迭代修正 -> 最终交付
+        接收用户指令 -> 斜杠指令转换 -> 实时流式思考决策 -> 调用工具 -> 穿插纠偏 -> 迭代修正 -> 最终交付
         """
-        # 添加用户输入
-        self.messages.append(Message(role="user", content=task_prompt))
+        # 1. 解析并转换斜杠快捷指令 (如 /goal, /grill-me, /schedule, /browser, /learn 等)
+        transformed_prompt, cmd_name, cmd_meta = parse_and_transform_slash_command(task_prompt)
+        self.messages.append(Message(role="user", content=transformed_prompt))
 
         step_count = 0
         final_answer = ""
         effort = reasoning_effort or self.reasoning_effort
 
         while step_count < max_steps:
+            # 2. 检查急停状态 (Emergency Stop / Abort)
+            if self._abort_requested:
+                abort_msg = "🛑 任务已由用户执行急停打断 (Emergency Stopped by User)。"
+                if on_step_callback:
+                    await on_step_callback({
+                        "type": "aborted",
+                        "message": abort_msg
+                    })
+                return abort_msg
+
+            # 3. 检查并注入工作中穿插的追问与纠偏消息 (Mid-flight Steer Messages)
+            while self._steer_queue:
+                interjected = self._steer_queue.pop(0)
+                steer_text, _, _ = parse_and_transform_slash_command(interjected)
+                self.messages.append(Message(role="user", content=f"[⚡ 穿插追问/纠偏指令]: {steer_text}"))
+                if on_step_callback:
+                    await on_step_callback({
+                        "type": "steer_injected",
+                        "content": interjected
+                    })
+
             step_count += 1
             if on_step_callback:
                 await on_step_callback({
@@ -280,6 +316,16 @@ class OmniAgent:
                 if on_step_callback:
                     await on_step_callback({"type": "error", "error": err_msg})
                 return err_msg
+
+            # 再次检查急停打断
+            if self._abort_requested:
+                abort_msg = "🛑 任务已由用户执行急停打断 (Emergency Stopped by User)。"
+                if on_step_callback:
+                    await on_step_callback({
+                        "type": "aborted",
+                        "message": abort_msg
+                    })
+                return abort_msg
 
             # 记录回复内容
             assistant_content = response.content or ""
@@ -325,6 +371,15 @@ class OmniAgent:
 
             # 依次执行工具调用
             for tc in tool_calls:
+                if self._abort_requested:
+                    abort_msg = "🛑 工具调用已由用户急停中止 (Tool execution aborted by user)。"
+                    if on_step_callback:
+                        await on_step_callback({
+                            "type": "aborted",
+                            "message": abort_msg
+                        })
+                    return abort_msg
+
                 t_name = tc.function.name
                 t_args = tc.function.arguments
 
@@ -382,7 +437,7 @@ class OmniAgent:
                 else:
                     observation = await self.tools.execute(t_name, t_args)
 
-                # 4. 生成统一红绿 Diff 补丁 (针对 replace_file_content)
+                # 5. 生成统一红绿 Diff 补丁 (针对 replace_file_content)
                 diff_text = None
                 if t_name == "replace_file_content":
                     try:

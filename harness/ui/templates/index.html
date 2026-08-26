@@ -231,6 +231,12 @@
             </div>
 
             <div class="flex items-center space-x-2">
+                <!-- Header Emergency Stop Button (顶部急停按钮) -->
+                <button id="btn-header-abort" class="hidden px-2.5 py-1 text-xs text-rose-300 bg-rose-950/70 hover:bg-rose-900 border border-rose-600/70 rounded flex items-center space-x-1 transition shadow-lg animate-pulse" title="急停打断当前运行中的任务 (Esc)">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                    <span class="font-semibold">急停 (Esc)</span>
+                </button>
+
                 <div id="runtime-status-pill" class="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-zinc-800/80 border border-zinc-700/80 text-[11px] text-zinc-300">
                     <span class="w-1.5 h-1.5 rounded-full bg-zinc-500" id="status-dot"></span>
                     <span id="status-text">Idle</span>
@@ -377,8 +383,19 @@
                     </div>
                 </div>
 
+                <!-- Floating Slash Commands Autocomplete Popover (斜杠快捷指令自动联想浮层) -->
+                <div id="slash-commands-popover" class="hidden absolute bottom-full left-2 mb-2 w-96 max-h-72 bg-dark-surface border border-dark-border rounded-xl shadow-2xl overflow-y-auto custom-scroll p-1.5 z-40 space-y-1">
+                    <div class="px-2 py-1 text-[10px] font-semibold text-dark-muted border-b border-dark-border/60 flex items-center justify-between">
+                        <span class="text-blue-400 flex items-center space-x-1"><span>⚡</span><span>快捷指令 (Slash Commands)</span></span>
+                        <span class="text-[9px] text-zinc-500">↑↓ 切换 · Enter / Tab 确认</span>
+                    </div>
+                    <div id="slash-commands-list" class="space-y-0.5">
+                        <!-- 动态渲染指令列表 -->
+                    </div>
+                </div>
+
                 <!-- Input Textarea -->
-                <textarea id="prompt-input" rows="2" class="w-full bg-transparent px-2 pt-1 pb-2 text-xs text-dark-heading placeholder-dark-muted focus:outline-none resize-none font-sans leading-relaxed custom-scroll" placeholder="Type instructions or assign a task... (Press Enter to execute, Shift+Enter for newline)"></textarea>
+                <textarea id="prompt-input" rows="2" class="w-full bg-transparent px-2 pt-1 pb-2 text-xs text-dark-heading placeholder-dark-muted focus:outline-none resize-none font-sans leading-relaxed custom-scroll" placeholder="Type instructions, /goal, /grill-me... (Enter to execute, Shift+Enter for newline)"></textarea>
 
                 <!-- Input Card Lower Control Bar (折叠底部栏，正如截图所示) -->
                 <div class="flex items-center justify-between pt-1 border-t border-dark-border/40">
@@ -408,13 +425,19 @@
                         </div>
                     </div>
 
-                    <!-- Right: Token Estimate & Circular Send Button -->
+                    <!-- Right: Emergency Abort, Clear Input, Action Send / Steer Button -->
                     <div class="flex items-center space-x-2">
+                        <!-- Emergency Stop Button (急停按钮: 运行时醒目展示) -->
+                        <button id="btn-abort-task" class="hidden px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-500 active:scale-95 text-white flex items-center space-x-1 shadow-lg border border-rose-400/40 transition animate-pulse text-xs font-semibold" title="Emergency Stop / 紧急停止执行 (Esc)">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                            <span>急停 (Esc)</span>
+                        </button>
+
                         <button id="btn-clear-input" class="p-1 text-dark-muted hover:text-dark-heading rounded hover:bg-dark-hover transition" title="Clear input">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
 
-                        <!-- Circular Action Blue Send Button (对齐截图) -->
+                        <!-- Circular Action Blue Send / Steer Button -->
                         <button id="btn-submit-task" class="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white flex items-center justify-center shadow-lg transition" title="Send (Enter)">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="12" y1="19" x2="12" y2="5"></line>
@@ -2780,7 +2803,133 @@
         if (btnDismissBillingModal) btnDismissBillingModal.addEventListener('click', () => modalBillingBreakdown.classList.add('hidden'));
         if (btnRefreshBalanceModal) btnRefreshBalanceModal.addEventListener('click', fetchUserBalance);
 
-        // 7. Execution Engine (Streaming & Auto-Collapsing)
+        // 7. Execution Engine (Streaming, Abort, Mid-flight Steer & Slash Commands)
+        const btnAbortTask = document.getElementById('btn-abort-task');
+        const btnHeaderAbort = document.getElementById('btn-header-abort');
+        const slashPopover = document.getElementById('slash-commands-popover');
+        const slashList = document.getElementById('slash-commands-list');
+        let activeAbortController = null;
+
+        // 斜杠指令定义表
+        let registeredSlashCommands = [
+            { command: '/goal', title: '🎯 长程深度攻坚目标 (Goal Autonomy)', syntax: '/goal <目标>', desc: '设定自主长程攻坚目标，多步迭代自纠偏，不达目的誓不罢休。' },
+            { command: '/grill-me', title: '🔥 交互式对齐盘问 (Grill-Me Alignment)', syntax: '/grill-me [议题]', desc: '架构师多轮向用户追问厘清未说明的技术细节与边界决策。' },
+            { command: '/schedule', title: '⏰ 定时/周期巡检任务 (Schedule Cron)', syntax: '/schedule <秒/cron> <任务>', desc: '调度后台一次性定时器或周期性 Cron 自动化任务。' },
+            { command: '/browser', title: '🌐 Chrome DevTools 自动化浏览 (Browser)', syntax: '/browser <URL/目标>', desc: '调用 Chrome DevTools MCP 抓包、DOM 提取与自动化操作。' },
+            { command: '/teamwork-preview', title: '👥 多智能体集群演练 (Swarm Teamwork)', syntax: '/teamwork-preview <项目>', desc: '派发架构师、逆向员、测试员协同攻关复杂工程。' },
+            { command: '/learn', title: '🧠 经验模式持久化 (Persistent Learning)', syntax: '/learn <经验/规则>', desc: '将重要避坑经验直接写入 persistent_memory.txt 永久记忆。' },
+            { command: '/rollback', title: '⏪ 状态时空回退 (Rollback)', syntax: '/rollback [编号]', desc: '回退到指定轮次并裁剪多余上下文。' },
+            { command: '/clear', title: '🧹 清空控制台 (Clear Console)', syntax: '/clear', desc: '清空当前控制台显示并重置流式会话。' },
+            { command: '/help', title: '❓ 斜杠指令指南 (Commands Help)', syntax: '/help', desc: '查看全部支持的斜杠快捷指令列表与指南。' }
+        ];
+
+        let selectedSlashIndex = 0;
+        let filteredSlashCommands = [];
+
+        async function fetchSlashCommands() {
+            try {
+                const res = await fetch('/api/slash/commands');
+                const data = await res.json();
+                if (data && data.commands && data.commands.length > 0) {
+                    registeredSlashCommands = data.commands;
+                }
+            } catch (e) {}
+        }
+        fetchSlashCommands();
+
+        function renderSlashCommandsPopover(query) {
+            if (!slashPopover || !slashList) return;
+            const q = query.toLowerCase();
+            filteredSlashCommands = registeredSlashCommands.filter(c => 
+                c.command.toLowerCase().includes(q) || 
+                c.title.toLowerCase().includes(q) || 
+                c.desc.toLowerCase().includes(q)
+            );
+
+            if (filteredSlashCommands.length === 0) {
+                slashPopover.classList.add('hidden');
+                return;
+            }
+
+            if (selectedSlashIndex >= filteredSlashCommands.length) selectedSlashIndex = 0;
+
+            slashList.innerHTML = '';
+            filteredSlashCommands.forEach((cmd, idx) => {
+                const isSelected = idx === selectedSlashIndex;
+                const div = document.createElement('div');
+                div.className = `px-2.5 py-1.5 rounded-lg cursor-pointer flex flex-col transition text-left ${isSelected ? 'bg-indigo-600/30 border border-indigo-500/60 text-white' : 'hover:bg-dark-bg text-dark-text border border-transparent'}`;
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="font-mono font-bold text-xs ${isSelected ? 'text-indigo-300' : 'text-blue-400'}">${escapeHtml(cmd.command)}</span>
+                            <span class="text-xs font-medium text-dark-heading">${escapeHtml(cmd.title.split(' ')[0] + ' ' + (cmd.title.split(' ')[1] || ''))}</span>
+                        </div>
+                        <span class="font-mono text-[10px] text-dark-muted">${escapeHtml(cmd.syntax)}</span>
+                    </div>
+                    <div class="text-[10.5px] text-dark-muted mt-0.5 leading-tight truncate">${escapeHtml(cmd.desc)}</div>
+                `;
+                div.addEventListener('click', () => {
+                    selectSlashCommand(cmd);
+                });
+                slashList.appendChild(div);
+            });
+
+            slashPopover.classList.remove('hidden');
+        }
+
+        function selectSlashCommand(cmd) {
+            promptInput.value = cmd.command + ' ';
+            slashPopover.classList.add('hidden');
+            promptInput.focus();
+        }
+
+        function hideSlashPopover() {
+            slashPopover?.classList.add('hidden');
+        }
+
+        // 输入框输入与快捷指令键盘交互
+        promptInput.addEventListener('input', () => {
+            const val = promptInput.value;
+            if (val.startsWith('/')) {
+                const firstWord = val.split(' ')[0];
+                renderSlashCommandsPopover(firstWord);
+            } else {
+                hideSlashPopover();
+            }
+        });
+
+        promptInput.addEventListener('keydown', (e) => {
+            if (slashPopover && !slashPopover.classList.contains('hidden') && filteredSlashCommands.length > 0) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedSlashIndex = (selectedSlashIndex + 1) % filteredSlashCommands.length;
+                    renderSlashCommandsPopover(promptInput.value.split(' ')[0]);
+                    return;
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedSlashIndex = (selectedSlashIndex - 1 + filteredSlashCommands.length) % filteredSlashCommands.length;
+                    renderSlashCommandsPopover(promptInput.value.split(' ')[0]);
+                    return;
+                } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                    e.preventDefault();
+                    selectSlashCommand(filteredSlashCommands[selectedSlashIndex]);
+                    return;
+                } else if (e.key === 'Escape') {
+                    hideSlashPopover();
+                    return;
+                }
+            }
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (isRunning) {
+                    sendSteerMessage(promptInput.value.trim());
+                } else {
+                    executeTask();
+                }
+            }
+        });
+
         document.querySelectorAll('.quick-chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const promptText = btn.dataset.prompt;
@@ -2791,25 +2940,115 @@
             });
         });
 
-        btnSubmit.addEventListener('click', executeTask);
-        promptInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        btnSubmit.addEventListener('click', () => {
+            if (isRunning) {
+                sendSteerMessage(promptInput.value.trim());
+            } else {
                 executeTask();
             }
         });
+
+        // 运行状态切换管理器
+        function setRunningState(running) {
+            isRunning = running;
+            if (running) {
+                btnAbortTask?.classList.remove('hidden');
+                btnHeaderAbort?.classList.remove('hidden');
+                btnSubmit.className = 'w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white flex items-center justify-center shadow-lg transition animate-pulse';
+                btnSubmit.title = '⚡ 实时穿插追问 / 纠偏 (Enter)';
+                btnSubmit.innerHTML = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+                promptInput.placeholder = '⚡ Agent 执行中... 输入追问或纠偏指令 (按 Enter 实时穿插发送)';
+                statusDot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping';
+                statusText.textContent = 'Agent Running...';
+            } else {
+                btnAbortTask?.classList.add('hidden');
+                btnHeaderAbort?.classList.add('hidden');
+                btnSubmit.className = 'w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white flex items-center justify-center shadow-lg transition';
+                btnSubmit.title = 'Send (Enter)';
+                btnSubmit.innerHTML = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
+                promptInput.placeholder = 'Type instructions, /goal, /grill-me... (Enter to execute, Shift+Enter for newline)';
+            }
+        }
+
+        // 一键急停处理机制 (Emergency Stop / Abort)
+        async function abortActiveTask() {
+            if (!isRunning) return;
+            try {
+                await fetch('/api/agent/abort', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: activeSessionId })
+                });
+            } catch (e) {
+                console.error('Abort request error:', e);
+            }
+            if (activeAbortController) {
+                try { activeAbortController.abort(); } catch (e) {}
+                activeAbortController = null;
+            }
+            if (activeTimerInterval) {
+                clearInterval(activeTimerInterval);
+                activeTimerInterval = null;
+            }
+            appendAbortCard('🛑 任务已由用户紧急中止 (Emergency Stopped by User)');
+            setRunningState(false);
+            statusDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
+            statusText.textContent = 'Aborted';
+        }
+
+        if (btnAbortTask) btnAbortTask.addEventListener('click', abortActiveTask);
+        if (btnHeaderAbort) btnHeaderAbort.addEventListener('click', abortActiveTask);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (slashPopover && !slashPopover.classList.contains('hidden')) {
+                    hideSlashPopover();
+                    return;
+                }
+                if (isRunning) {
+                    e.preventDefault();
+                    abortActiveTask();
+                }
+            }
+        });
+
+        // 实时穿插追问与纠偏对话 (Mid-flight Steer)
+        async function sendSteerMessage(prompt) {
+            if (!prompt) return;
+            appendSteerUserMessage(prompt);
+            promptInput.value = '';
+            hideSlashPopover();
+            try {
+                const res = await fetch('/api/agent/steer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: activeSessionId, prompt: prompt })
+                });
+                const data = await res.json();
+                if (data.status === 'steered') {
+                    console.log('Steer command injected:', prompt);
+                }
+            } catch (e) {
+                console.error('Steer error:', e);
+            }
+        }
 
         async function executeTask() {
             const prompt = promptInput.value.trim();
             if (!prompt || isRunning) return;
 
-            isRunning = true;
-            emptyState?.classList.add('hidden');
-            btnSubmit.disabled = true;
-            promptInput.value = '';
+            // 处理前端直出快捷指令
+            if (prompt === '/clear') {
+                timeline.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                promptInput.value = '';
+                return;
+            }
 
-            statusDot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping';
-            statusText.textContent = 'Agent Running...';
+            hideSlashPopover();
+            setRunningState(true);
+            emptyState?.classList.add('hidden');
+            promptInput.value = '';
 
             appendUserMessage(prompt);
 
@@ -2832,6 +3071,8 @@
             let liveStreamChars = 0;
             const isReasoner = chosenModel.includes('reasoner') || chosenModel.includes('r1');
 
+            activeAbortController = new AbortController();
+
             // 启动实时毫秒级秒表走秒与 TPS 动态测速器
             if (activeTimerInterval) clearInterval(activeTimerInterval);
             activeTimerInterval = setInterval(() => {
@@ -2853,7 +3094,8 @@
                 const response = await fetch('/api/agent/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    signal: activeAbortController.signal
                 });
 
                 const reader = response.body.getReader();
@@ -2901,6 +3143,11 @@
                                 }
                                 currentThoughtText = ev.content;
                                 updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
+                            } else if (ev.type === 'steer_injected') {
+                                // 穿插追问已被 Agent 处理
+                                console.log('Steer injected event:', ev.content);
+                            } else if (ev.type === 'aborted') {
+                                appendAbortCard(ev.message);
                             } else if (ev.type === 'ask_user') {
                                 renderAskUserModal(ev);
                             } else if (ev.type === 'todo_update') {
@@ -2951,17 +3198,48 @@
                     }
                 }
             } catch (err) {
-                appendErrorCard(err.message);
+                if (err.name !== 'AbortError') {
+                    appendErrorCard(err.message);
+                }
             } finally {
                 if (activeTimerInterval) {
                     clearInterval(activeTimerInterval);
                     activeTimerInterval = null;
                 }
-                isRunning = false;
-                btnSubmit.disabled = false;
+                setRunningState(false);
                 statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
                 statusText.textContent = 'Completed';
             }
+        }
+
+        // 穿插追问消息卡片
+        function appendSteerUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/50 text-indigo-100 shadow-md relative transition';
+            div.innerHTML = `
+                <div class="text-[11px] font-mono text-indigo-300 mb-1 flex items-center justify-between">
+                    <span class="font-semibold flex items-center gap-1.5 text-indigo-400">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        实时穿插追问 / 纠偏 (Interjected Directive)
+                    </span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="font-mono text-xs whitespace-pre-wrap">${escapeHtml(text)}</div>
+            `;
+            timeline.appendChild(div);
+            scrollBottom();
+        }
+
+        // 急停卡片展示
+        function appendAbortCard(message = '🛑 任务已由用户紧急中止 (Emergency Stopped by User)。') {
+            const div = document.createElement('div');
+            div.className = 'p-3 rounded-lg bg-rose-950/40 border border-rose-600/60 text-rose-200 text-xs flex items-center space-x-2 shadow-sm font-mono';
+            div.innerHTML = `
+                <svg class="w-4 h-4 text-rose-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                <span>${escapeHtml(message)}</span>
+            `;
+            timeline.appendChild(div);
+            scrollBottom();
         }
 
         // Accordion Helpers: User Message with Rollback Action

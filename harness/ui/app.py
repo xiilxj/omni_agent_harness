@@ -22,6 +22,7 @@ from harness.core.session import SessionManager, SessionItem, TelemetryData, aut
 from harness.core.workspace import WorkspaceManager, global_workspace_manager
 from harness.prompt.master_injector import MasterPromptInjector
 from harness.core.billing import calculate_token_cost
+from harness.core.slash_commands import SLASH_COMMANDS_REGISTRY, parse_and_transform_slash_command
 from harness.tools.registry import global_tools
 from harness.tools.default_tools import register_default_tools
 
@@ -526,6 +527,11 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
 
         agent.ask_user_resolver = ask_user_resolver
 
+        # 注册活跃 Agent 实例以便支持全局一键急停与实时穿插纠偏对话
+        active_agents: Dict[str, OmniAgent] = getattr(app.state, "active_agents", {})
+        app.state.active_agents = active_agents
+        active_agents[session.id] = agent
+
         start_time = time.time()
 
         async def event_generator():
@@ -608,6 +614,8 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 yield f"data: {json.dumps({'type': 'complete', 'session_id': session.id, 'result': res, 'telemetry': telemetry.model_dump()}, ensure_ascii=False)}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
+            finally:
+                active_agents.pop(session.id, None)
 
             yield "data: [DONE]\n\n"
 
@@ -620,6 +628,41 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 "X-Accel-Buffering": "no"
             }
         )
+
+    @app.get("/api/slash/commands")
+    async def get_slash_commands():
+        """获取系统支持的全部斜杠快捷指令清单 (Slash Commands)"""
+        return {"commands": SLASH_COMMANDS_REGISTRY}
+
+    class AbortTaskRequest(BaseModel):
+        session_id: Optional[str] = None
+
+    @app.post("/api/agent/abort")
+    async def abort_agent_task(req: AbortTaskRequest):
+        """一键急停打断当前正在执行的 Agent 任务与工具调用 (Emergency Stop)"""
+        active_agents: Dict[str, OmniAgent] = getattr(app.state, "active_agents", {})
+        if req.session_id and req.session_id in active_agents:
+            active_agents[req.session_id].request_abort()
+            return {"status": "aborted", "session_id": req.session_id}
+
+        # 若未指定 session_id，则急停打断所有正在执行的 agent
+        for sid, ag in list(active_agents.items()):
+            ag.request_abort()
+        return {"status": "aborted", "count": len(active_agents)}
+
+    class SteerTaskRequest(BaseModel):
+        session_id: str
+        prompt: str
+
+    @app.post("/api/agent/steer")
+    async def steer_agent_task(req: SteerTaskRequest):
+        """在 Agent 执行任务工作中实时穿插追问、补充约束与动态纠偏 (Mid-flight Steer)"""
+        active_agents: Dict[str, OmniAgent] = getattr(app.state, "active_agents", {})
+        ag = active_agents.get(req.session_id)
+        if not ag:
+            return {"status": "not_running", "message": "当前会话没有正在运行的任务，您可以直接发送新任务。"}
+        ag.steer_message(req.prompt)
+        return {"status": "steered", "session_id": req.session_id, "prompt": req.prompt}
 
     class UserResponseRequest(BaseModel):
         tool_id: str
