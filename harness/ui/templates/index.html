@@ -3621,6 +3621,7 @@
 
             appendUserMessage(prompt);
 
+            const chosenModel = (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-flash') || 'deepseek-v4-flash';
             let suffixToSend = masterSuffixTextarea ? masterSuffixTextarea.value : '';
             if (suffixState && suffixState.mode === 'random') {
                 suffixToSend = '__POOL__';
