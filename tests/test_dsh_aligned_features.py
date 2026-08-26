@@ -65,3 +65,50 @@ def test_tools_dictionary_order_cache_friendly():
     assert names == sorted(names)
     assert "ask_user" in names
     assert "update_todo_list" in names
+    assert "find_symbol_definition" in names
+    assert "run_code_tests" in names
+    assert "manage_task" in names
+
+
+def test_context_pruner_compaction():
+    """测试 DSH 级长会话上下文剪枝器对超长历史输出的压缩能力"""
+    from harness.core.context_pruner import ContextPruner
+    pruner = ContextPruner(max_context_chars=400, tool_truncation_len=100)
+
+    # 构造一条长历史消息列表
+    messages = [
+        Message(role="system", content="Master System Prompt"),
+        Message(role="user", content="First question"),
+        Message(role="tool", name="grep_search", content="A" * 500), # 需压缩
+        Message(role="assistant", content="Intermediate thought"),
+        Message(role="user", content="Recent turn 1"),
+        Message(role="assistant", content="Recent turn 2"),
+        Message(role="user", content="Latest question")
+    ]
+
+    compacted, saved_tokens = pruner.prune_and_compact(messages)
+    assert len(compacted) == len(messages)
+    assert "Master System Prompt" in compacted[0].content
+    assert "Omni Context Pruner" in compacted[2].content
+    assert saved_tokens > 50
+
+
+@pytest.mark.asyncio
+async def test_task_manager_lifecycle():
+    """测试后台常驻任务管理器启动、状态查询与终止流程"""
+    from harness.tools.task_manager import BackgroundTaskManager
+    tm = BackgroundTaskManager(log_dir="/tmp/test_omni_tasks")
+
+    # 启动一个后台 sleep 任务
+    start_msg = await tm.start_task("sleep 2")
+    assert "started successfully" in start_msg
+    assert "task-001" in start_msg
+
+    # 查询状态
+    status_msg = tm.get_status("task-001")
+    assert "RUNNING" in status_msg
+
+    # 终止任务
+    kill_msg = await tm.kill_task("task-001")
+    assert "terminated" in kill_msg
+

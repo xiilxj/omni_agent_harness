@@ -243,4 +243,91 @@ def register_default_tools(registry: Optional[ToolRegistry] = None) -> ToolRegis
     def _find_symbol(symbol_name: str, search_path: str = ".") -> str:
         return _find_symbol_fn(symbol_name, search_path=search_path)
 
+    # 12. Codex 级测试驱动与自愈验证执行器 (Test-Driven Verification Loop)
+    from harness.tools.bash_executor import run_shell_command as _run_sh
+
+    @reg.register(
+        name="run_code_tests",
+        description="Execute automated unit/integration test suites (e.g. pytest, npm test, cargo test, go test) and parse the results. Formats failure traces and diagnostic reports for autonomous self-healing.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "test_command": {"type": "string", "description": "The test runner command to execute (default: 'pytest')."},
+                "test_path": {"type": "string", "description": "Optional specific test path or file (e.g. 'tests/test_core.py')."},
+                "cwd": {"type": "string", "description": "Optional working directory."}
+            }
+        }
+    )
+    async def _run_tests(test_command: str = "pytest", test_path: Optional[str] = None, cwd: Optional[str] = None) -> str:
+        cmd = f"{test_command} {test_path}".strip() if test_path else test_command
+        raw_out = await _run_sh(cmd, cwd=cwd)
+        
+        # 提取关键测试通过与失败摘要
+        lines = raw_out.splitlines()
+        summary_line = lines[-1] if lines else "No output"
+        is_passed = "passed" in raw_out.lower() and "failed" not in raw_out.lower() and "error" not in raw_out.lower()
+        status_tag = "✅ ALL TESTS PASSED" if is_passed else "❌ TESTS FAILED / NEED SELF-HEAL"
+
+        return f"=== Codex Test Suite Result: {status_tag} ===\nCommand: {cmd}\nSummary: {summary_line}\n\n--- Full Output ---\n{raw_out}"
+
+    # 13. DSH 后台常驻任务与守护进程管理 (Background Daemon Manager)
+    from harness.tools.task_manager import global_task_manager
+
+    @reg.register(
+        name="manage_task",
+        description="Manage long-running background tasks and daemons (e.g. dev servers, continuous watchers, background compilers, scanners) without blocking conversation. Supports starting, inspecting status/logs, terminating, and listing tasks.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["start", "status", "kill", "list"],
+                    "description": "Action to perform: 'start' (launch background command), 'status' (view logs & status), 'kill' (terminate task), 'list' (list all active tasks)."
+                },
+                "command": {"type": "string", "description": "Command line to start (required when action='start')."},
+                "task_id": {"type": "string", "description": "The unique task ID (required when action='status' or 'kill')."},
+                "cwd": {"type": "string", "description": "Optional working directory."}
+            },
+            "required": ["action"]
+        }
+    )
+    async def _manage_task(action: str, command: Optional[str] = None, task_id: Optional[str] = None, cwd: Optional[str] = None) -> str:
+        if action == "start":
+            if not command:
+                return "Error: 'command' parameter is required when action='start'."
+            return await global_task_manager.start_task(command, cwd=cwd)
+        elif action == "status":
+            if not task_id:
+                return "Error: 'task_id' parameter is required when action='status'."
+            return global_task_manager.get_status(task_id)
+        elif action == "kill":
+            if not task_id:
+                return "Error: 'task_id' parameter is required when action='kill'."
+            return await global_task_manager.kill_task(task_id)
+        elif action == "list":
+            return global_task_manager.list_tasks()
+        return f"Error: Unknown action '{action}'."
+
+    # 14. DSH 多智能体集群与子任务异步派发 (Subagent Swarm Delegation)
+    @reg.register(
+        name="invoke_subagent",
+        description="Spawn a dedicated specialized subagent with isolated sandbox context to execute an independent research, code auditing, or reverse analysis subtask. Returns a structured final report back to the main agent.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "enum": ["researcher", "code_auditor", "exploit_analyst", "general"],
+                    "description": "The specialization role of the subagent."
+                },
+                "prompt": {"type": "string", "description": "Clear actionable instruction prompt describing the exact subtask to accomplish."},
+                "max_steps": {"type": "integer", "description": "Maximum ReAct execution steps for the subagent (default: 15)."}
+            },
+            "required": ["role", "prompt"]
+        }
+    )
+    async def _invoke_subagent(role: str, prompt: str, max_steps: int = 15) -> str:
+        # Note: Handled by agent.subagent_manager in OmniAgent ReAct loop
+        return f"Subagent invocation placeholder: role='{role}', prompt='{prompt}'"
+
     return reg

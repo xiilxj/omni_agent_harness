@@ -8,6 +8,8 @@ import logging
 from typing import Any, Callable, Dict, List, Optional
 from harness.core.config import AppConfig, load_config
 from harness.core.models import LLMResponse, Message, ToolCall, ToolFunction, UsageStats
+from harness.core.context_pruner import ContextPruner
+from harness.core.subagent import SubagentManager
 from harness.prompt.master_injector import MasterPromptInjector
 from harness.providers.router import ProviderRouter
 from harness.tools.registry import ToolRegistry, global_tools
@@ -34,6 +36,8 @@ class OmniAgent:
         self.custom_master_prompt = custom_master_prompt
         self.router = ProviderRouter(config)
         self.injector = MasterPromptInjector()
+        self.pruner = ContextPruner()
+        self.subagent_manager = SubagentManager(parent_config=config, parent_tools=self.tools)
         self.messages: List[Message] = []
         self.total_usage = UsageStats()
         self.current_provider_name: Optional[str] = None
@@ -109,9 +113,12 @@ class OmniAgent:
         provider = self.router.get_provider(p_name)
         m_name = model_name or self.config.providers.get("default_model", "deepseek-chat")
 
+        # 0. DSH 级长会话上下文剪枝与 Token 优化
+        pruned_messages, saved_tokens = self.pruner.prune_and_compact(self.messages)
+
         # 1. 核心关键：通过 Injector 确保 MASTER_SYSTEM_PROMPT.md 100% 绝对置顶与双端物理锚定
         injected_messages = self.injector.inject(
-            messages=self.messages,
+            messages=pruned_messages,
             workspace=self.config.workspace.default_cwd,
             custom_master_prompt=self.custom_master_prompt
         )
@@ -351,7 +358,20 @@ class OmniAgent:
                             "todos": self.current_todos
                         })
 
-                # 3. 权限控制检查 (DSH Permission Enforcer)
+                # 3. 多智能体集群协同派发 (invoke_subagent)
+                elif t_name == "invoke_subagent":
+                    p_args = json.loads(t_args) if isinstance(t_args, str) else (t_args or {})
+                    sub_role = p_args.get("role", "general")
+                    sub_prompt = p_args.get("prompt", "")
+                    max_s = p_args.get("max_steps", 15)
+                    observation = await self.subagent_manager.invoke(
+                        role=sub_role,
+                        task_prompt=sub_prompt,
+                        max_steps=max_s,
+                        on_parent_callback=on_step_callback
+                    )
+
+                # 4. 权限控制检查 (DSH Permission Enforcer)
                 elif self.permission_mode == "read_only" and t_name in ("run_command", "write_file", "replace_file_content"):
                     observation = f"Permission Denied: Agent is running in 'read_only' mode. Destructive tool '{t_name}' execution is blocked by safety policy."
                 else:
