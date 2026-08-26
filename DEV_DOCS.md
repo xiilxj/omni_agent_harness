@@ -60,12 +60,57 @@
 
 ---
 
+### 🛑 一键急停与实时穿插纠偏对话机制 (Emergency Stop & Mid-flight Steer)
+- **多端一键急停 (Emergency Stop / Abort)**：
+  * 输入框右侧醒目呼吸灯按钮 **`⏹ 急停 (Esc)`** 与 Header 顶部状态急停按钮；
+  * 按下或键盘 `Esc` 立即发送 `/api/agent/abort` 并中断前端 SSE，瞬间打断大模型吐字与正在执行的工具调用。
+- **工作中实时穿插追问与纠偏对话 (Mid-flight Steer)**：
+  * 在 Agent 执行任务或多步工具循环期间，输入框**不锁死**；
+  * 随时输入追问、补充约束与纠偏指令，点击 `⚡ 实时穿插纠偏 (Enter)`；
+  * 指令直接注入 Agent 运行队列，在下一个推理步中动态调整执行方向，无需中止重开。
+
+### ⚡ 全套斜杠快捷指令系统 (Slash Commands Engine)
+- **智能联想浮层 (`#slash-commands-popover`)**：
+  * 输入 `/` 自动弹出支持键盘 `↑` `↓` 切换与 `Enter` / `Tab` 补全的指令列表；
+  * `/goal <目标>`: 开启深度长程自主攻坚模式，不达目的誓不罢休；
+  * `/grill-me [议题]`: 资深架构师交互式多轮追问盘问，厘清设计决策与边界细节；
+  * `/schedule <时间> <任务>`: 调度后台定时或周期性 Cron 自动化任务；
+  * `/browser <URL>`: 调用 Chrome DevTools MCP 进行页面审计、DOM 提取与抓包；
+  * `/teamwork-preview <项目>`: 多智能体集群协同攻关演练；
+  * `/learn <经验>`: 将技术要点与避坑经验直接持久化写入 `persistent_memory.txt`；
+  * `/rollback [步数]`: 历史会话时空回退；
+  * `/clear`: 清空控制台与重置会话；
+  * `/help`: 查看完整斜杠指令清单。
+
+---
+
+## 2. 核心模块与工具集 (共 14 项完整工具)
+
+| 工具名称 | 分类 | 用途说明 |
+| :--- | :--- | :--- |
+| `run_command` | Shell 执行 | 跨平台执行 Bash / PowerShell 命令。 |
+| `view_file` | 文件系统 | 切片读取文件内容。 |
+| `write_file` | 文件系统 | 创建或完全覆盖写入文件。 |
+| `replace_file_content` | 文件系统 | 精准行级文本替换并生成 Unified Diff。 |
+| `list_dir` | 搜索浏览 | 递归列出目录层级结构。 |
+| `grep_search` | 搜索浏览 | 文本与正则模式搜索。 |
+| `find_by_name` | 搜索浏览 | 文件名通配符快速查找。 |
+| `read_url_content` | 网络提取 | HTTP 抓取并转换为纯净 Markdown。 |
+| `ask_user` | 交互控制 | 决策分支向用户弹出选项卡片。 |
+| `update_todo_list` | 任务追踪 | 动态维护里程碑 Checklist 与进度百分比。 |
+| `find_symbol_definition` | Codex 引擎 | AST 符号与函数定义精准定位。 |
+| `run_code_tests` | Codex 引擎 | 运行测试套件并结构化解析报错。 |
+| `manage_task` | DSH 后台 | 启动、监控与终止后台守护进程。 |
+| `invoke_subagent` | DSH 集群 | 异步派发专精子智能体执行独立子任务。 |
+
+---
+
 ## 3. 审核与验证记录
-- **审核轮数**: 第 30 轮（DSH 1:1 仪表盘全量复刻 + 实时计费核算引擎与明细表全量验收）
+- **审核轮数**: 第 31 轮（一键急停 + 工作中实时穿插纠偏追问 + 全套斜杠快捷指令系统全量验收）
 - **测试状态**:
-  - `pytest tests/`: **16/16 全部通过 (100% Passed)**。
+  - `pytest tests/`: **18/18 全部通过 (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `/mnt/d/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/c/Users/Lenovo/Desktop/Omni_Agent_Harness_Windows_Clean.zip`
   - `/mnt/d/Omni_Agent_Harness_Windows_Clean.zip`
-- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（Commit: `b88912f`）。
+- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（最新 Commit 已推送）。
