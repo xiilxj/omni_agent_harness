@@ -113,12 +113,15 @@ class MasterPromptInjector:
     def get_skills_manifest(self) -> str:
         """扫描宿主机与本地技能目录并生成结构化清单"""
         import json
+        user_profile = os.environ.get("USERPROFILE")
         skills_dirs = [
             Path.home() / ".gemini" / "antigravity" / "skills",
-            Path("/mnt/c/Users/Lenovo/.gemini/config/skills"),
+            Path.home() / ".gemini" / "config" / "skills",
+            (Path(user_profile) / ".gemini" / "config" / "skills") if user_profile else None,
             Path.cwd() / "skills",
             self.base_dir / "skills"
         ]
+        skills_dirs = [p for p in skills_dirs if p is not None]
         scanned_skills = {}
         for sdir in skills_dirs:
             if not sdir.exists():
@@ -170,13 +173,15 @@ class MasterPromptInjector:
     def get_mcp_manifest(self) -> str:
         """扫描 MCP 配置文件并生成结构化清单"""
         import json
+        user_profile = os.environ.get("USERPROFILE")
         mcp_paths = [
             Path.home() / ".gemini" / "config" / "mcp_config.json",
-            Path("/mnt/c/Users/Lenovo/.gemini/config/mcp_config.json"),
+            (Path(user_profile) / ".gemini" / "config" / "mcp_config.json") if user_profile else None,
             Path.home() / ".config" / "dsh" / "mcp_config.json",
             Path.cwd() / "mcp_config.json",
             self.base_dir / "mcp_config.json"
         ]
+        mcp_paths = [p for p in mcp_paths if p is not None]
         mcp_servers = {}
         for mpath in mcp_paths:
             if mpath.exists():

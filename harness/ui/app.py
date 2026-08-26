@@ -793,13 +793,16 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
     @app.get("/api/skills")
     async def list_skills():
         """扫描并获取所有可用 Skills 技能列表与描述"""
+        user_prof = os.environ.get("USERPROFILE")
         search_dirs = [
-            Path("/home/maker/.gemini/antigravity/skills"),
-            Path.home() / ".gemini/antigravity/skills",
-            Path.home() / ".gemini/config/skills",
-            Path("./skills"),
+            Path.home() / ".gemini" / "antigravity" / "skills",
+            Path.home() / ".gemini" / "config" / "skills",
+            (Path(user_prof) / ".gemini" / "config" / "skills") if user_prof else None,
+            Path.cwd() / "skills",
+            self_base_dir / "skills" if 'self_base_dir' in locals() else None,
             Path(workspace_mgr.cwd) / "skills"
         ]
+        search_dirs = [d for d in search_dirs if d is not None]
         skills_found = {}
 
         for s_dir in search_dirs:
@@ -815,25 +818,30 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                             content = ""
                             if skill_md.exists():
                                 try:
-                                    with open(skill_md, "r", encoding="utf-8", errors="ignore") as f:
-                                        content = f.read(4000)
-                                        # 提取简述
-                                        lines = [l.strip() for l in content.splitlines() if l.strip() and not l.startswith("#")]
+                                    content = skill_md.read_text(encoding="utf-8", errors="ignore")
+                                    for line in content.splitlines()[:15]:
+                                        if line.lower().startswith("description:"):
+                                            desc = line.split(":", 1)[1].strip().strip('"').strip("'")
+                                            break
+                                    if desc == "No description" and content:
+                                        lines = [l.strip() for l in content.splitlines() if l.strip() and not l.startswith("#") and not l.startswith("---")]
                                         if lines:
-                                            desc = lines[0][:150]
+                                            desc = lines[0][:120]
                                 except Exception:
                                     pass
-                            skills_found[entry.name] = {
-                                "name": entry.name,
-                                "path": str(resolved),
-                                "description": desc,
-                                "has_skill_md": skill_md.exists(),
-                                "content_preview": content[:1000]
-                            }
+
+                            skill_name = entry.name
+                            if skill_name not in skills_found:
+                                skills_found[skill_name] = {
+                                    "name": skill_name,
+                                    "description": desc,
+                                    "path": str(resolved),
+                                    "content_preview": content[:600] if content else ""
+                                }
                     except Exception:
-                        continue
+                        pass
             except Exception:
-                continue
+                pass
 
         return {"skills": list(skills_found.values())}
 
@@ -856,16 +864,19 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
 
         return {"status": "success", "message": f"Skill '{clean_name}' created successfully at {skill_file}."}
 
-    # ==================== MCP 配置与热加载 API ====================
+    # ==================== MCP 服务管理 API ====================
 
     @app.get("/api/mcp/config")
     async def get_mcp_config():
         """读取 MCP 服务的 JSON 配置文件"""
+        user_prof = os.environ.get("USERPROFILE")
         paths = [
-            Path("/home/maker/.gemini/config/mcp_config.json"),
-            Path.home() / ".gemini/config/mcp_config.json",
-            Path("./mcp_config.json")
+            Path.home() / ".gemini" / "config" / "mcp_config.json",
+            (Path(user_prof) / ".gemini" / "config" / "mcp_config.json") if user_prof else None,
+            Path.cwd() / "mcp_config.json",
+            Path.home() / ".config" / "dsh" / "mcp_config.json"
         ]
+        paths = [p for p in paths if p is not None]
         for p in paths:
             if p.exists():
                 try:

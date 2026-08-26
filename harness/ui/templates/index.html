@@ -4258,7 +4258,7 @@
         // Switch Workspace Directory on Computer
         document.getElementById('btn-switch-cwd').addEventListener('click', async () => {
             const currentCwd = document.getElementById('sidebar-cwd').textContent;
-            const targetPath = prompt('Enter absolute directory path on your computer (e.g. /home/maker/agycode, /mnt/d/...):', currentCwd);
+            const targetPath = prompt('Enter absolute directory path on your computer (e.g. /Users/name/projects, D:/projects/...):', currentCwd);
             if (targetPath && targetPath.trim()) {
                 try {
                     const res = await fetch('/api/workspace/set-cwd', {

@@ -13,7 +13,7 @@ async function verifyDshPatch() {
         agent: {
             session: {
                 header: {
-                    cwd: "/home/maker/agycode"
+                    cwd: process.cwd()
                 }
             },
             options: {

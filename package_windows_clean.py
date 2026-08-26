@@ -24,6 +24,7 @@ def create_clean_windows_package():
         "requirements.txt",
         "start_windows.bat",
         "install_windows.bat",
+        "start_linux.sh",
         "README_WINDOWS.md",
         "README.md",
         ".env.example"
@@ -46,7 +47,7 @@ def create_clean_windows_package():
         "MASTER_SYSTEM_PROMPT.md"  # 不包含用户的当前私有提示词，完全留白
     ]
 
-    print(f"[1/4] 开始构建 Windows 纯净独立分发包: {zip_filename} ...")
+    print(f"[1/4] 开始构建 Windows/全平台 纯净独立分发包: {zip_filename} ...")
 
     with zipfile.ZipFile(local_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # 1. 打包顶级文件
@@ -87,25 +88,38 @@ def create_clean_windows_package():
 
     print("  ✓ 安全审计通过: 零私有密钥、零个人提示词、零历史会话残留。")
 
-    # 4. 导出到宿主机 Windows 桌面
-    print("[4/4] 正在导出分发包到宿主机桌面...")
-    export_targets = [
-        Path("/mnt/d/Desktop") / zip_filename,
-        Path("/mnt/d") / zip_filename,
-        Path("/mnt/c/Users/Lenovo/Desktop") / zip_filename
-    ]
+    # 4. 导出到宿主机与本地桌面
+    print("[4/4] 正在导出分发包到宿主机与桌面...")
+    export_targets = []
+    user_prof = os.environ.get("USERPROFILE")
+    if user_prof:
+        export_targets.append(Path(user_prof) / "Desktop" / zip_filename)
+        export_targets.append(Path(user_prof) / "桌面" / zip_filename)
 
+    desktop_dirs = [
+        Path.home() / "Desktop",
+        Path.home() / "桌面",
+        Path("/mnt/d/Desktop"),
+        Path("/mnt/d"),
+        Path("/mnt/c/Users/Lenovo/Desktop")
+    ]
+    for d in desktop_dirs:
+        if d.exists():
+            export_targets.append(d / zip_filename)
+
+    # 去重
+    unique_targets = list(dict.fromkeys(export_targets))
     exported_count = 0
-    for target in export_targets:
+    for target in unique_targets:
         try:
             if target.parent.exists():
                 shutil.copy2(local_zip_path, target)
                 print(f"  ✓ 成功导出至: {target}")
                 exported_count += 1
         except Exception as e:
-            print(f"  ! 导出至 {target} 失败: {e}")
+            pass
 
-    print(f"\n[完成] Windows 纯净版已成功打包并存放到桌面，共导出 {exported_count} 处目标。")
+    print(f"\n[完成] 纯净分发包已成功生成 (dist/{zip_filename})，并同步导出 {exported_count} 处桌面备份。")
 
 
 if __name__ == "__main__":
