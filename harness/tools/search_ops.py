@@ -150,3 +150,81 @@ def find_by_name(
         return f"No files or directories matching pattern '{pattern}' found in '{search_dir}'."
 
     return f"=== Found {len(results)} items matching '{pattern}' ===\n" + "\n".join(results)
+
+
+def find_symbol_definition(
+    symbol_name: str,
+    search_path: str = ".",
+    cwd: Optional[str] = None,
+    max_results: int = 15
+) -> str:
+    """
+    Codex 级代码符号与定义检索器 (AST / Signature Matcher)
+    在整个工程代码库中精准定位类定义 (class)、函数/方法 (def/async def/function/fn)、接口与结构体。
+    返回精准的文件位置、行号及函数签名代码块，无需加载整个超大文件。
+    """
+    target = Path(search_path)
+    if not target.is_absolute() and cwd:
+        target = Path(cwd) / target
+
+    if not target.exists():
+        return f"Error: Search path '{search_path}' does not exist."
+
+    # 构造跨语言主流符号定义的匹配正则
+    # Python: def func / class Cls / async def func
+    # JS/TS: function func / const func = / class Cls / interface Cls / type Cls
+    # Rust/Go: fn func / type Struct struct / func (r) Method / func Func
+    # C/C++: void func(...) / class Cls / struct Cls
+    clean_sym = re.escape(symbol_name.strip())
+    patterns = [
+        re.compile(rf'^\s*(?:async\s+)?def\s+{clean_sym}\s*\(', re.IGNORECASE),
+        re.compile(rf'^\s*class\s+{clean_sym}\b', re.IGNORECASE),
+        re.compile(rf'^\s*(?:export\s+)?(?:default\s+)?function\s+{clean_sym}\s*\(', re.IGNORECASE),
+        re.compile(rf'^\s*(?:export\s+)?(?:const|let|var)\s+{clean_sym}\s*=\s*(?:async\s+)?(?:\([^)]*\)|[a-zA-Z0-9_]+)\s*=>', re.IGNORECASE),
+        re.compile(rf'^\s*(?:pub\s+)?(?:async\s+)?fn\s+{clean_sym}\b', re.IGNORECASE),
+        re.compile(rf'^\s*func\s+(?:\([^)]*\)\s+)?{clean_sym}\s*\(', re.IGNORECASE),
+        re.compile(rf'^\s*(?:export\s+)?(?:interface|type|struct|enum)\s+{clean_sym}\b', re.IGNORECASE),
+    ]
+
+    results = []
+    valid_exts = {".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".c", ".cpp", ".h", ".hpp", ".java", ".cs", ".php", ".rb"}
+
+    search_files: List[Path] = []
+    if target.is_file():
+        search_files.append(target)
+    else:
+        for root, _, files in os.walk(target):
+            if any(ign in root for ign in [".git", "node_modules", "__pycache__", ".venv", "dist", "build"]):
+                continue
+            for f in files:
+                ext = os.path.splitext(f)[1].lower()
+                if ext in valid_exts:
+                    search_files.append(Path(root) / f)
+
+    for f_path in search_files:
+        if len(results) >= max_results:
+            break
+        try:
+            with open(f_path, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+
+            for line_idx, line in enumerate(lines, 1):
+                if any(p.search(line) for p in patterns):
+                    # 提取签名块（包含上下文 12 行代码与文档注释）
+                    start_snippet = max(0, line_idx - 1)
+                    end_snippet = min(len(lines), line_idx + 12)
+                    snippet_code = "".join(lines[start_snippet:end_snippet]).rstrip()
+                    rel_path = f_path.relative_to(target.parent if target.is_file() else target)
+                    results.append(
+                        f"--- Symbol Match in [{rel_path}:{line_idx}] ---\n```\n{snippet_code}\n```"
+                    )
+                    if len(results) >= max_results:
+                        break
+        except Exception:
+            continue
+
+    if not results:
+        return f"No symbol definition found for '{symbol_name}' in '{search_path}'. Try using grep_search for raw text matches."
+
+    return f"=== Found {len(results)} definitions for symbol '{symbol_name}' ===\n\n" + "\n\n".join(results)
+

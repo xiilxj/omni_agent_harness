@@ -225,4 +225,22 @@ def register_default_tools(registry: Optional[ToolRegistry] = None) -> ToolRegis
         completed = sum(1 for t in todos if t.get("status") == "completed")
         return f"Todo checklist updated: {completed}/{len(todos)} steps completed."
 
+    # 11. Codex 级代码符号与定义检索 (AST / Symbol Indexing)
+    from harness.tools.search_ops import find_symbol_definition as _find_symbol_fn
+
+    @reg.register(
+        name="find_symbol_definition",
+        description="Locate declarations and definitions of classes, functions, methods, structs, or interfaces across the codebase by symbol name. Returns exact file locations, line numbers, and signature code snippets without loading entire large files.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "symbol_name": {"type": "string", "description": "The name of the class, function, method, or struct to locate (e.g. 'OmniAgent', 'run_task', 'User')."},
+                "search_path": {"type": "string", "description": "Directory or file to search within (default: '.')."}
+            },
+            "required": ["symbol_name"]
+        }
+    )
+    def _find_symbol(symbol_name: str, search_path: str = ".") -> str:
+        return _find_symbol_fn(symbol_name, search_path=search_path)
+
     return reg

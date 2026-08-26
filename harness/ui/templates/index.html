@@ -438,11 +438,19 @@
         <!-- Tab 1: Model & API Provider Settings -->
         <div id="tab-pane-models" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
             <div class="space-y-1.5">
-                <label class="text-[11px] font-semibold text-dark-heading">Provider Selection</label>
-                <select id="settings-provider" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs text-dark-heading focus:outline-none focus:border-brand-500 font-mono">
-                    <option value="deepseek">DeepSeek Official API</option>
-                    <option value="openai">OpenAI Compatible (vLLM / Ollama / Other)</option>
-                    <option value="anthropic">Anthropic Claude API</option>
+                <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-semibold text-dark-heading">Provider Quick Profile (快速厂商模板)</label>
+                    <span class="text-[10px] text-blue-400 font-mono">全厂商矩阵</span>
+                </div>
+                <select id="settings-provider-preset" class="w-full bg-dark-bg border border-blue-500/40 rounded p-2 text-xs text-blue-400 focus:outline-none focus:border-blue-500 font-medium cursor-pointer">
+                    <option value="deepseek">🌟 DeepSeek 官方 (api.deepseek.com)</option>
+                    <option value="openai">🤖 OpenAI 官方 (api.openai.com)</option>
+                    <option value="siliconflow">⚡ 硅基流动 SiliconFlow (api.siliconflow.cn)</option>
+                    <option value="openrouter">🌐 OpenRouter 聚合/Claude (openrouter.ai)</option>
+                    <option value="ollama">🏠 Ollama 本地私有化 (localhost:11434)</option>
+                    <option value="dashscope">🐉 阿里百炼 通义千问 (dashscope.aliyuncs.com)</option>
+                    <option value="moonshot">🌙 月之暗面 Kimi (api.moonshot.cn)</option>
+                    <option value="custom">⚙️ 自定义 OpenAI 兼容端点...</option>
                 </select>
             </div>
 
@@ -460,20 +468,56 @@
                 <p class="text-[10px] text-dark-muted">API Key 安全隔离保存在本地 <code>.env</code> 文件中，杜绝硬编码泄露。</p>
             </div>
 
-            <div class="pt-2">
+            <div class="pt-1">
                 <button id="btn-test-fetch-models" class="w-full py-2 bg-dark-hover hover:bg-zinc-800 border border-dark-border text-blue-400 rounded font-medium text-xs flex items-center justify-center space-x-2 transition">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <polyline points="1 20 1 14 7 14"></polyline>
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
-                    <span>Test & Fetch Available Models</span>
+                    <span>🔍 测试连接并动态拉取模型列表</span>
                 </button>
                 <div id="fetch-status-msg" class="hidden mt-2 p-2 rounded text-[11px] font-mono"></div>
             </div>
 
-            <div class="space-y-1.5 pt-2">
-                <label class="text-[11px] font-semibold text-dark-heading">Active Model</label>
+            <!-- Custom 4-Tier Model Mapping (自定义4档模型绑定) -->
+            <div class="p-3 bg-dark-bg/80 border border-dark-border rounded-lg space-y-2.5">
+                <div class="flex items-center justify-between border-b border-dark-border pb-1.5">
+                    <span class="text-xs font-semibold text-dark-heading flex items-center gap-1.5">
+                        <span>🎯 4 档智能体能力映射 (自定义绑定)</span>
+                    </span>
+                    <span class="text-[10px] text-dark-muted font-mono">通用矩阵</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
+                            <span>⚡ Flash (极速档)</span>
+                        </label>
+                        <input id="tier-map-flash" type="text" value="deepseek-v4-flash" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 gpt-4o-mini">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
+                            <span>🛠️ Pro (工程主力档)</span>
+                        </label>
+                        <input id="tier-map-pro" type="text" value="deepseek-v4-pro" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 claude-3-5-sonnet">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
+                            <span>🧠 Reasoner (深度推理)</span>
+                        </label>
+                        <input id="tier-map-reasoner" type="text" value="deepseek-reasoner" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 o3-mini / deepseek-r1">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
+                            <span>👁️ Vision (多模态档)</span>
+                        </label>
+                        <input id="tier-map-vision" type="text" value="deepseek-v4-flash-vision-exp" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 gpt-4o / qwen-vl-max">
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+                <label class="text-[11px] font-semibold text-dark-heading">默认激活模型 (Active Model)</label>
                 <select id="settings-model-select" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500">
                     <option value="deepseek-v4-pro">deepseek-v4-pro</option>
                     <option value="deepseek-v4-flash">deepseek-v4-flash</option>
@@ -483,9 +527,9 @@
                 </select>
             </div>
 
-            <div class="pt-4 border-t border-dark-border">
-                <button id="btn-save-provider-config" class="w-full py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-medium text-xs transition">
-                    Save & Apply Settings
+            <div class="pt-3 border-t border-dark-border">
+                <button id="btn-save-provider-config" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs transition shadow-md">
+                    💾 保存并应用全厂商模型设置
                 </button>
             </div>
         </div>
@@ -637,10 +681,14 @@
         const btnQuickPrompt = document.getElementById('btn-quick-prompt');
 
         // Settings Elements
-        const settingsProvider = document.getElementById('settings-provider');
+        const settingsProviderPreset = document.getElementById('settings-provider-preset');
         const settingsBaseUrl = document.getElementById('settings-base-url');
         const settingsApiKey = document.getElementById('settings-api-key');
         const settingsModelSelect = document.getElementById('settings-model-select');
+        const tierMapFlash = document.getElementById('tier-map-flash');
+        const tierMapPro = document.getElementById('tier-map-pro');
+        const tierMapReasoner = document.getElementById('tier-map-reasoner');
+        const tierMapVision = document.getElementById('tier-map-vision');
         const btnTestFetchModels = document.getElementById('btn-test-fetch-models');
         const fetchStatusMsg = document.getElementById('fetch-status-msg');
         const btnSaveProviderConfig = document.getElementById('btn-save-provider-config');
@@ -648,6 +696,107 @@
         const masterCharCount = document.getElementById('master-char-count');
         const btnSaveMasterPrompt = document.getElementById('btn-save-master-prompt');
         const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
+
+        // Multi-Provider Matrix Templates
+        const providerTemplates = {
+            deepseek: {
+                baseUrl: 'https://api.deepseek.com/v1',
+                flash: 'deepseek-v4-flash',
+                pro: 'deepseek-v4-pro',
+                reasoner: 'deepseek-reasoner',
+                vision: 'deepseek-v4-flash-vision-exp',
+                models: ['deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash-vision-exp']
+            },
+            openai: {
+                baseUrl: 'https://api.openai.com/v1',
+                flash: 'gpt-4o-mini',
+                pro: 'gpt-4o',
+                reasoner: 'o3-mini',
+                vision: 'gpt-4o',
+                models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4.5-preview']
+            },
+            siliconflow: {
+                baseUrl: 'https://api.siliconflow.cn/v1',
+                flash: 'deepseek-ai/DeepSeek-V3',
+                pro: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+                reasoner: 'deepseek-ai/DeepSeek-R1',
+                vision: 'OpenGVLab/InternVL2-26B',
+                models: ['deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Qwen/Qwen2.5-Coder-32B-Instruct', 'Qwen/Qwen2.5-72B-Instruct']
+            },
+            openrouter: {
+                baseUrl: 'https://openrouter.ai/api/v1',
+                flash: 'anthropic/claude-3.5-haiku',
+                pro: 'anthropic/claude-3.5-sonnet',
+                reasoner: 'anthropic/claude-3.7-sonnet:thinking',
+                vision: 'google/gemini-2.0-flash-001',
+                models: ['anthropic/claude-3.5-sonnet', 'anthropic/claude-3.7-sonnet', 'deepseek/deepseek-r1', 'google/gemini-2.0-flash-001']
+            },
+            ollama: {
+                baseUrl: 'http://localhost:11434/v1',
+                flash: 'qwen2.5-coder:7b',
+                pro: 'qwen2.5-coder:32b',
+                reasoner: 'deepseek-r1:14b',
+                vision: 'llava:latest',
+                models: ['qwen2.5-coder:32b', 'deepseek-r1:14b', 'qwen2.5-coder:7b', 'llama3.3:70b']
+            },
+            dashscope: {
+                baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+                flash: 'qwen-turbo',
+                pro: 'qwen-max',
+                reasoner: 'qwq-32b',
+                vision: 'qwen-vl-max',
+                models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwq-32b', 'qwen-vl-max']
+            },
+            moonshot: {
+                baseUrl: 'https://api.moonshot.cn/v1',
+                flash: 'moonshot-v1-8k',
+                pro: 'moonshot-v1-32k',
+                reasoner: 'moonshot-v1-128k',
+                vision: 'moonshot-v1-32k',
+                models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k']
+            }
+        };
+
+        if (settingsProviderPreset) {
+            settingsProviderPreset.addEventListener('change', () => {
+                const key = settingsProviderPreset.value;
+                if (providerTemplates[key]) {
+                    const tmpl = providerTemplates[key];
+                    settingsBaseUrl.value = tmpl.baseUrl;
+                    tierMapFlash.value = tmpl.flash;
+                    tierMapPro.value = tmpl.pro;
+                    tierMapReasoner.value = tmpl.reasoner;
+                    tierMapVision.value = tmpl.vision;
+                    populateModelSelects(tmpl.models, tmpl.pro);
+                    applyCustomTierMapping();
+                }
+            });
+        }
+
+        function applyCustomTierMapping() {
+            tierModelMap.flash.model = tierMapFlash.value || 'deepseek-v4-flash';
+            tierModelMap.pro.model = tierMapPro.value || 'deepseek-v4-pro';
+            tierModelMap.reasoner.model = tierMapReasoner.value || 'deepseek-reasoner';
+            tierModelMap.vision.model = tierMapVision.value || 'deepseek-v4-flash-vision-exp';
+
+            tierModelMap.flash.name = tierMapFlash.value;
+            tierModelMap.pro.name = tierMapPro.value;
+            tierModelMap.reasoner.name = tierMapReasoner.value;
+            tierModelMap.vision.name = tierMapVision.value;
+
+            const mapObj = {
+                flash: tierModelMap.flash.model,
+                pro: tierModelMap.pro.model,
+                reasoner: tierModelMap.reasoner.model,
+                vision: tierModelMap.vision.model
+            };
+            localStorage.setItem('omni_custom_tier_map', JSON.stringify(mapObj));
+            setModelTierUI(currentTier, tierModelMap[currentTier].model);
+        }
+
+        [tierMapFlash, tierMapPro, tierMapReasoner, tierMapVision].forEach(input => {
+            if (input) input.addEventListener('input', applyCustomTierMapping);
+        });
 
         // 1. Sidebar Mode Switching (Sessions vs Explorer)
         tabSessions.addEventListener('click', () => {
@@ -2410,6 +2559,17 @@
 
         // Initialize on page load
         loadSystemData().then(() => {
+            const savedTierMapStr = localStorage.getItem('omni_custom_tier_map');
+            if (savedTierMapStr) {
+                try {
+                    const mapObj = JSON.parse(savedTierMapStr);
+                    if (tierMapFlash) tierMapFlash.value = mapObj.flash || 'deepseek-v4-flash';
+                    if (tierMapPro) tierMapPro.value = mapObj.pro || 'deepseek-v4-pro';
+                    if (tierMapReasoner) tierMapReasoner.value = mapObj.reasoner || 'deepseek-reasoner';
+                    if (tierMapVision) tierMapVision.value = mapObj.vision || 'deepseek-v4-flash-vision-exp';
+                    applyCustomTierMapping();
+                } catch (e) {}
+            }
             const savedModel = localStorage.getItem('omni_selected_model') || 'deepseek-v4-pro';
             handleDropdownModelChange(savedModel);
             const savedEffort = localStorage.getItem('omni_reasoning_effort') || 'medium';

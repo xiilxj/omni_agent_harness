@@ -57,3 +57,23 @@ def test_search_operations(tmp_path):
 async def test_bash_execution():
     res = await run_shell_command("echo 'Omni Harness OK'")
     assert "Omni Harness OK" in res
+
+
+def test_find_symbol_definition(tmp_path):
+    code_file = tmp_path / "models.py"
+    code_file.write_text(
+        "class OmniMasterAgent:\n"
+        "    def __init__(self):\n"
+        "        pass\n\n"
+        "async def execute_task_stream(prompt: str):\n"
+        "    return 'ok'\n",
+        encoding="utf-8"
+    )
+    from harness.tools.search_ops import find_symbol_definition
+    res1 = find_symbol_definition("OmniMasterAgent", search_path=str(tmp_path))
+    assert "class OmniMasterAgent" in res1
+    assert "models.py:1" in res1
+
+    res2 = find_symbol_definition("execute_task_stream", search_path=str(tmp_path))
+    assert "async def execute_task_stream" in res2
+
