@@ -635,9 +635,9 @@
     </div> <!-- End of Main Workspace Area -->
 
     <!-- Right Slide-out Settings Drawer -->
-    <div id="settings-drawer" class="fixed inset-y-0 right-0 w-[520px] bg-dark-surface border-l border-dark-border shadow-2xl flex flex-col z-50 transform translate-x-full drawer-slide">
+    <div id="settings-drawer" class="fixed inset-y-0 right-0 w-[540px] bg-dark-surface border-l border-dark-border shadow-2xl flex flex-col z-50 transform translate-x-full drawer-slide">
         <!-- Drawer Header -->
-        <div class="h-13 px-5 border-b border-dark-border flex items-center justify-between bg-dark-bg/60">
+        <div class="h-13 px-4 border-b border-dark-border flex items-center justify-between bg-dark-bg/80 select-none">
             <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -645,12 +645,19 @@
                 </svg>
                 <h2 class="text-xs font-semibold text-dark-heading uppercase tracking-wider">Harness Settings & Engine</h2>
             </div>
-            <button id="btn-close-settings" class="p-1 rounded hover:bg-dark-hover text-dark-muted hover:text-dark-heading transition">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <div class="flex items-center space-x-1.5">
+                <button id="btn-pin-drawer" class="px-2 py-1 rounded bg-blue-950/50 hover:bg-blue-900/60 border border-blue-800/60 text-blue-300 transition flex items-center space-x-1 text-[11px]" title="固定面板 (点击外部不收起)">
+                    <span id="pin-icon">📌</span>
+                    <span id="pin-label">已常驻</span>
+                </button>
+                <button id="btn-close-settings" class="px-2.5 py-1 rounded bg-dark-bg hover:bg-red-950/40 hover:border-red-800/60 border border-dark-border text-dark-muted hover:text-red-400 transition flex items-center space-x-1 text-xs font-medium" title="收起面板">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>收起</span>
+                </button>
+            </div>
         </div>
 
         <!-- Drawer Tab Switcher (5 Major Configuration Tabs - High Visibility Pill Tabs) -->
@@ -1650,21 +1657,55 @@
             });
         }
 
-        // 4. Drawer & Settings
+        // 4. Drawer & Settings (具备常驻锁定防误关闭保护)
         let currentDrawerTab = 'models';
+        let isDrawerPinned = true; // 默认开启常驻防误关闭模式
+
+        const btnPinDrawer = document.getElementById('btn-pin-drawer');
+        const pinIcon = document.getElementById('pin-icon');
+        const pinLabel = document.getElementById('pin-label');
+
+        function updatePinUI() {
+            if (btnPinDrawer && pinIcon && pinLabel) {
+                if (isDrawerPinned) {
+                    btnPinDrawer.className = 'px-2 py-1 rounded bg-blue-950/60 hover:bg-blue-900/70 border border-blue-600/60 text-blue-300 transition flex items-center space-x-1 text-[11px] font-medium';
+                    pinIcon.textContent = '📌';
+                    pinLabel.textContent = '已常驻';
+                    if (backdrop) backdrop.classList.add('hidden');
+                } else {
+                    btnPinDrawer.className = 'px-2 py-1 rounded bg-dark-bg hover:bg-dark-hover border border-dark-border text-dark-muted hover:text-dark-heading transition flex items-center space-x-1 text-[11px]';
+                    pinIcon.textContent = '🔓';
+                    pinLabel.textContent = '浮出模式';
+                    if (backdrop && isDrawerOpen()) backdrop.classList.remove('hidden');
+                }
+            }
+        }
+
+        if (btnPinDrawer) {
+            btnPinDrawer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isDrawerPinned = !isDrawerPinned;
+                updatePinUI();
+            });
+        }
+
         function isDrawerOpen() {
             return !drawer.classList.contains('translate-x-full');
         }
 
         function openDrawer(tabName = 'models') {
             drawer.classList.remove('translate-x-full');
-            backdrop.classList.remove('hidden');
+            if (!isDrawerPinned && backdrop) {
+                backdrop.classList.remove('hidden');
+            } else if (backdrop) {
+                backdrop.classList.add('hidden');
+            }
             switchTab(tabName);
         }
 
         function closeDrawer() {
             drawer.classList.add('translate-x-full');
-            backdrop.classList.add('hidden');
+            if (backdrop) backdrop.classList.add('hidden');
         }
 
         function toggleDrawer(tabName = 'models') {
@@ -1678,7 +1719,7 @@
         if (btnOpenSettings) btnOpenSettings.addEventListener('click', (e) => { e.stopPropagation(); toggleDrawer('models'); });
         if (btnQuickPrompt) btnQuickPrompt.addEventListener('click', (e) => { e.stopPropagation(); toggleDrawer('prompt'); });
         if (btnCloseSettings) btnCloseSettings.addEventListener('click', (e) => { e.stopPropagation(); closeDrawer(); });
-        if (backdrop) backdrop.addEventListener('click', closeDrawer);
+        if (backdrop) backdrop.addEventListener('click', () => { if (!isDrawerPinned) closeDrawer(); });
         if (drawer) drawer.addEventListener('click', (e) => e.stopPropagation());
 
         // 5-Tab Settings Drawer Switcher
