@@ -304,56 +304,69 @@ class ProviderManager:
     @staticmethod
     async def fetch_upstream_models(base_url: str, api_key: str) -> Tuple[bool, List[str], str]:
         """
-        在线探测并获取上游可用的全部模型列表 (/v1/models 或 /models)
+        在线探测并获取上游可用的全部模型列表 (/v1/models、/models 或 /openai/models)
+        支持单 Key 及多 Key 逗号分隔逐一探测，兼容 OpenAI、Google Gemini、DeepSeek、Anthropic 规范
         :return: (success, model_ids, message)
         """
         if not base_url:
             return False, [], "Base URL 不能为空"
 
         clean_base = base_url.rstrip("/")
-        # 尝试标准 OpenAI 规范端点
+        # 构建待探测的端点候选列表
         test_urls = [
             f"{clean_base}/models",
             f"{clean_base}/v1/models" if not clean_base.endswith("/v1") else f"{clean_base}/models"
         ]
-        # 去重
+        if "generativelanguage.googleapis.com" in clean_base:
+            test_urls.insert(0, f"{clean_base}/openai/models" if not clean_base.endswith("/openai") else f"{clean_base}/models")
+            test_urls.insert(1, f"{clean_base}/models")
+
         unique_urls = list(dict.fromkeys(test_urls))
 
-        headers = {
-            "Authorization": f"Bearer {api_key}" if api_key and api_key != "EMPTY" else "",
-            "Content-Type": "application/json"
-        }
-        if not headers["Authorization"]:
-            del headers["Authorization"]
+        # 解析多 Key 列表
+        raw_keys = [k.strip() for k in str(api_key or "").split(",") if k.strip() and k.strip() != "EMPTY"]
+        keys_to_test = raw_keys if raw_keys else [""]
 
         last_error = ""
         async with httpx.AsyncClient(timeout=15.0) as client:
-            for u in unique_urls:
-                try:
-                    resp = await client.get(u, headers=headers)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        models = []
-                        if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
-                            for item in data["data"]:
-                                if isinstance(item, dict) and "id" in item:
-                                    models.append(str(item["id"]))
-                                elif isinstance(item, str):
-                                    models.append(item)
-                        elif isinstance(data, list):
-                            for item in data:
-                                if isinstance(item, dict) and "id" in item:
-                                    models.append(str(item["id"]))
-                                elif isinstance(item, str):
-                                    models.append(item)
+            for k in keys_to_test:
+                headers = {"Content-Type": "application/json"}
+                if k:
+                    headers["Authorization"] = f"Bearer {k}"
 
-                        if models:
-                            # 过滤并排序
-                            sorted_models = sorted(list(set(models)))
-                            return True, sorted_models, f"成功从上游获取到 {len(sorted_models)} 个可用模型"
-                    else:
-                        last_error = f"HTTP {resp.status_code}: {resp.text[:150]}"
-                except Exception as e:
-                    last_error = str(e)
+                for u in unique_urls:
+                    try:
+                        resp = await client.get(u, headers=headers)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            models = []
+                            if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
+                                for item in data["data"]:
+                                    if isinstance(item, dict) and "id" in item:
+                                        models.append(str(item["id"]))
+                                    elif isinstance(item, str):
+                                        models.append(item)
+                            elif isinstance(data, dict) and "models" in data and isinstance(data["models"], list):
+                                for item in data["models"]:
+                                    if isinstance(item, dict) and "name" in item:
+                                        models.append(str(item["name"]))
+                                    elif isinstance(item, dict) and "id" in item:
+                                        models.append(str(item["id"]))
+                                    elif isinstance(item, str):
+                                        models.append(item)
+                            elif isinstance(data, list):
+                                for item in data:
+                                    if isinstance(item, dict) and "id" in item:
+                                        models.append(str(item["id"]))
+                                    elif isinstance(item, str):
+                                        models.append(item)
+
+                            if models:
+                                sorted_models = sorted(list(set(models)))
+                                return True, sorted_models, f"成功从上游获取到 {len(sorted_models)} 个可用模型"
+                        else:
+                            last_error = f"HTTP {resp.status_code}: {resp.text[:150]}"
+                    except Exception as e:
+                        last_error = str(e)
 
         return False, [], f"拉取上游模型列表失败: {last_error}"

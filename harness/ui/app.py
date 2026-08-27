@@ -606,12 +606,31 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
     @app.post("/api/providers/fetch-models")
     async def fetch_upstream_models(req: FetchModelsRequest):
         """一键在线探测上游接口并拉取全部可用模型列表"""
-        key = req.api_key or ""
+        from harness.providers.router import load_env_keys
+        load_env_keys(override=True)
+
+        key = (req.api_key or "").strip()
         if (not key or key == "EMPTY") and req.provider_id:
             info = provider_mgr.get_provider_info(req.provider_id)
             if info:
                 env_var = info.get("env_key") or f"{req.provider_id.upper()}_API_KEY"
-                key = os.environ.get(env_var, "")
+                key = os.environ.get(env_var, "") or info.get("api_key", "")
+
+        # 如果前端留空且未匹配到，根据 base_url 智能关联默认环境变量
+        if not key or key == "EMPTY":
+            b_lower = req.base_url.lower()
+            if "generativelanguage.googleapis.com" in b_lower or "google" in b_lower:
+                key = os.environ.get("GEMINI_API_KEY", "")
+            elif "deepseek.com" in b_lower:
+                key = os.environ.get("DEEPSEEK_API_KEY", "")
+            elif "openai.com" in b_lower:
+                key = os.environ.get("OPENAI_API_KEY", "")
+            elif "anthropic.com" in b_lower:
+                key = os.environ.get("ANTHROPIC_API_KEY", "")
+            elif "siliconflow" in b_lower:
+                key = os.environ.get("SILICONFLOW_API_KEY", "")
+            elif "moonshot" in b_lower:
+                key = os.environ.get("MOONSHOT_API_KEY", "")
 
         success, models, msg = await ProviderManager.fetch_upstream_models(
             base_url=req.base_url,

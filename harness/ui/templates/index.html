@@ -1359,17 +1359,18 @@
                 id: 'gemini',
                 name: 'Google Gemini 官方',
                 baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-                flash: 'gemini-2.5-flash',
-                pro: 'gemini-2.5-pro',
-                reasoner: 'gemini-2.0-flash-thinking-exp-01-21',
-                vision: 'gemini-2.5-flash',
+                flash: 'models/gemini-2.5-flash',
+                pro: 'models/gemini-2.5-pro',
+                reasoner: 'models/gemini-3.7-flash',
+                vision: 'models/gemini-2.5-flash',
                 models: [
-                    'gemini-2.5-flash',
-                    'gemini-2.5-pro',
-                    'gemini-2.0-flash',
-                    'gemini-2.0-flash-thinking-exp-01-21',
-                    'gemini-1.5-pro',
-                    'gemini-1.5-flash'
+                    'models/gemini-2.5-flash',
+                    'models/gemini-2.5-pro',
+                    'models/gemini-3.7-flash',
+                    'models/gemini-2.5-flash-lite',
+                    'models/gemini-3.5-flash',
+                    'models/gemini-3.5-flash-lite',
+                    'models/gemma-4-26b-a4b-it'
                 ]
             },
             openai: {
@@ -1479,13 +1480,20 @@
         if (settingsProviderPreset) {
             settingsProviderPreset.addEventListener('change', () => {
                 const key = settingsProviderPreset.value;
+                const existingP = configuredProvidersList.find(x => x.id === key);
+                if (existingP) {
+                    loadProviderIntoForm(existingP);
+                    return;
+                }
                 if (providerTemplates[key]) {
                     const tmpl = providerTemplates[key];
                     if (settingsProviderId) settingsProviderId.value = tmpl.id || key;
                     if (settingsProviderName) settingsProviderName.value = tmpl.name || key;
                     if (settingsBaseUrl) settingsBaseUrl.value = tmpl.baseUrl;
+                    if (settingsApiKey) settingsApiKey.value = '';
+                    if (keyStatusIndicator) keyStatusIndicator.textContent = '未配置';
                     if (settingsModelsInput) settingsModelsInput.value = (tmpl.models || []).join(', ');
-                    if (formProviderTitle) formProviderTitle.textContent = ` 配置 / 接入供应商: ${tmpl.name}`;
+                    if (formProviderTitle) formProviderTitle.textContent = `配置 / 接入供应商: ${tmpl.name}`;
                     populateModelSelects(tmpl.models, tmpl.pro || tmpl.models[0]);
                     populateTierMapDropdowns(tmpl.models, {
                         flash: tmpl.flash,
@@ -1497,7 +1505,9 @@
                     if (settingsProviderId) settingsProviderId.value = 'custom';
                     if (settingsProviderName) settingsProviderName.value = '自定义代理 / 上游';
                     if (settingsBaseUrl) settingsBaseUrl.value = 'http://localhost:8000/v1';
-                    if (formProviderTitle) formProviderTitle.textContent = ' 配置自定义 OpenAI 兼容上游';
+                    if (settingsApiKey) settingsApiKey.value = '';
+                    if (keyStatusIndicator) keyStatusIndicator.textContent = '未配置';
+                    if (formProviderTitle) formProviderTitle.textContent = '配置自定义 OpenAI 兼容上游';
                 }
             });
         }
@@ -2598,6 +2608,25 @@
                         populateModelSelects(data.models, data.models[0]);
                         populateTierMapDropdowns(data.models, {});
                         handleDropdownModelChange(data.models[0]);
+
+                        // 自动持久化已拉取模型并刷新
+                        const pId = (settingsProviderId ? settingsProviderId.value.trim() : '') || 'custom';
+                        const pName = (settingsProviderName ? settingsProviderName.value.trim() : '') || pId;
+                        try {
+                            await fetch('/api/providers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: pId,
+                                    name: pName,
+                                    base_url: settingsBaseUrl.value.trim(),
+                                    api_key: settingsApiKey.value.trim(),
+                                    models: data.models,
+                                    default_model: data.models[0]
+                                })
+                            });
+                            await loadProvidersList();
+                        } catch (saveErr) {}
                     }
                 } else {
                     fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
