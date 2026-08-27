@@ -4551,16 +4551,17 @@
                                 appendRefusalInterceptedPill(ev.message || ` 毫秒级熔断模型拒绝倾向，已自动叠加第 ${ev.attempt || 1} 阶强力豁免指令重发...`);
                             } else if (ev.type === 'thought_signature_injected') {
                                 if (currentThoughtContainer) {
-                                    currentThoughtContainer.remove();
                                     currentThoughtContainer = null;
                                     currentThoughtText = '';
                                 }
-                                if (currentAnswerContainer) {
-                                    currentAnswerContainer.remove();
-                                    currentAnswerContainer = null;
-                                    currentAnswerText = '';
-                                }
                                 appendRefusalInterceptedPill(ev.notice || '⚡ 检测到上游 thought_signature 校验异常，已自动直接注入「继续」指令自愈推进...');
+                            } else if (ev.type === 'assistant_text_updated') {
+                                if (currentAnswerContainer && ev.content) {
+                                    updateAssistantStreamBlock(currentAnswerContainer, ev.content);
+                                } else if (ev.content) {
+                                    currentAnswerContainer = appendAssistantStreamBlock();
+                                    updateAssistantStreamBlock(currentAnswerContainer, ev.content);
+                                }
                             } else if (ev.type === 'steer_injected') {
                                 // 穿插追问已被 Agent 处理
                                 console.log('Steer injected event:', ev.content);
@@ -4575,6 +4576,7 @@
                                     finalizeThoughtAccordion(currentThoughtContainer, currentThoughtText, (Date.now() - startTime) / 1000);
                                     currentThoughtContainer = null;
                                 }
+                                // 定稿当前回答文本，确保正文与紧随其后的工具卡片共存展示
                                 currentAnswerContainer = null;
                                 createToolAccordion(ev.tool_name, ev.tool_args, ev.tool_id);
                             } else if (ev.type === 'tool_result') {

@@ -592,10 +592,10 @@ class OmniAgent:
                     clean_answer = cleaned_text
                     self.messages[-1].content = cleaned_text
                     self.messages[-1].tool_calls = extracted_tools
-                    if on_step_callback:
+                    if on_step_callback and cleaned_text:
                         await on_step_callback({
-                            "type": "thought_signature_injected",
-                            "notice": f"🛠️ 智能检测并分离 {len(extracted_tools)} 项嵌入式工具调用，已转入工具通道真实执行并净化正文文本！"
+                            "type": "assistant_text_updated",
+                            "content": cleaned_text
                         })
 
             # 若分离后仍无工具调用，作为最终回答交付
