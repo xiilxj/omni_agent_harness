@@ -27,7 +27,10 @@ def create_clean_windows_package():
         "start_linux.sh",
         "README_WINDOWS.md",
         "README.md",
-        ".env.example"
+        ".env.example",
+        "MASTER_SYSTEM_PROMPT.md.example",
+        "MASTER_RESPONSE_SUFFIX.md.example",
+        "LICENSE"
     ]
 
     # 严格排除的文件名与后缀模式
