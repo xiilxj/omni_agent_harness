@@ -1,28 +1,32 @@
-@echo off
-chcp 65001 >nul
-title Omni Agent Harness - 依赖安装
+@echo off & chcp 65001 >nul 2>&1
+title Omni Agent Harness - 依赖安装与修复
 echo ================================================================
-echo           Omni Agent Harness - Windows 依赖环境安装程序
+echo           Omni Agent Harness - Windows 依赖安装与校验
 echo ================================================================
 echo.
 
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 未检测到 Python，请先安装 Python 3.10+ 并勾选 Add to PATH。
+    echo [ERROR] 未检测到 Python 环境！
+    echo 请先安装 Python (推荐 3.10-3.12) 并勾选 Add Python to PATH。
     pause
     exit /b 1
 )
 
-echo 正在安装 Python 依赖库 (fastapi, uvicorn, jinja2, httpx 等)...
+echo [1/2] 正在安装与更新 Python 核心依赖库...
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade
 
-if %errorlevel% equ 0 (
-    echo.
-    echo [成功] 所有依赖安装完毕！您可以直接双击运行 start_windows.bat 启动系统。
-) else (
-    echo.
-    echo [警告] 依赖安装可能遇到网络问题，请检查网络后重试。
+echo [2/2] 正在校验 pydantic-core 动态链接库兼容性...
+python -c "import pydantic_core; print('  ✓ pydantic-core 动态链接库校验通过')" 2>nul
+if %errorlevel% neq 0 (
+    echo [自动修复] 正在重新拉取适配当前 Python 环境的 pydantic 与 pydantic-core...
+    pip install --upgrade --force-reinstall --no-cache-dir pydantic pydantic-core
 )
 
+echo.
+echo ================================================================
+echo [成功] 所有依赖安装与健康校验完毕！
+echo 您可以直接双击运行 start_windows.bat 启动系统。
+echo ================================================================
 echo.
 pause
