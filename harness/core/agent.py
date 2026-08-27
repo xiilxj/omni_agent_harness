@@ -187,9 +187,9 @@ class OmniAgent:
 
             return raw_str
 
-        # 1. 匹配 [调用工具 tool_name 参数: {...}] 或 [调用_api:tool_name{...}]
+        # 1. 匹配 [Executed tool_name with parameters: {...}]、[Calling tool tool_name with args: {...}]、[调用工具 tool_name 参数: {...}] 或 [调用_api:tool_name{...}]
         pattern_bracket = re.compile(
-            r"\[\s*(?:调用_api|调用api|调用工具|api|tool_call|tool|action)\s*[:：]?\s*([a-zA-Z0-9_\-]+)\s*(?:参数|args|parameters)?\s*[:：]?\s*(\{[\s\S]*?\})\s*\]",
+            r"\[\s*(?:Executed|Calling\s*tool|Calling|Execute\s*tool|Execute|调用_api|调用api|调用工具|api|tool_call|tool|action)\s*[:：]?\s*([a-zA-Z0-9_\-]+)\s*(?:with\s+parameters|with\s+params|with\s+args|参数|args|parameters)?\s*[:：]?\s*(\{[\s\S]*?\})\s*\]",
             re.IGNORECASE
         )
 
@@ -230,8 +230,8 @@ class OmniAgent:
             except Exception:
                 pass
 
-        # 3. 清理伪工具伴随的末尾冗余模板语句
-        cleaned_text = re.sub(r"(?:^|\n)\s*[-—]{3,}\s*(?:\n|$)", "\n", cleaned_text)
+        # 3. 清理伪工具伴随的末尾冗余模板语句与超长分隔线
+        cleaned_text = re.sub(r"(?:^|\n)\s*[-—_]{3,}\s*(?:\n|$)", "\n", cleaned_text)
         cleaned_text = re.sub(r"执行状态\s*[:：]\s*当前步骤已完成[，,。]?\s*(?:请确认或下发下一指令[。]?)?", "", cleaned_text).strip()
 
         return cleaned_text, extracted_tool_calls

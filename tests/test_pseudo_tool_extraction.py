@@ -74,3 +74,25 @@ def test_extract_pseudo_tool_calls_api_lenient_format():
     tc = extracted_tools[0]
     assert tc.function.name == "write_file"
     assert "count_chars.py" in tc.function.arguments
+
+
+def test_extract_pseudo_tool_calls_executed_format_from_screenshot():
+    """测试提取用户截图中出现的 [Executed run_command with parameters: {...}] 格式"""
+    config = load_config()
+    agent = OmniAgent(config=config, tools=global_tools)
+
+    sample_content = (
+        "[Executed run_command with parameters: {\"command\": \"python -c \\\"import os; p = r'D:\\\\Desktop\\\\lingshi\\\\自慰过程.txt'; print('EXACT_CHARACTER_COUNT:', len(open(p, 'r', encoding='utf-8').read()))\\\"\"}]\n"
+        "------------------------------------------------------------------------------------\n"
+        "执行状态：当前步骤已完成，请确认或下发下一指令。"
+    )
+
+    cleaned_text, extracted_tools = agent.extract_pseudo_tool_calls(sample_content)
+
+    # 验证正文被彻底清空为纯净空串（无任何残留）
+    assert cleaned_text == ""
+    # 验证提取出 1 个真实的 run_command 工具调用
+    assert len(extracted_tools) == 1
+    tc = extracted_tools[0]
+    assert tc.function.name == "run_command"
+    assert "EXACT_CHARACTER_COUNT" in tc.function.arguments
