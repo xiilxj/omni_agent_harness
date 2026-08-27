@@ -29,6 +29,9 @@ class Message(BaseModel):
     tool_calls: Optional[List[ToolCall]] = None
     refusal_notices: Optional[List[str]] = Field(default_factory=list, description="本轮被熔断拦截的拒绝事件记录")
     attachments: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="上传的图片与文件附件列表")
+    is_harness_intervention: bool = Field(default=False, description="是否为 Harness 框架层自主发起的自愈/干预指令（非真实用户操作）")
+    intervention_type: Optional[str] = Field(default=None, description="Harness 干预类型（如 thought_signature_auto_heal）")
+    intervention_notice: Optional[str] = Field(default=None, description="Harness 框架干预提示文案")
 
 
 class ToolParamSchema(BaseModel):

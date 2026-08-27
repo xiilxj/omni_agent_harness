@@ -504,12 +504,13 @@ class OmniAgent:
                 )
             except Exception as e:
                 err_str = str(e)
-                # 针对 Google Gemini thought_signature 校验异常自动直接注入「继续」指令推进
+                # 针对 Google Gemini thought_signature 校验异常，由 Harness 框架层发起自主干预与自愈推进
                 if "thought_signature" in err_str:
+                    notice_msg = "⚡ [Harness 框架层自主干预] 检测到上游 thought_signature 签名校验异常，Harness 已自动接管自愈推进..."
                     if on_step_callback:
                         await on_step_callback({
                             "type": "thought_signature_injected",
-                            "notice": "⚡ 检测到上游 thought_signature 校验异常，已自动直接注入「继续」指令自愈推进...",
+                            "notice": notice_msg,
                             "injected_prompt": "继续"
                         })
                     
@@ -523,8 +524,16 @@ class OmniAgent:
                             m.role = "user"
                             m.content = f"[Tool `{m.name or 'tool'}` Execution Output]:\n{m.content}"
                     
-                    # 直接注入「继续」两个字
-                    self.messages.append(Message(role="user", content="继续"))
+                    # 明确标明为 Harness 框架层发起的自主干预指令（非真实用户操作）
+                    self.messages.append(
+                        Message(
+                            role="user",
+                            content="继续",
+                            is_harness_intervention=True,
+                            intervention_type="thought_signature_auto_heal",
+                            intervention_notice=notice_msg
+                        )
+                    )
                     continue
 
                 err_msg = f"LLM Call Failed at step {step_count}: {e}"

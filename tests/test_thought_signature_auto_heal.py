@@ -41,7 +41,9 @@ async def test_thought_signature_auto_inject_continue():
     assert len(injected_events) == 1
     assert injected_events[0]["injected_prompt"] == "继续"
 
-    # 验证消息历史中是否被自动注入了「继续」
-    user_msgs = [m.content for m in agent.messages if m.role == "user"]
-    assert "继续" in user_msgs
+    # 验证消息历史中是否被自动注入了「继续」且明确带有 Harness 框架层干预标识
+    intervention_msgs = [m for m in agent.messages if m.is_harness_intervention]
+    assert len(intervention_msgs) == 1
+    assert intervention_msgs[0].intervention_type == "thought_signature_auto_heal"
+    assert "Harness 框架层自主干预" in intervention_msgs[0].intervention_notice
     assert "已成功自愈并继续完成后续任务。" in result
