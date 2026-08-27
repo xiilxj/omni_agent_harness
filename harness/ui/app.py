@@ -860,6 +860,23 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                 session_mgr.save_session(session)
 
                 yield f"data: {json.dumps({'type': 'complete', 'session_id': session.id, 'result': res, 'telemetry': telemetry.model_dump()}, ensure_ascii=False)}\n\n"
+
+                # 若 Telegram Bot 在线，自动同步向管理员手机推送任务交付答复
+                if telegram_bridge and getattr(telegram_bridge, "_running", False) and telegram_bridge.allowed_users:
+                    async def _sync_to_tg(tg_res: str, tg_model: str, tg_prompt: str):
+                        for uid in telegram_bridge.allowed_users[:2]:
+                            try:
+                                tg_msg = (
+                                    f"🏁 *Web 端任务完成同步推送* (`{tg_model}`)\n\n"
+                                    f"📝 *指令*: `{tg_prompt[:100]}`\n\n"
+                                    f"💡 *答复*:\n{tg_res}"
+                                )
+                                d_res = await telegram_bridge.send_message(uid, tg_msg, parse_mode="Markdown")
+                                if not d_res.get("ok"):
+                                    await telegram_bridge.send_message(uid, f"🏁 Web 端任务完成同步 ({tg_model})\n\n指令: {tg_prompt[:100]}\n\n答复:\n{tg_res}")
+                            except Exception as err:
+                                logger.warning(f"Sync answer to Telegram failed: {err}")
+                    asyncio.create_task(_sync_to_tg(res, actual_model, req.prompt))
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
             finally:
