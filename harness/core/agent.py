@@ -461,9 +461,32 @@ class OmniAgent:
             if thought_text and "<think>" not in assistant_content:
                 self.messages[-1].content = f"<think>\n{thought_text}\n</think>\n\n{clean_answer}".strip()
 
-            # 若无工具调用，说明本轮对话已完成，推送最终文本答案
+            # 若无工具调用，检查是否输出了不正常的伪工具调用文本或未完结异常回答
             if not tool_calls:
                 final_answer = clean_answer or assistant_content
+                
+                # 检测不正常回答：例如输出了 "[调用工具 ... 参数: {...}]"、"[工具 ..."、"<tool_call>" 等伪工具调用文本
+                import re
+                is_abnormal_reply = False
+                if re.search(r'\[\s*(?:调用工具|Tool\s*Call|tool_call|工具)\b', final_answer, re.IGNORECASE):
+                    is_abnormal_reply = True
+                elif re.search(r'\[\s*调用工具\s+\w+\s+参数\s*:', final_answer):
+                    is_abnormal_reply = True
+                elif re.search(r'```(?:json)?\s*\{\s*"(?:command|tool|action|tool_name|function)"\s*:', final_answer):
+                    is_abnormal_reply = True
+
+                if is_abnormal_reply and step_count < max_steps:
+                    # 触发自动注入「继续」指令自愈推进
+                    if on_step_callback:
+                        await on_step_callback({
+                            "type": "thought_signature_injected",
+                            "notice": "⚡ 检测到模型输出伪工具调用文本等未完结异常回答，已自动直接注入「继续」指令推进执行...",
+                            "injected_prompt": "继续"
+                        })
+                    # 直接追加一条「继续」
+                    self.messages.append(Message(role="user", content="继续"))
+                    continue
+
                 # 融入最高回答词 (Master Response Suffix)
                 final_answer = self.injector.apply_master_suffix(
                     assistant_content=final_answer,
