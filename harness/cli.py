@@ -64,6 +64,17 @@ def parse_args():
         default=None,
         help="启用 Web UI 与 API 访问 Token 认证密码 (防止公网无鉴权暴露)"
     )
+    parser.add_argument(
+        "--telegram", "--tg",
+        action="store_true",
+        help="启动 Telegram Bot 远程控制服务"
+    )
+    parser.add_argument(
+        "--tg-token",
+        type=str,
+        default=None,
+        help="指定 Telegram Bot Token (从 @BotFather 获取)"
+    )
     return parser.parse_args()
 
 
@@ -172,11 +183,33 @@ def start_web_ui(host: str, port: int, token: str = None, config_path: str = Non
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 
+def start_telegram_bot(token: str = None, config: AppConfig = None):
+    """启动 Telegram Bot 远程控制监听服务"""
+    from harness.bot.telegram_bot import TelegramBotBridge
+    cfg = config or load_config()
+    bot = TelegramBotBridge(token=token, config=cfg)
+    if not bot.token:
+        print("\n[错误] 启动失败：未检测到 Telegram Bot Token！")
+        print("请在 .env 中设置 TELEGRAM_BOT_TOKEN=xxx 或通过 --tg-token 传递。\n")
+        sys.exit(1)
+    
+    print("\n=======================================================")
+    print("  Omni Agent Harness - Telegram Bot 远程控制服务已启动!")
+    print("  正在连接 Telegram 服务器并开启 Long-Polling 监听...")
+    print("=======================================================\n")
+    try:
+        asyncio.run(bot.start_polling())
+    except (KeyboardInterrupt, SystemExit):
+        print("\nTelegram Bot 已优雅停止。")
+
+
 def main():
     args = parse_args()
     config = load_config()
 
-    if args.ui:
+    if args.telegram:
+        start_telegram_bot(token=args.tg_token, config=config)
+    elif args.ui:
         start_web_ui(args.host, args.port, token=args.token)
     elif args.prompt:
         asyncio.run(run_single_task(args, config))

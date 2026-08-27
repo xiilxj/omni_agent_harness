@@ -46,6 +46,13 @@ class ServerConfig(BaseModel):
     open_browser_on_start: bool = False
 
 
+class TelegramConfig(BaseModel):
+    enabled: bool = False
+    bot_token: str = Field(default="", description="Telegram Bot Token (从 @BotFather 获取)")
+    allowed_users: List[int] = Field(default_factory=list, description="允许使用 Bot 的 Telegram User ID 白名单")
+    admin_id: Optional[int] = None
+
+
 # DSH 模型档位映射规范
 MODEL_TIERS = {
     "flash": {
@@ -146,6 +153,7 @@ class AppConfig(BaseModel):
     master_suffix: MasterSuffixConfig = Field(default_factory=MasterSuffixConfig)
     providers: Dict[str, Any] = Field(default_factory=dict)
     server: ServerConfig = Field(default_factory=ServerConfig)
+    telegram: TelegramConfig = Field(default_factory=TelegramConfig)
 
 
 def _expand_env_vars(data: Any) -> Any:

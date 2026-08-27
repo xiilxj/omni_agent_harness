@@ -368,3 +368,7 @@ class ProviderManager:
                         last_error = str(e)
 
         return False, [], f"拉取上游模型列表失败: {last_error}"
+
+
+# 全局单例
+global_provider_manager = ProviderManager()
