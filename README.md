@@ -3,8 +3,8 @@
 <p align="center">
   <b>基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度融合改造的工业级智能体底座</b><br>
   <i>100% 协议级系统提示词注入 ｜ 上下文精准引用与历史回答行内修改 ｜ 5 档深度推理强度 ｜ 实时穿插纠偏与一键急停 ｜ 跨平台 Linux & Windows 原生支持</i><br><br>
-  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=flat-square" alt="Version 1.3.0" />
-  <img src="https://img.shields.io/badge/Tests-29%20Passed%20(100%25)-brightgreen?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Release-v1.4.0-blue?style=flat-square" alt="Version 1.4.0" />
+  <img src="https://img.shields.io/badge/Tests-34%20Passed%20(100%25)-brightgreen?style=flat-square" alt="Tests" />
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-emerald?style=flat-square" alt="Platform" />
 </p>
 
@@ -81,6 +81,11 @@
 
 ### 10. 🎯 DSH 1:1 官方像素级复刻仪表盘与实时计费系统
 - **实时 Telemetry 仪表盘**：`Prompt Tokens (Hit 缓存命中数)`、`Completion Tokens`、`Total Tokens`、`Latency & TPS 吐字速率`、`Cache Hit Ratio 缓存命中率 (90% 折扣加速)`、`本次计费 (精确至分后五位)`、`会话累计支出`、`账户实时余额`。
+
+### 11. 🌐 多模型供应商管理中心与模型列表在线探测 (Multi-Provider Manager & Live Model Fetch)
+- **多厂商独立并存与随时自由切换**：内置已接入矩阵（DeepSeek 官方、Google Gemini、OpenAI 官方、Anthropic Claude、硅基流动 SiliconFlow、月之暗面 Kimi、本地 Ollama 及自定义代理），各个厂商配置与 API Key 独立存储，随时在顶部导航栏一键自由切换，**绝不互相覆盖或丢失配置**；
+- **🔄 一键在线探测并动态拉取模型列表 (Fetch Models)**：在设置抽屉中点击「🔄 在线探测并拉取模型列表」，系统直接向指定 Base URL 发送探测请求获取上游 `/models` 列表，自动填充可用模型下拉项与快捷 4 档映射；
+- **💎 Google Gemini 官方标准接入**：完美支持 Google Gemini 官方 OpenAI 兼容上游（`https://generativelanguage.googleapis.com/v1beta/openai/`），支持 `gemini-2.5-flash`、`gemini-2.5-pro`、`gemini-2.0-flash`、`gemini-2.0-flash-thinking-exp-01-21` 等全模态模型。
 
 ---
 

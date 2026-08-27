@@ -229,16 +229,32 @@
                     <button data-tier="vision" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Vision (多模态档 · deepseek-v4-flash-vision-exp / gpt-4o)">👁️ Vision</button>
                 </div>
 
+                <!-- Provider Switcher Dropdown (多供应商自由切换) -->
+                <div class="hidden sm:flex items-center space-x-1.5 bg-dark-bg border border-dark-border rounded px-2 py-1" id="header-provider-box" title="一键自由切换已接入的大模型供应商">
+                    <span class="text-[11px] text-blue-400 font-semibold flex items-center gap-1">
+                        <svg class="w-3 h-3 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span class="hidden md:inline">厂商:</span>
+                    </span>
+                    <select id="header-provider-select" class="bg-transparent text-[11px] text-zinc-300 font-medium focus:outline-none cursor-pointer">
+                        <option value="deepseek">⚡ DeepSeek 官方</option>
+                        <option value="gemini">💎 Google Gemini</option>
+                        <option value="openai">🤖 OpenAI 官方</option>
+                        <option value="anthropic">🧠 Anthropic Claude</option>
+                        <option value="siliconflow">🌊 硅基流动 SiliconFlow</option>
+                        <option value="moonshot">🌙 月之暗面 Kimi</option>
+                        <option value="ollama">🦙 本地 Ollama</option>
+                    </select>
+                </div>
+
                 <!-- Custom Model Select Dropdown -->
                 <div class="hidden lg:flex items-center space-x-1.5 bg-dark-bg border border-dark-border rounded px-2 py-1">
-                    <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-400 font-mono focus:outline-none cursor-pointer">
-                        <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer">
                         <option value="deepseek-chat">deepseek-chat</option>
                         <option value="deepseek-reasoner">deepseek-reasoner</option>
-                        <option value="deepseek-v4-flash-vision-exp">deepseek-v4-flash-vision-exp</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
                         <option value="gpt-4o">gpt-4o</option>
-                        <option value="claude-3-5-sonnet">claude-3-5-sonnet</option>
+                        <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>
                     </select>
                 </div>
 
@@ -674,104 +690,129 @@
             </button>
         </div>
 
-        <!-- Tab 1: Model & API Provider Settings -->
-        <div id="tab-pane-models" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
-            <div class="space-y-1.5">
-                <div class="flex items-center justify-between">
-                    <label class="text-[11px] font-semibold text-dark-heading">Provider Quick Profile (快速厂商模板)</label>
-                    <span class="text-[10px] text-blue-400 font-mono">全厂商矩阵</span>
-                </div>
-                <select id="settings-provider-preset" class="w-full bg-dark-bg border border-blue-500/40 rounded p-2 text-xs text-blue-400 focus:outline-none focus:border-blue-500 font-medium cursor-pointer">
-                    <option value="deepseek">🌟 DeepSeek 官方 (api.deepseek.com)</option>
-                    <option value="openai">🤖 OpenAI 官方 (api.openai.com)</option>
-                    <option value="siliconflow">⚡ 硅基流动 SiliconFlow (api.siliconflow.cn)</option>
-                    <option value="openrouter">🌐 OpenRouter 聚合/Claude (openrouter.ai)</option>
-                    <option value="ollama">🏠 Ollama 本地私有化 (localhost:11434)</option>
-                    <option value="dashscope">🐉 阿里百炼 通义千问 (dashscope.aliyuncs.com)</option>
-                    <option value="moonshot">🌙 月之暗面 Kimi (api.moonshot.cn)</option>
-                    <option value="custom">⚙️ 自定义 OpenAI 兼容端点...</option>
-                </select>
-            </div>
-
-            <div class="space-y-1.5">
-                <label class="text-[11px] font-semibold text-dark-heading">Base URL</label>
-                <input id="settings-base-url" type="text" value="https://api.deepseek.com/v1" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500" placeholder="https://api.deepseek.com/v1">
-            </div>
-
-            <div class="space-y-1.5">
-                <label class="text-[11px] font-semibold text-dark-heading">API Key</label>
-                <div class="relative">
-                    <input id="settings-api-key" type="password" class="w-full bg-dark-bg border border-dark-border rounded p-2 pr-16 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500" placeholder="sk-...">
-                    <button id="btn-toggle-key-visibility" class="absolute right-2 top-2 text-[10px] text-dark-muted hover:text-dark-heading px-1.5 py-0.5 rounded bg-dark-hover">Show</button>
-                </div>
-                <p class="text-[10px] text-dark-muted">API Key 安全隔离保存在本地 <code>.env</code> 文件中，杜绝硬编码泄露。</p>
-            </div>
-
-            <div class="pt-1">
-                <button id="btn-test-fetch-models" class="w-full py-2 bg-dark-hover hover:bg-zinc-800 border border-dark-border text-blue-400 rounded font-medium text-xs flex items-center justify-center space-x-2 transition">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="23 4 23 10 17 10"></polyline>
-                        <polyline points="1 20 1 14 7 14"></polyline>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
-                    <span>🔍 测试连接并动态拉取模型列表</span>
-                </button>
-                <div id="fetch-status-msg" class="hidden mt-2 p-2 rounded text-[11px] font-mono"></div>
-            </div>
-
-            <!-- Custom 4-Tier Model Mapping (自定义4档模型绑定) -->
-            <div class="p-3 bg-dark-bg/80 border border-dark-border rounded-lg space-y-2.5">
-                <div class="flex items-center justify-between border-b border-dark-border pb-1.5">
+        <!-- Tab 1: Multi-Provider & Model Management -->
+        <div id="tab-pane-models" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll">
+            <!-- Active Providers Gallery Cards (已接入供应商卡片库) -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between pb-1 border-b border-dark-border">
                     <span class="text-xs font-semibold text-dark-heading flex items-center gap-1.5">
-                        <span>🎯 4 档智能体能力映射 (自定义绑定)</span>
+                        <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span>已接入供应商 (Multi-Providers)</span>
                     </span>
-                    <span class="text-[10px] text-dark-muted font-mono">通用矩阵</span>
+                    <span class="text-[10px] text-blue-400 font-mono" id="providers-count-badge">7 厂商就绪</span>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
-                            <span>⚡ Flash (极速档)</span>
-                        </label>
-                        <input id="tier-map-flash" type="text" value="deepseek-v4-flash" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 deepseek-v4-flash / gpt-4o-mini">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
-                            <span>🛠️ Pro (工程主力档)</span>
-                        </label>
-                        <input id="tier-map-pro" type="text" value="deepseek-v4-pro" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 deepseek-v4-pro / claude-3-5-sonnet">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
-                            <span>🧠 Reasoner (深度推理)</span>
-                        </label>
-                        <input id="tier-map-reasoner" type="text" value="deepseek-reasoner" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 deepseek-reasoner / o3-mini">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-medium text-dark-muted flex items-center space-x-1">
-                            <span>👁️ Vision (多模态档)</span>
-                        </label>
-                        <input id="tier-map-vision" type="text" value="deepseek-v4-flash-vision-exp" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none" placeholder="如 deepseek-v4-flash-vision-exp / gpt-4o">
-                    </div>
+                <div id="providers-cards-list" class="space-y-2">
+                    <!-- Dynamically Rendered Provider Cards -->
                 </div>
             </div>
 
-            <div class="space-y-1.5 pt-1">
-                <label class="text-[11px] font-semibold text-dark-heading">默认激活模型 (Active Model)</label>
-                <select id="settings-model-select" class="w-full bg-dark-bg border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:outline-none focus:border-brand-500">
-                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                    <option value="deepseek-chat">deepseek-chat</option>
-                    <option value="deepseek-reasoner">deepseek-reasoner</option>
-                    <option value="deepseek-v4-flash-vision-exp">deepseek-v4-flash-vision-exp</option>
-                    <option value="gpt-4o">gpt-4o</option>
-                    <option value="claude-3-5-sonnet">claude-3-5-sonnet</option>
-                </select>
-            </div>
+            <!-- Provider Edit / Add Form (供应商接入与编辑表单) -->
+            <div class="p-3.5 bg-dark-bg/90 border border-dark-border rounded-xl space-y-3 shadow-inner">
+                <div class="flex items-center justify-between pb-1.5 border-b border-dark-border/60">
+                    <span class="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+                        <span id="form-provider-title">⚙️ 配置 / 接入供应商</span>
+                    </span>
+                    <span class="text-[10px] text-zinc-500 font-mono">独立存储 · 永不覆盖</span>
+                </div>
 
-            <div class="pt-3 border-t border-dark-border">
-                <button id="btn-save-provider-config" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs transition shadow-md">
-                    💾 保存并应用全厂商模型设置
-                </button>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-semibold text-dark-heading">快速选择厂商模板 (Quick Template)</label>
+                    <select id="settings-provider-preset" class="w-full bg-dark-surface border border-blue-500/40 rounded p-2 text-xs text-blue-400 focus:outline-none focus:border-blue-500 font-medium cursor-pointer">
+                        <option value="deepseek">🌟 DeepSeek 官方 (api.deepseek.com)</option>
+                        <option value="gemini">💎 Google Gemini 官方 (generativelanguage.googleapis.com)</option>
+                        <option value="openai">🤖 OpenAI 官方 (api.openai.com)</option>
+                        <option value="anthropic">🧠 Anthropic Claude (api.anthropic.com)</option>
+                        <option value="siliconflow">⚡ 硅基流动 SiliconFlow (api.siliconflow.cn)</option>
+                        <option value="moonshot">🌙 月之暗面 Kimi (api.moonshot.cn)</option>
+                        <option value="ollama">🏠 Ollama 本地私有化 (localhost:11434)</option>
+                        <option value="custom">⚙️ 自定义 OpenAI 兼容端点...</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-semibold text-dark-heading">供应商 ID</label>
+                        <input id="settings-provider-id" type="text" value="deepseek" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:outline-none focus:border-blue-500" placeholder="如 gemini">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-semibold text-dark-heading">供应商显示名称</label>
+                        <input id="settings-provider-name" type="text" value="DeepSeek 官方" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-medium text-dark-heading focus:outline-none focus:border-blue-500" placeholder="如 Google Gemini">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[11px] font-semibold text-dark-heading">Base URL (上游接口地址)</label>
+                    <input id="settings-base-url" type="text" value="https://api.deepseek.com/v1" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:outline-none focus:border-blue-500" placeholder="https://api.deepseek.com/v1">
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold text-dark-heading">API Key</label>
+                        <span id="key-status-indicator" class="text-[10px] text-zinc-500 font-mono">未修改</span>
+                    </div>
+                    <div class="relative">
+                        <input id="settings-api-key" type="password" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 pr-16 text-xs font-mono text-dark-heading focus:outline-none focus:border-blue-500" placeholder="留空则保持当前已有密钥">
+                        <button id="btn-toggle-key-visibility" type="button" class="absolute right-1.5 top-1 text-[10px] text-dark-muted hover:text-dark-heading px-1.5 py-0.5 rounded bg-dark-hover">Show</button>
+                    </div>
+                </div>
+
+                <div class="pt-1">
+                    <button id="btn-test-fetch-models" type="button" class="w-full py-2 bg-blue-950/50 hover:bg-blue-900/60 border border-blue-600/60 text-blue-300 rounded font-medium text-xs flex items-center justify-center space-x-2 transition shadow-sm">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>🔄 在线探测并拉取模型列表 (Fetch Models)</span>
+                    </button>
+                    <div id="fetch-status-msg" class="hidden mt-2 p-2 rounded text-[11px] font-mono leading-relaxed"></div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[11px] font-semibold text-dark-heading">包含模型列表 (逗号分隔)</label>
+                    <textarea id="settings-models-input" rows="2" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:outline-none focus:border-blue-500 leading-relaxed" placeholder="deepseek-chat, deepseek-reasoner"></textarea>
+                </div>
+
+                <!-- Custom 4-Tier Model Mapping (自定义4档模型绑定) -->
+                <div class="p-2.5 bg-dark-surface/80 border border-dark-border/80 rounded-lg space-y-2">
+                    <div class="flex items-center justify-between pb-1 border-b border-dark-border/40">
+                        <span class="text-[11px] font-semibold text-zinc-300">🎯 快捷 4 档能力映射</span>
+                        <span class="text-[9px] text-dark-muted font-mono">DSH 映射</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="space-y-0.5">
+                            <label class="text-[10px] text-dark-muted">⚡ Flash (极速档)</label>
+                            <input id="tier-map-flash" type="text" value="deepseek-v4-flash" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div class="space-y-0.5">
+                            <label class="text-[10px] text-dark-muted">🛠️ Pro (主力档)</label>
+                            <input id="tier-map-pro" type="text" value="deepseek-v4-pro" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div class="space-y-0.5">
+                            <label class="text-[10px] text-dark-muted">🧠 Reasoner (深度推理)</label>
+                            <input id="tier-map-reasoner" type="text" value="deepseek-reasoner" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div class="space-y-0.5">
+                            <label class="text-[10px] text-dark-muted">👁️ Vision (多模态档)</label>
+                            <input id="tier-map-vision" type="text" value="deepseek-v4-flash-vision-exp" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[11px] font-semibold text-dark-heading">默认启动模型 (Default Active Model)</label>
+                    <select id="settings-model-select" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:outline-none focus:border-blue-500">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    </select>
+                </div>
+
+                <div class="pt-2">
+                    <button id="btn-save-provider-config" type="button" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-xs transition shadow-lg flex items-center justify-center space-x-1.5">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <span>💾 保存并应用当前供应商配置</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1230,12 +1271,19 @@
         const btnCloseSettings = document.getElementById('btn-close-settings');
         const btnQuickPrompt = document.getElementById('btn-quick-prompt');
 
-        // Settings Elements
+        // Provider & Engine Settings Elements
+        const headerProviderSelect = document.getElementById('header-provider-select');
         const settingsProviderPreset = document.getElementById('settings-provider-preset');
-        const settingsProvider = settingsProviderPreset;
+        const settingsProviderId = document.getElementById('settings-provider-id');
+        const settingsProviderName = document.getElementById('settings-provider-name');
         const settingsBaseUrl = document.getElementById('settings-base-url');
         const settingsApiKey = document.getElementById('settings-api-key');
+        const settingsModelsInput = document.getElementById('settings-models-input');
         const settingsModelSelect = document.getElementById('settings-model-select');
+        const providersCardsList = document.getElementById('providers-cards-list');
+        const providersCountBadge = document.getElementById('providers-count-badge');
+        const keyStatusIndicator = document.getElementById('key-status-indicator');
+        const formProviderTitle = document.getElementById('form-provider-title');
         const tierMapFlash = document.getElementById('tier-map-flash');
         const tierMapPro = document.getElementById('tier-map-pro');
         const tierMapReasoner = document.getElementById('tier-map-reasoner');
@@ -1264,63 +1312,84 @@
         const listOverwriteSuffixOptions = document.getElementById('list-overwrite-suffix-options');
         const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
 
-        // Multi-Provider Matrix Templates
+        // Multi-Provider Matrix Templates (包括 Google Gemini、DeepSeek、OpenAI 全矩阵)
         const providerTemplates = {
             deepseek: {
+                id: 'deepseek',
+                name: 'DeepSeek 官方',
                 baseUrl: 'https://api.deepseek.com/v1',
                 flash: 'deepseek-v4-flash',
                 pro: 'deepseek-v4-pro',
                 reasoner: 'deepseek-reasoner',
                 vision: 'deepseek-v4-flash-vision-exp',
-                models: ['deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash-vision-exp']
+                models: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash', 'deepseek-v4-pro']
+            },
+            gemini: {
+                id: 'gemini',
+                name: 'Google Gemini 官方',
+                baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+                flash: 'gemini-2.5-flash',
+                pro: 'gemini-2.5-pro',
+                reasoner: 'gemini-2.0-flash-thinking-exp-01-21',
+                vision: 'gemini-2.5-flash',
+                models: [
+                    'gemini-2.5-flash',
+                    'gemini-2.5-pro',
+                    'gemini-2.0-flash',
+                    'gemini-2.0-flash-thinking-exp-01-21',
+                    'gemini-1.5-pro',
+                    'gemini-1.5-flash'
+                ]
             },
             openai: {
+                id: 'openai',
+                name: 'OpenAI 官方',
                 baseUrl: 'https://api.openai.com/v1',
                 flash: 'gpt-4o-mini',
                 pro: 'gpt-4o',
                 reasoner: 'o3-mini',
                 vision: 'gpt-4o',
-                models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini', 'gpt-4.5-preview']
+                models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini']
+            },
+            anthropic: {
+                id: 'anthropic',
+                name: 'Anthropic Claude',
+                baseUrl: 'https://api.anthropic.com/v1',
+                flash: 'claude-3-5-haiku-20241022',
+                pro: 'claude-3-5-sonnet-20241022',
+                reasoner: 'claude-3-5-sonnet-20241022',
+                vision: 'claude-3-5-sonnet-20241022',
+                models: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229']
             },
             siliconflow: {
+                id: 'siliconflow',
+                name: 'SiliconFlow (硅基流动)',
                 baseUrl: 'https://api.siliconflow.cn/v1',
                 flash: 'deepseek-ai/DeepSeek-V3',
-                pro: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+                pro: 'deepseek-ai/DeepSeek-R1',
                 reasoner: 'deepseek-ai/DeepSeek-R1',
-                vision: 'OpenGVLab/InternVL2-26B',
-                models: ['deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Qwen/Qwen2.5-Coder-32B-Instruct', 'Qwen/Qwen2.5-72B-Instruct']
-            },
-            openrouter: {
-                baseUrl: 'https://openrouter.ai/api/v1',
-                flash: 'anthropic/claude-3.5-haiku',
-                pro: 'anthropic/claude-3.5-sonnet',
-                reasoner: 'anthropic/claude-3.7-sonnet:thinking',
-                vision: 'google/gemini-2.0-flash-001',
-                models: ['anthropic/claude-3.5-sonnet', 'anthropic/claude-3.7-sonnet', 'deepseek/deepseek-r1', 'google/gemini-2.0-flash-001']
-            },
-            ollama: {
-                baseUrl: 'http://localhost:11434/v1',
-                flash: 'qwen2.5-coder:7b',
-                pro: 'qwen2.5-coder:32b',
-                reasoner: 'deepseek-r1:14b',
-                vision: 'llava:latest',
-                models: ['qwen2.5-coder:32b', 'deepseek-r1:14b', 'qwen2.5-coder:7b', 'llama3.3:70b']
-            },
-            dashscope: {
-                baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-                flash: 'qwen-turbo',
-                pro: 'qwen-max',
-                reasoner: 'qwq-32b',
-                vision: 'qwen-vl-max',
-                models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwq-32b', 'qwen-vl-max']
+                vision: 'Qwen/Qwen2.5-VL-72B-Instruct',
+                models: ['deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Qwen/Qwen2.5-72B-Instruct']
             },
             moonshot: {
+                id: 'moonshot',
+                name: 'Moonshot (Kimi)',
                 baseUrl: 'https://api.moonshot.cn/v1',
                 flash: 'moonshot-v1-8k',
                 pro: 'moonshot-v1-32k',
                 reasoner: 'moonshot-v1-128k',
                 vision: 'moonshot-v1-32k',
                 models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k']
+            },
+            ollama: {
+                id: 'ollama',
+                name: 'Ollama 本地私有化',
+                baseUrl: 'http://localhost:11434/v1',
+                flash: 'qwen2.5-coder:7b',
+                pro: 'llama3.3',
+                reasoner: 'deepseek-r1:8b',
+                vision: 'llava',
+                models: ['llama3.3', 'qwen2.5-coder:7b', 'deepseek-r1:8b']
             }
         };
 
@@ -1329,13 +1398,22 @@
                 const key = settingsProviderPreset.value;
                 if (providerTemplates[key]) {
                     const tmpl = providerTemplates[key];
-                    settingsBaseUrl.value = tmpl.baseUrl;
-                    tierMapFlash.value = tmpl.flash;
-                    tierMapPro.value = tmpl.pro;
-                    tierMapReasoner.value = tmpl.reasoner;
-                    tierMapVision.value = tmpl.vision;
-                    populateModelSelects(tmpl.models, tmpl.pro);
+                    if (settingsProviderId) settingsProviderId.value = tmpl.id || key;
+                    if (settingsProviderName) settingsProviderName.value = tmpl.name || key;
+                    if (settingsBaseUrl) settingsBaseUrl.value = tmpl.baseUrl;
+                    if (settingsModelsInput) settingsModelsInput.value = (tmpl.models || []).join(', ');
+                    if (tierMapFlash) tierMapFlash.value = tmpl.flash || '';
+                    if (tierMapPro) tierMapPro.value = tmpl.pro || '';
+                    if (tierMapReasoner) tierMapReasoner.value = tmpl.reasoner || '';
+                    if (tierMapVision) tierMapVision.value = tmpl.vision || '';
+                    if (formProviderTitle) formProviderTitle.textContent = `⚙️ 配置 / 接入供应商: ${tmpl.name}`;
+                    populateModelSelects(tmpl.models, tmpl.pro || tmpl.models[0]);
                     applyCustomTierMapping();
+                } else if (key === 'custom') {
+                    if (settingsProviderId) settingsProviderId.value = 'custom';
+                    if (settingsProviderName) settingsProviderName.value = '自定义代理 / 上游';
+                    if (settingsBaseUrl) settingsBaseUrl.value = 'http://localhost:8000/v1';
+                    if (formProviderTitle) formProviderTitle.textContent = '⚙️ 配置自定义 OpenAI 兼容上游';
                 }
             });
         }
@@ -2163,6 +2241,162 @@
             }
         });
 
+        // ==================== Multi-Provider & Model Manager Logic ====================
+        let configuredProvidersList = [];
+        let activeProviderGlobal = 'deepseek';
+
+        async function loadProvidersList() {
+            try {
+                const res = await fetch('/api/providers');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    configuredProvidersList = data.providers || [];
+                    activeProviderGlobal = data.active_provider || 'deepseek';
+                    renderProvidersCards(configuredProvidersList, activeProviderGlobal);
+                    renderHeaderProviderDropdown(configuredProvidersList, activeProviderGlobal);
+                }
+            } catch (err) {
+                console.error('Failed to load providers list:', err);
+            }
+        }
+
+        function renderHeaderProviderDropdown(providers, activeId) {
+            if (!headerProviderSelect) return;
+            headerProviderSelect.innerHTML = '';
+            providers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.id === activeId ? '● ' : ''}${p.name || p.id}`;
+                if (p.id === activeId) opt.selected = true;
+                headerProviderSelect.appendChild(opt);
+            });
+        }
+
+        function renderProvidersCards(providers, activeId) {
+            if (!providersCardsList) return;
+            if (providersCountBadge) providersCountBadge.textContent = `${providers.length} 厂商就绪`;
+            providersCardsList.innerHTML = '';
+
+            providers.forEach(p => {
+                const isActive = (p.id === activeId);
+                const isConfigured = p.is_configured;
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-lg border transition-all ${
+                    isActive 
+                        ? 'bg-blue-950/40 border-blue-600/70 shadow-md ring-1 ring-blue-500/30' 
+                        : 'bg-dark-surface border-dark-border/70 hover:border-zinc-700'
+                }`;
+
+                const modelTagsHtml = (p.models || []).slice(0, 3).map(m => 
+                    `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-dark-bg border border-dark-border text-zinc-400 truncate max-w-[140px] inline-block">${m}</span>`
+                ).join('');
+                const moreCount = (p.models || []).length > 3 ? `<span class="text-[9px] text-zinc-500">+${p.models.length - 3}</span>` : '';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2 min-w-0">
+                            <div class="w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : (isConfigured ? 'bg-blue-400' : 'bg-zinc-600')}"></div>
+                            <span class="text-xs font-semibold text-dark-heading truncate">${p.name}</span>
+                            <span class="text-[9px] font-mono px-1 rounded bg-dark-bg border border-dark-border text-zinc-400">${p.type}</span>
+                        </div>
+                        <div class="flex items-center space-x-1 shrink-0">
+                            ${isActive 
+                                ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/50">● 使用中</span>'
+                                : `<button data-activate-id="${p.id}" class="btn-activate-provider px-2 py-0.5 rounded text-[10px] font-medium bg-blue-950/50 hover:bg-blue-900 text-blue-300 border border-blue-800 transition">⚡ 切换</button>`
+                            }
+                            <button data-edit-id="${p.id}" class="btn-edit-provider p-1 rounded hover:bg-dark-hover text-zinc-400 hover:text-white transition" title="编辑该供应商配置">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-1.5 flex items-center justify-between text-[10px] text-dark-muted font-mono">
+                        <span class="truncate max-w-[200px]" title="${p.base_url}">${p.base_url}</span>
+                        <span>Key: <strong class="${isConfigured ? 'text-emerald-400' : 'text-zinc-600'}">${p.masked_key}</strong></span>
+                    </div>
+                    <div class="mt-1.5 flex flex-wrap items-center gap-1">
+                        ${modelTagsHtml}
+                        ${moreCount}
+                    </div>
+                `;
+
+                providersCardsList.appendChild(card);
+            });
+
+            // Bind activate buttons
+            providersCardsList.querySelectorAll('.btn-activate-provider').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const targetId = e.currentTarget.getAttribute('data-activate-id');
+                    await switchActiveProvider(targetId);
+                });
+            });
+
+            // Bind edit buttons
+            providersCardsList.querySelectorAll('.btn-edit-provider').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.currentTarget.getAttribute('data-edit-id');
+                    const targetP = configuredProvidersList.find(x => x.id === targetId);
+                    if (targetP) {
+                        loadProviderIntoForm(targetP);
+                    }
+                });
+            });
+        }
+
+        function loadProviderIntoForm(p) {
+            if (settingsProviderId) settingsProviderId.value = p.id;
+            if (settingsProviderName) settingsProviderName.value = p.name;
+            if (settingsBaseUrl) settingsBaseUrl.value = p.base_url;
+            if (settingsApiKey) settingsApiKey.value = '';
+            if (keyStatusIndicator) keyStatusIndicator.textContent = `已配置 (${p.masked_key})`;
+            if (settingsModelsInput) settingsModelsInput.value = (p.models || []).join(', ');
+            if (formProviderTitle) formProviderTitle.textContent = `⚙️ 编辑供应商: ${p.name}`;
+            if (settingsProviderPreset) {
+                if (providerTemplates[p.id]) {
+                    settingsProviderPreset.value = p.id;
+                } else {
+                    settingsProviderPreset.value = 'custom';
+                }
+            }
+            populateModelSelects(p.models || [], p.default_model || (p.models && p.models[0]));
+            if (p.models && p.models.length > 0) {
+                if (tierMapFlash) tierMapFlash.value = p.models[0];
+                if (tierMapPro) tierMapPro.value = p.models[1] || p.models[0];
+                if (tierMapReasoner) tierMapReasoner.value = p.models[2] || p.models[0];
+                if (tierMapVision) tierMapVision.value = p.models[0];
+                applyCustomTierMapping();
+            }
+        }
+
+        async function switchActiveProvider(providerId) {
+            try {
+                const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}/activate`, {
+                    method: 'POST'
+                });
+                if (res.ok) {
+                    activeProviderGlobal = providerId;
+                    await loadProvidersList();
+                    const targetP = configuredProvidersList.find(x => x.id === providerId);
+                    if (targetP && targetP.models && targetP.models.length > 0) {
+                        populateModelSelects(targetP.models, targetP.default_model || targetP.models[0]);
+                        if (tierMapFlash) tierMapFlash.value = targetP.models[0];
+                        if (tierMapPro) tierMapPro.value = targetP.models[1] || targetP.models[0];
+                        if (tierMapReasoner) tierMapReasoner.value = targetP.models[2] || targetP.models[0];
+                        if (tierMapVision) tierMapVision.value = targetP.models[0];
+                        applyCustomTierMapping();
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to activate provider:', err);
+            }
+        }
+
+        if (headerProviderSelect) {
+            headerProviderSelect.addEventListener('change', async () => {
+                const targetId = headerProviderSelect.value;
+                await switchActiveProvider(targetId);
+            });
+        }
+
         // Test & Fetch Models API
         btnTestFetchModels.addEventListener('click', async () => {
             btnTestFetchModels.disabled = true;
@@ -2171,18 +2405,18 @@
                     <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
                     <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
                 </svg>
-                <span>Querying /v1/models...</span>
+                <span>探测中...</span>
             `;
             fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-zinc-900 border border-zinc-800 text-zinc-400';
-            fetchStatusMsg.textContent = 'Connecting to upstream API...';
+            fetchStatusMsg.textContent = `连接上游 ${settingsBaseUrl.value}...`;
             fetchStatusMsg.classList.remove('hidden');
 
             try {
-                const res = await fetch('/api/providers/test-and-fetch-models', {
+                const res = await fetch('/api/providers/fetch-models', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        provider_name: settingsProvider.value,
+                        provider_id: settingsProviderId ? settingsProviderId.value : '',
                         base_url: settingsBaseUrl.value,
                         api_key: settingsApiKey.value
                     })
@@ -2191,17 +2425,23 @@
                 const data = await res.json();
                 if (res.ok && data.status === 'success') {
                     fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-emerald-950/40 border border-emerald-800/50 text-emerald-300';
-                    fetchStatusMsg.textContent = `[OK ${data.latency_ms}ms] ${data.message}`;
+                    fetchStatusMsg.textContent = `[成功] ${data.message}`;
                     if (data.models && data.models.length > 0) {
+                        settingsModelsInput.value = data.models.join(', ');
                         populateModelSelects(data.models, data.models[0]);
+                        if (tierMapFlash) tierMapFlash.value = data.models[0];
+                        if (tierMapPro) tierMapPro.value = data.models[1] || data.models[0];
+                        if (tierMapReasoner) tierMapReasoner.value = data.models[2] || data.models[0];
+                        if (tierMapVision) tierMapVision.value = data.models[0];
+                        applyCustomTierMapping();
                     }
                 } else {
                     fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
-                    fetchStatusMsg.textContent = `[Error] ${data.detail || data.error || 'Connection failed'}`;
+                    fetchStatusMsg.textContent = `[拉取失败] ${data.message || data.detail || '无法连接上游'}`;
                 }
             } catch (err) {
                 fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
-                fetchStatusMsg.textContent = `[Network Error] ${err.message}`;
+                fetchStatusMsg.textContent = `[网络异常] ${err.message}`;
             } finally {
                 btnTestFetchModels.disabled = false;
                 btnTestFetchModels.innerHTML = `
@@ -2210,30 +2450,51 @@
                         <polyline points="1 20 1 14 7 14"></polyline>
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
-                    <span>Test & Fetch Available Models</span>
+                    <span>🔄 在线探测并拉取模型列表 (Fetch Models)</span>
                 `;
             }
         });
 
         btnSaveProviderConfig.addEventListener('click', async () => {
+            btnSaveProviderConfig.disabled = true;
+            btnSaveProviderConfig.textContent = '正在保存供应商配置...';
+
+            const rawModels = settingsModelsInput.value.split(/[\n,]/).map(x => x.trim()).filter(Boolean);
+            const pId = (settingsProviderId ? settingsProviderId.value.trim() : '') || 'custom';
+            const pName = (settingsProviderName ? settingsProviderName.value.trim() : '') || pId;
+
             const payload = {
-                provider_name: settingsProvider.value,
-                base_url: settingsBaseUrl.value,
-                api_key: settingsApiKey.value,
+                id: pId,
+                name: pName,
+                base_url: settingsBaseUrl.value.trim(),
+                api_key: settingsApiKey.value.trim(),
+                models: rawModels.length > 0 ? rawModels : [settingsModelSelect.value],
                 default_model: settingsModelSelect.value
             };
+
             try {
-                const res = await fetch('/api/config/update-provider', {
+                const res = await fetch('/api/providers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    btnSaveProviderConfig.textContent = 'Saved Successfully!';
-                    setTimeout(() => { btnSaveProviderConfig.textContent = 'Save & Apply Settings'; }, 1500);
+                    btnSaveProviderConfig.textContent = '✅ 已成功保存并同步！';
+                    await loadProvidersList();
+                    setTimeout(() => {
+                        btnSaveProviderConfig.disabled = false;
+                        btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
+                    }, 1500);
+                } else {
+                    const err = await res.json();
+                    alert('保存失败: ' + (err.detail || '未知错误'));
+                    btnSaveProviderConfig.disabled = false;
+                    btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
                 }
             } catch (err) {
-                alert('Save failed: ' + err.message);
+                alert('保存失败: ' + err.message);
+                btnSaveProviderConfig.disabled = false;
+                btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
             }
         });
 
@@ -2959,6 +3220,7 @@
                 console.error('Failed to load system info:', err);
             }
 
+            await loadProvidersList();
             await loadMasterPrompt();
             await loadPromptPresets();
             await loadMasterSuffix();

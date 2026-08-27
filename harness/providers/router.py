@@ -12,7 +12,7 @@ from harness.providers.openai_provider import OpenAICompatibleProvider
 from harness.providers.anthropic_provider import AnthropicProvider
 
 
-def load_env_keys():
+def load_env_keys(override: bool = True):
     """自动加载本地与全局 .env 中的 API 密钥"""
     from pathlib import Path
     candidate_envs = [
@@ -31,8 +31,9 @@ def load_env_keys():
                         k, v = line.split("=", 1)
                         k = k.strip()
                         v = v.strip().strip('"').strip("'")
-                        if k and not os.environ.get(k):
-                            os.environ[k] = v
+                        if k:
+                            if override or not os.environ.get(k):
+                                os.environ[k] = v
             except Exception:
                 pass
 
@@ -47,11 +48,19 @@ class ProviderRouter:
         self._initialize_providers()
 
     def _initialize_providers(self):
-        """初始化配置文件中定义的所有 Provider"""
+        """初始化配置文件与持久化管理器中定义的所有 Provider"""
         load_env_keys()
-        providers_data = self.config.providers
+        from harness.providers.manager import ProviderManager
+        self.mgr = ProviderManager()
+        custom_data = self.mgr.load_data().get("providers", {})
 
-        for name, p_data in providers_data.items():
+        # 合并默认配置与用户自定义供应商
+        all_providers = dict(self.config.providers)
+        for k, v in custom_data.items():
+            if k not in all_providers or not isinstance(all_providers[k], dict):
+                all_providers[k] = v
+
+        for name, p_data in all_providers.items():
             if not isinstance(p_data, dict):
                 continue
 
@@ -92,22 +101,41 @@ class ProviderRouter:
 
     def get_provider(self, provider_name: Optional[str] = None) -> BaseProvider:
         """获取指定或默认的 Provider 实例，并执行 Key 轮询与动态热刷新"""
-        p_name = (provider_name or self.config.default_provider or "deepseek").lower()
+        p_name = (provider_name or getattr(self.config, "default_provider", "deepseek") or "deepseek").lower().strip()
+        load_env_keys()
+
+        # 如果 requested provider 尚未缓存，尝试从 ProviderManager 动态加载
         if p_name not in self._providers:
-            if self._providers:
+            from harness.providers.manager import ProviderManager
+            mgr = ProviderManager()
+            p_info = mgr.get_provider_info(p_name)
+            if p_info:
+                p_type = p_info.get("type", "openai_compatible")
+                base_url = p_info.get("base_url", "")
+                env_var = p_info.get("env_key") or f"{p_name.upper()}_API_KEY"
+                k_val = os.environ.get(env_var) or p_info.get("api_key", "EMPTY")
+                if p_type == "anthropic":
+                    self._providers[p_name] = AnthropicProvider(name=p_name, base_url=base_url, api_key=k_val)
+                else:
+                    self._providers[p_name] = OpenAICompatibleProvider(name=p_name, base_url=base_url, api_key=k_val)
+            elif self._providers:
                 p_name = list(self._providers.keys())[0]
             else:
-                load_env_keys()
                 return OpenAICompatibleProvider(
                     name="deepseek",
-                    base_url="https://api.deepseek.com",
+                    base_url="https://api.deepseek.com/v1",
                     api_key=os.environ.get("DEEPSEEK_API_KEY", "EMPTY")
                 )
 
         provider = self._providers[p_name]
 
-        # 动态检测环境变量中的最新 API Key
-        load_env_keys()
+        # 动态检测并热刷新环境变量中的最新 API Key 及 Base URL
+        from harness.providers.manager import ProviderManager
+        mgr = ProviderManager()
+        p_info = mgr.get_provider_info(p_name)
+        if p_info and p_info.get("base_url"):
+            provider.base_url = p_info["base_url"].rstrip("/")
+
         current_env_key = os.environ.get(f"{p_name.upper()}_API_KEY") or os.environ.get(f"{p_name.upper()}_KEY") or ""
         if current_env_key and (provider.api_key == "EMPTY" or not provider.api_key or provider.api_key != current_env_key):
             provider.api_key = current_env_key

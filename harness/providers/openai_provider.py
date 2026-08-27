@@ -55,7 +55,7 @@ class OpenAICompatibleProvider(BaseProvider):
         extra_params: Optional[Dict[str, Any]] = None
     ) -> LLMResponse:
         """执行同步/非流式请求（内置 3 次指数退避网络自动重试）"""
-        url = f"{self.base_url}/chat/completions"
+        url = f"{self.base_url.rstrip('/')}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -147,7 +147,7 @@ class OpenAICompatibleProvider(BaseProvider):
         extra_params: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """执行流式请求并逐帧解析 SSE（内置网络重试与大模型深度长链思考超时加固）"""
-        url = f"{self.base_url}/chat/completions"
+        url = f"{self.base_url.rstrip('/')}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"

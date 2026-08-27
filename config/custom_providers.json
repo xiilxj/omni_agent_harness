@@ -1,0 +1,109 @@
+{
+  "active_provider": "deepseek",
+  "providers": {
+    "deepseek": {
+      "id": "deepseek",
+      "name": "DeepSeek 官方",
+      "type": "openai_compatible",
+      "base_url": "https://api.deepseek.com/v1",
+      "models": [
+        "deepseek-chat",
+        "deepseek-reasoner",
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ],
+      "default_model": "deepseek-chat",
+      "env_key": "DEEPSEEK_API_KEY",
+      "description": "DeepSeek 官方大模型 API，支持 DeepSeek-V3/R1 深度思考推理"
+    },
+    "gemini": {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "type": "openai_compatible",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "models": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-thinking-exp-01-21",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash"
+      ],
+      "default_model": "gemini-2.5-flash",
+      "env_key": "GEMINI_API_KEY",
+      "description": "Google Gemini 官方 OpenAI 兼容接口，支持全系列 Gemini 多模态与长上下文模型"
+    },
+    "openai": {
+      "id": "openai",
+      "name": "OpenAI 官方",
+      "type": "openai_compatible",
+      "base_url": "https://api.openai.com/v1",
+      "models": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o1",
+        "o3-mini"
+      ],
+      "default_model": "gpt-4o",
+      "env_key": "OPENAI_API_KEY",
+      "description": "OpenAI 官方接口，支持 GPT-4o 及 o1/o3 复杂推理模型"
+    },
+    "anthropic": {
+      "id": "anthropic",
+      "name": "Anthropic Claude",
+      "type": "anthropic",
+      "base_url": "https://api.anthropic.com/v1",
+      "models": [
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
+        "claude-3-opus-20240229"
+      ],
+      "default_model": "claude-3-5-sonnet-20241022",
+      "env_key": "ANTHROPIC_API_KEY",
+      "description": "Anthropic Claude 官方接口"
+    },
+    "siliconflow": {
+      "id": "siliconflow",
+      "name": "SiliconFlow (硅基流动)",
+      "type": "openai_compatible",
+      "base_url": "https://api.siliconflow.cn/v1",
+      "models": [
+        "deepseek-ai/DeepSeek-V3",
+        "deepseek-ai/DeepSeek-R1",
+        "Qwen/Qwen2.5-72B-Instruct",
+        "meta-llama/Llama-3.3-70B-Instruct"
+      ],
+      "default_model": "deepseek-ai/DeepSeek-V3",
+      "env_key": "SILICONFLOW_API_KEY",
+      "description": "硅基流动高性能大模型托管平台"
+    },
+    "moonshot": {
+      "id": "moonshot",
+      "name": "Moonshot (Kimi)",
+      "type": "openai_compatible",
+      "base_url": "https://api.moonshot.cn/v1",
+      "models": [
+        "moonshot-v1-8k",
+        "moonshot-v1-32k",
+        "moonshot-v1-128k"
+      ],
+      "default_model": "moonshot-v1-8k",
+      "env_key": "MOONSHOT_API_KEY",
+      "description": "月之暗面 Kimi 长文本大模型"
+    },
+    "ollama": {
+      "id": "ollama",
+      "name": "Ollama (本地私有化)",
+      "type": "openai_compatible",
+      "base_url": "http://localhost:11434/v1",
+      "models": [
+        "llama3.3",
+        "qwen2.5-coder",
+        "deepseek-r1:8b"
+      ],
+      "default_model": "llama3.3",
+      "env_key": "OLLAMA_API_KEY",
+      "description": "本地部署的 Ollama 开源模型服务"
+    }
+  }
+}

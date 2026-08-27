@@ -543,6 +543,86 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         except httpx.RequestError as e:
             raise HTTPException(status_code=500, detail=f"Network error connecting to {url}: {e}")
 
+    from harness.providers.manager import ProviderManager
+    provider_mgr = ProviderManager()
+
+    @app.get("/api/providers")
+    async def get_providers_list():
+        """获取所有已接入与预设的模型供应商列表"""
+        providers = provider_mgr.list_providers()
+        active_id = provider_mgr.get_active_provider_id()
+        return {
+            "status": "success",
+            "active_provider": active_id,
+            "providers": providers
+        }
+
+    class SaveProviderRequest(BaseModel):
+        id: str
+        name: str
+        base_url: str
+        type: Optional[str] = "openai_compatible"
+        api_key: Optional[str] = None
+        models: Optional[List[str]] = None
+        default_model: Optional[str] = None
+        description: Optional[str] = None
+
+    @app.post("/api/providers")
+    async def save_provider_preset(req: SaveProviderRequest):
+        """新增或保存模型供应商配置（独立存储，绝不覆盖其他厂商配置）"""
+        saved = provider_mgr.save_provider(
+            provider_id=req.id,
+            name=req.name,
+            base_url=req.base_url,
+            provider_type=req.type or "openai_compatible",
+            api_key=req.api_key,
+            models=req.models,
+            default_model=req.default_model,
+            description=req.description
+        )
+        return {"status": "success", "provider": saved}
+
+    @app.delete("/api/providers/{provider_id}")
+    async def delete_provider_preset(provider_id: str):
+        """删除指定自定义模型供应商"""
+        success = provider_mgr.delete_provider(provider_id)
+        return {"status": "success" if success else "error"}
+
+    @app.post("/api/providers/{provider_id}/activate")
+    async def activate_provider(provider_id: str):
+        """一键无缝切换当前激活的大模型供应商"""
+        success = provider_mgr.set_active_provider(provider_id)
+        if success:
+            if isinstance(config.providers, dict):
+                config.providers["default_provider"] = provider_id
+            return {"status": "success", "active_provider": provider_id}
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    class FetchModelsRequest(BaseModel):
+        base_url: str
+        api_key: Optional[str] = None
+        provider_id: Optional[str] = None
+
+    @app.post("/api/providers/fetch-models")
+    async def fetch_upstream_models(req: FetchModelsRequest):
+        """一键在线探测上游接口并拉取全部可用模型列表"""
+        key = req.api_key or ""
+        if (not key or key == "EMPTY") and req.provider_id:
+            info = provider_mgr.get_provider_info(req.provider_id)
+            if info:
+                env_var = info.get("env_key") or f"{req.provider_id.upper()}_API_KEY"
+                key = os.environ.get(env_var, "")
+
+        success, models, msg = await ProviderManager.fetch_upstream_models(
+            base_url=req.base_url,
+            api_key=key
+        )
+        return {
+            "status": "success" if success else "failed",
+            "models": models,
+            "message": msg
+        }
+
     class UpdateProviderConfigRequest(BaseModel):
         provider_name: str
         base_url: str
@@ -552,42 +632,16 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
 
     @app.post("/api/config/update-provider")
     async def update_provider_config(req: UpdateProviderConfigRequest):
-        """更新 Provider 配置并持久化到私有环境变量"""
-        p_name = req.provider_name.lower()
-        if req.api_key and req.api_key.strip():
-            env_var = f"{p_name.upper()}_API_KEY"
-            os.environ[env_var] = req.api_key.strip()
-            env_file = Path(__file__).resolve().parent.parent.parent / ".env"
-            try:
-                lines = []
-                found = False
-                if env_file.exists():
-                    with open(env_file, "r", encoding="utf-8") as f:
-                        lines = f.readlines()
-                
-                new_lines = []
-                for line in lines:
-                    if line.startswith(f"{env_var}="):
-                        new_lines.append(f"{env_var}={req.api_key.strip()}\n")
-                        found = True
-                    else:
-                        new_lines.append(line)
-                if not found:
-                    new_lines.append(f"{env_var}={req.api_key.strip()}\n")
-
-                with open(env_file, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
-            except Exception as e:
-                print(f"Warning writing .env: {e}")
-
-        if p_name in config.providers and isinstance(config.providers[p_name], dict):
-            config.providers[p_name]["base_url"] = req.base_url
-            if req.models:
-                config.providers[p_name]["models"] = req.models
-        if req.default_model:
-            config.providers["default_model"] = req.default_model
-
-        return {"status": "success", "message": f"Provider '{p_name}' configuration updated."}
+        """兼容旧版更新接口"""
+        provider_mgr.save_provider(
+            provider_id=req.provider_name,
+            name=req.provider_name,
+            base_url=req.base_url,
+            api_key=req.api_key,
+            models=req.models,
+            default_model=req.default_model
+        )
+        return {"status": "success", "message": f"Provider '{req.provider_name}' configuration updated."}
 
     @app.get("/api/tools")
     async def get_tools():
