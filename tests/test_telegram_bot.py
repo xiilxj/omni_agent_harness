@@ -118,10 +118,12 @@ async def test_telegram_bot_message_dispatch_and_execution():
 
 
 @pytest.mark.asyncio
-async def test_telegram_bot_session_management():
+async def test_telegram_bot_session_management(tmp_path):
     """测试 Telegram Bot 新建会话、会话列表与切换历史对话"""
+    from harness.core.session import SessionManager, SessionItem
     config = load_config()
     bot = TelegramBotBridge(token="TEST_TOKEN", allowed_users=[1001], config=config)
+    bot.session_mgr = SessionManager(storage_dir=tmp_path / "sessions")
     bot._send_api = AsyncMock(return_value={"ok": True, "result": {"message_id": 200}})
 
     # 1. 模拟发送 /new 指令开启新会话
@@ -149,7 +151,6 @@ async def test_telegram_bot_session_management():
     assert "会话与对话管理中心" in last_call[1]["text"]
 
     # 3. 模拟点击会话按钮切换会话
-    from harness.core.session import SessionItem
     test_session = SessionItem(id="sess_test_123", title="测试历史对话", model="models/gemini-3.5-flash-lite", provider="gemini")
     bot.session_mgr.save_session(test_session)
 
