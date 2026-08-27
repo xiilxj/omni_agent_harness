@@ -781,20 +781,32 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="space-y-0.5">
-                            <label class="text-[10px] text-dark-muted">⚡ Flash (极速档)</label>
-                            <input id="tier-map-flash" type="text" value="deepseek-v4-flash" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                            <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
+                                <span>⚡ Flash (极速档)</span>
+                            </label>
+                            <select id="tier-map-flash" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
+                            </select>
                         </div>
                         <div class="space-y-0.5">
-                            <label class="text-[10px] text-dark-muted">🛠️ Pro (主力档)</label>
-                            <input id="tier-map-pro" type="text" value="deepseek-v4-pro" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                            <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
+                                <span>🛠️ Pro (主力档)</span>
+                            </label>
+                            <select id="tier-map-pro" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
+                            </select>
                         </div>
                         <div class="space-y-0.5">
-                            <label class="text-[10px] text-dark-muted">🧠 Reasoner (深度推理)</label>
-                            <input id="tier-map-reasoner" type="text" value="deepseek-reasoner" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                            <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
+                                <span>🧠 Reasoner (深度推理)</span>
+                            </label>
+                            <select id="tier-map-reasoner" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
+                            </select>
                         </div>
                         <div class="space-y-0.5">
-                            <label class="text-[10px] text-dark-muted">👁️ Vision (多模态档)</label>
-                            <input id="tier-map-vision" type="text" value="deepseek-v4-flash-vision-exp" class="w-full bg-dark-bg border border-dark-border rounded p-1 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none">
+                            <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
+                                <span>👁️ Vision (多模态档)</span>
+                            </label>
+                            <select id="tier-map-vision" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1393,6 +1405,58 @@
             }
         };
 
+        function findBestTierModel(models, tierKey) {
+            if (!models || models.length === 0) return '';
+            const mLower = models.map(m => m.toLowerCase());
+            if (tierKey === 'flash') {
+                const idx = mLower.findIndex(m => m.includes('flash') && !m.includes('image') && !m.includes('audio') && !m.includes('tts'));
+                if (idx !== -1) return models[idx];
+            } else if (tierKey === 'pro') {
+                const idx = mLower.findIndex(m => m.includes('pro') && !m.includes('image') && !m.includes('audio') && !m.includes('tts'));
+                if (idx !== -1) return models[idx];
+            } else if (tierKey === 'reasoner') {
+                const idx = mLower.findIndex(m => m.includes('reasoner') || m.includes('r1') || m.includes('thinking') || m.includes('o1') || m.includes('o3') || m.includes('deep-research'));
+                if (idx !== -1) return models[idx];
+            } else if (tierKey === 'vision') {
+                const idx = mLower.findIndex(m => m.includes('vision') || m.includes('image') || m.includes('flash'));
+                if (idx !== -1) return models[idx];
+            }
+            return models[0];
+        }
+
+        function populateTierMapDropdowns(models, selectedMap = {}) {
+            const list = Array.isArray(models) ? models : [];
+            const tierDefs = [
+                { el: tierMapFlash, key: 'flash' },
+                { el: tierMapPro, key: 'pro' },
+                { el: tierMapReasoner, key: 'reasoner' },
+                { el: tierMapVision, key: 'vision' }
+            ];
+
+            tierDefs.forEach(({ el, key }) => {
+                if (!el) return;
+                const previousVal = el.value;
+                const targetVal = selectedMap[key] || previousVal || findBestTierModel(list, key);
+                el.innerHTML = '';
+                list.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === targetVal) opt.selected = true;
+                    el.appendChild(opt);
+                });
+                if (targetVal && !list.includes(targetVal)) {
+                    const opt = document.createElement('option');
+                    opt.value = targetVal;
+                    opt.textContent = targetVal;
+                    opt.selected = true;
+                    el.appendChild(opt);
+                }
+            });
+
+            applyCustomTierMapping();
+        }
+
         if (settingsProviderPreset) {
             settingsProviderPreset.addEventListener('change', () => {
                 const key = settingsProviderPreset.value;
@@ -1402,13 +1466,14 @@
                     if (settingsProviderName) settingsProviderName.value = tmpl.name || key;
                     if (settingsBaseUrl) settingsBaseUrl.value = tmpl.baseUrl;
                     if (settingsModelsInput) settingsModelsInput.value = (tmpl.models || []).join(', ');
-                    if (tierMapFlash) tierMapFlash.value = tmpl.flash || '';
-                    if (tierMapPro) tierMapPro.value = tmpl.pro || '';
-                    if (tierMapReasoner) tierMapReasoner.value = tmpl.reasoner || '';
-                    if (tierMapVision) tierMapVision.value = tmpl.vision || '';
                     if (formProviderTitle) formProviderTitle.textContent = `⚙️ 配置 / 接入供应商: ${tmpl.name}`;
                     populateModelSelects(tmpl.models, tmpl.pro || tmpl.models[0]);
-                    applyCustomTierMapping();
+                    populateTierMapDropdowns(tmpl.models, {
+                        flash: tmpl.flash,
+                        pro: tmpl.pro,
+                        reasoner: tmpl.reasoner,
+                        vision: tmpl.vision
+                    });
                 } else if (key === 'custom') {
                     if (settingsProviderId) settingsProviderId.value = 'custom';
                     if (settingsProviderName) settingsProviderName.value = '自定义代理 / 上游';
@@ -1418,16 +1483,26 @@
             });
         }
 
-        function applyCustomTierMapping() {
-            tierModelMap.flash.model = tierMapFlash.value || 'deepseek-v4-flash';
-            tierModelMap.pro.model = tierMapPro.value || 'deepseek-v4-pro';
-            tierModelMap.reasoner.model = tierMapReasoner.value || 'deepseek-reasoner';
-            tierModelMap.vision.model = tierMapVision.value || 'deepseek-v4-flash-vision-exp';
+        if (settingsModelsInput) {
+            settingsModelsInput.addEventListener('input', () => {
+                const raw = settingsModelsInput.value;
+                const models = raw.split(',').map(s => s.trim()).filter(Boolean);
+                if (models.length > 0) {
+                    populateTierMapDropdowns(models);
+                }
+            });
+        }
 
-            tierModelMap.flash.name = tierMapFlash.value;
-            tierModelMap.pro.name = tierMapPro.value;
-            tierModelMap.reasoner.name = tierMapReasoner.value;
-            tierModelMap.vision.name = tierMapVision.value;
+        function applyCustomTierMapping() {
+            tierModelMap.flash.model = (tierMapFlash && tierMapFlash.value) || 'deepseek-v4-flash';
+            tierModelMap.pro.model = (tierMapPro && tierMapPro.value) || 'deepseek-v4-pro';
+            tierModelMap.reasoner.model = (tierMapReasoner && tierMapReasoner.value) || 'deepseek-reasoner';
+            tierModelMap.vision.model = (tierMapVision && tierMapVision.value) || 'deepseek-v4-flash-vision-exp';
+
+            tierModelMap.flash.name = tierModelMap.flash.model;
+            tierModelMap.pro.name = tierModelMap.pro.model;
+            tierModelMap.reasoner.name = tierModelMap.reasoner.model;
+            tierModelMap.vision.name = tierModelMap.vision.model;
 
             const mapObj = {
                 flash: tierModelMap.flash.model,
@@ -1436,11 +1511,13 @@
                 vision: tierModelMap.vision.model
             };
             localStorage.setItem('omni_custom_tier_map', JSON.stringify(mapObj));
-            setModelTierUI(currentTier, tierModelMap[currentTier].model);
+            if (typeof setModelTierUI === 'function' && tierModelMap[currentTier]) {
+                setModelTierUI(currentTier, tierModelMap[currentTier].model);
+            }
         }
 
-        [tierMapFlash, tierMapPro, tierMapReasoner, tierMapVision].forEach(input => {
-            if (input) input.addEventListener('input', applyCustomTierMapping);
+        [tierMapFlash, tierMapPro, tierMapReasoner, tierMapVision].forEach(selectEl => {
+            if (selectEl) selectEl.addEventListener('change', applyCustomTierMapping);
         });
 
         // 1. Sidebar Mode Switching (Sessions vs Explorer)
@@ -2359,11 +2436,7 @@
             }
             populateModelSelects(p.models || [], p.default_model || (p.models && p.models[0]));
             if (p.models && p.models.length > 0) {
-                if (tierMapFlash) tierMapFlash.value = p.models[0];
-                if (tierMapPro) tierMapPro.value = p.models[1] || p.models[0];
-                if (tierMapReasoner) tierMapReasoner.value = p.models[2] || p.models[0];
-                if (tierMapVision) tierMapVision.value = p.models[0];
-                applyCustomTierMapping();
+                populateTierMapDropdowns(p.models, {});
             }
         }
 
@@ -2378,11 +2451,7 @@
                     const targetP = configuredProvidersList.find(x => x.id === providerId);
                     if (targetP && targetP.models && targetP.models.length > 0) {
                         populateModelSelects(targetP.models, targetP.default_model || targetP.models[0]);
-                        if (tierMapFlash) tierMapFlash.value = targetP.models[0];
-                        if (tierMapPro) tierMapPro.value = targetP.models[1] || targetP.models[0];
-                        if (tierMapReasoner) tierMapReasoner.value = targetP.models[2] || targetP.models[0];
-                        if (tierMapVision) tierMapVision.value = targetP.models[0];
-                        applyCustomTierMapping();
+                        populateTierMapDropdowns(targetP.models, {});
                     }
                 }
             } catch (err) {
@@ -2429,11 +2498,7 @@
                     if (data.models && data.models.length > 0) {
                         settingsModelsInput.value = data.models.join(', ');
                         populateModelSelects(data.models, data.models[0]);
-                        if (tierMapFlash) tierMapFlash.value = data.models[0];
-                        if (tierMapPro) tierMapPro.value = data.models[1] || data.models[0];
-                        if (tierMapReasoner) tierMapReasoner.value = data.models[2] || data.models[0];
-                        if (tierMapVision) tierMapVision.value = data.models[0];
-                        applyCustomTierMapping();
+                        populateTierMapDropdowns(data.models, {});
                     }
                 } else {
                     fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
@@ -3896,10 +3961,12 @@
                 suffixToSend = '__POOL__';
             }
 
+            const chosenProvider = (headerProviderSelect ? headerProviderSelect.value : (settingsProviderPreset ? settingsProviderPreset.value : 'deepseek')) || activeProviderGlobal || 'deepseek';
+
             const payload = {
                 session_id: activeSessionId,
                 prompt: prompt,
-                provider: (settingsProviderPreset ? settingsProviderPreset.value : 'deepseek') || 'deepseek',
+                provider: chosenProvider,
                 model: chosenModel,
                 permission_mode: currentPermission || 'unrestricted',
                 reasoning_effort: currentEffort || 'medium',

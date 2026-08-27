@@ -78,9 +78,15 @@ class OmniAgent:
         reasoning_effort: Optional[str] = None
     ) -> LLMResponse:
         """执行单步 LLM 推理并应用 100% 绝对 Master 提示词注入"""
-        p_name = provider_name or self.config.providers.get("default_provider", "deepseek")
-        provider = self.router.get_provider(p_name)
+        from harness.providers.router import infer_provider_from_model
         m_name = model_name or self.config.providers.get("default_model", "deepseek-chat")
+        p_name = provider_name or infer_provider_from_model(m_name, self.config.providers.get("default_provider", "deepseek"))
+        # 再次核验：若用户选取的模型属于其他厂商（如选了 Gemini 模型但 provider 传了 deepseek），自动智能纠正
+        inferred = infer_provider_from_model(m_name, p_name)
+        if inferred != p_name and ("gemini" in m_name or "claude" in m_name or "gpt" in m_name or "o1" in m_name or "o3" in m_name):
+            p_name = inferred
+
+        provider = self.router.get_provider(p_name)
 
         # 1. 核心关键：通过 Injector 确保 MASTER_SYSTEM_PROMPT.md 100% 绝对置顶与三层锚定
         injected_messages = self.injector.inject(
@@ -128,9 +134,15 @@ class OmniAgent:
         on_chunk_callback: Optional[Callable[[Dict[str, Any]], Any]] = None
     ) -> LLMResponse:
         """执行流式 LLM 推理并实时逐字推送思考链 (thought_delta) 与回答 (answer_delta)"""
-        p_name = provider_name or self.config.providers.get("default_provider", "deepseek")
-        provider = self.router.get_provider(p_name)
+        from harness.providers.router import infer_provider_from_model
         m_name = model_name or self.config.providers.get("default_model", "deepseek-chat")
+        p_name = provider_name or infer_provider_from_model(m_name, self.config.providers.get("default_provider", "deepseek"))
+        # 再次核验智能纠正
+        inferred = infer_provider_from_model(m_name, p_name)
+        if inferred != p_name and ("gemini" in m_name or "claude" in m_name or "gpt" in m_name or "o1" in m_name or "o3" in m_name):
+            p_name = inferred
+
+        provider = self.router.get_provider(p_name)
 
         # 0. DSH 级长会话上下文剪枝与 Token 优化
         pruned_messages, saved_tokens = self.pruner.prune_and_compact(self.messages)

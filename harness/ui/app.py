@@ -667,15 +667,23 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         session = None
         if req.session_id:
             session = session_mgr.get_session(req.session_id)
+        from harness.providers.router import infer_provider_from_model
+        target_model = req.model or (session.model if session else None) or "deepseek-chat"
+        target_provider = req.provider or (session.provider if session else None)
+        target_provider = infer_provider_from_model(target_model, target_provider or "deepseek")
+
         if not session:
             session = SessionItem(
                 title=auto_generate_title(req.prompt),
                 workspace=str(workspace_mgr.cwd),
-                provider=req.provider or "deepseek",
-                model=req.model or "deepseek-chat"
+                provider=target_provider,
+                model=target_model
             )
-        elif session.title in ("New Task Session", "Untitled Session") or len(session.messages) <= 1:
-            session.title = auto_generate_title(req.prompt)
+        else:
+            session.provider = target_provider
+            session.model = target_model
+            if session.title in ("New Task Session", "Untitled Session") or len(session.messages) <= 1:
+                session.title = auto_generate_title(req.prompt)
 
         agent = OmniAgent(
             config=config,
@@ -729,8 +737,8 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             task = asyncio.create_task(
                 agent.run_task(
                     task_prompt=req.prompt,
-                    provider_name=req.provider or session.provider,
-                    model_name=req.model or session.model,
+                    provider_name=target_provider,
+                    model_name=target_model,
                     reasoning_effort=req.reasoning_effort or getattr(config, "reasoning_effort", "medium"),
                     on_step_callback=step_callback
                 )

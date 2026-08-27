@@ -38,6 +38,24 @@ def load_env_keys(override: bool = True):
                 pass
 
 
+def infer_provider_from_model(model_name: Optional[str], default_provider: str = "deepseek") -> str:
+    """根据模型名称智能推导对应的供应商 ID"""
+    if not model_name:
+        return default_provider
+    m = model_name.lower().strip()
+    if m.startswith("gemini-") or m.startswith("models/gemini") or m.startswith("models/gemma") or "gemini" in m:
+        return "gemini"
+    if m.startswith("deepseek-"):
+        return "deepseek"
+    if m.startswith("claude-"):
+        return "anthropic"
+    if m.startswith("gpt-") or m.startswith("o1-") or m.startswith("o3-") or m.startswith("text-embedding"):
+        return "openai"
+    if m.startswith("moonshot-"):
+        return "moonshot"
+    return default_provider
+
+
 class ProviderRouter:
     """Provider 路由管理器与多 Key 轮询调度器"""
 
