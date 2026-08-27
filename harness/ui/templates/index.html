@@ -223,10 +223,10 @@
 
                 <!-- DSH Model Tier Pills (模型档位) -->
                 <div class="flex items-center space-x-1 p-0.5 bg-dark-bg rounded border border-dark-border" id="model-tier-pills">
-                    <button data-tier="flash" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Flash (极速档 · deepseek-v4-flash / deepseek-chat)">⚡ Flash</button>
-                    <button data-tier="pro" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition" title="Pro (专业工程档 · deepseek-v4-pro / deepseek-chat)">🛠️ Pro</button>
-                    <button data-tier="reasoner" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Reasoner (深度推理档 · deepseek-reasoner)">🧠 Reasoner</button>
-                    <button data-tier="vision" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Vision (多模态档 · deepseek-v4-flash-vision-exp / gpt-4o)">👁️ Vision</button>
+                    <button data-tier="flash" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Flash (极速档 · deepseek-v4-flash / deepseek-chat)">Flash</button>
+                    <button data-tier="pro" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition" title="Pro (专业工程档 · deepseek-v4-pro / deepseek-chat)">Pro</button>
+                    <button data-tier="reasoner" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Reasoner (深度推理档 · deepseek-reasoner)">Reasoner</button>
+                    <button data-tier="vision" class="tier-pill px-2 py-0.5 rounded text-[11px] font-medium text-dark-muted hover:text-dark-heading transition" title="Vision (多模态档 · deepseek-v4-flash-vision-exp / gpt-4o)">Vision</button>
                 </div>
 
                 <!-- Provider Switcher Dropdown (多供应商自由切换) -->
@@ -236,19 +236,20 @@
                         <span class="hidden md:inline">厂商:</span>
                     </span>
                     <select id="header-provider-select" class="bg-transparent text-[11px] text-zinc-300 font-medium focus:outline-none cursor-pointer">
-                        <option value="deepseek">⚡ DeepSeek 官方</option>
-                        <option value="gemini">💎 Google Gemini</option>
-                        <option value="openai">🤖 OpenAI 官方</option>
-                        <option value="anthropic">🧠 Anthropic Claude</option>
-                        <option value="siliconflow">🌊 硅基流动 SiliconFlow</option>
-                        <option value="moonshot">🌙 月之暗面 Kimi</option>
-                        <option value="ollama">🦙 本地 Ollama</option>
+                        <option value="deepseek">DeepSeek 官方</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="openai">OpenAI 官方</option>
+                        <option value="anthropic">Anthropic Claude</option>
+                        <option value="siliconflow">硅基流动 SiliconFlow</option>
+                        <option value="moonshot">月之暗面 Kimi</option>
+                        <option value="ollama">本地 Ollama</option>
                     </select>
                 </div>
 
-                <!-- Custom Model Select Dropdown -->
-                <div class="hidden lg:flex items-center space-x-1.5 bg-dark-bg border border-dark-border rounded px-2 py-1">
-                    <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer">
+                <!-- Custom Model Select Dropdown & Quick Fetch Models Button -->
+                <div class="hidden sm:flex items-center space-x-1.5 bg-dark-bg border border-dark-border rounded px-2 py-1">
+                    <span class="text-[11px] text-zinc-400 font-semibold hidden md:inline">模型:</span>
+                    <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer max-w-[200px] truncate">
                         <option value="deepseek-chat">deepseek-chat</option>
                         <option value="deepseek-reasoner">deepseek-reasoner</option>
                         <option value="gemini-2.5-flash">gemini-2.5-flash</option>
@@ -256,15 +257,19 @@
                         <option value="gpt-4o">gpt-4o</option>
                         <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>
                     </select>
+                    <button id="btn-header-fetch-models" class="p-1 text-zinc-400 hover:text-blue-400 hover:bg-dark-hover rounded transition flex items-center gap-1 text-[10px]" title="在线探测并拉取当前上游最新模型列表">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                        <span class="hidden xl:inline">拉取最新模型</span>
+                    </button>
                 </div>
 
                 <!-- DSH Permission Mode Selector (权限模式) -->
                 <div class="flex items-center space-x-1 bg-dark-bg border border-dark-border rounded px-2 py-1" id="permission-mode-box">
                     <span class="text-[11px] text-dark-muted font-medium">Auth:</span>
                     <select id="header-permission-select" class="bg-transparent text-[11px] text-emerald-400 font-medium focus:outline-none cursor-pointer">
-                        <option value="unrestricted">🔓 Unrestricted</option>
-                        <option value="ask_confirmation">🛡️ Controlled</option>
-                        <option value="read_only">🔒 Read-Only</option>
+                        <option value="unrestricted"> Unrestricted</option>
+                        <option value="ask_confirmation"> Controlled</option>
+                        <option value="read_only"> Read-Only</option>
                     </select>
                 </div>
 
@@ -331,28 +336,28 @@
                 <div class="grid grid-cols-2 gap-2.5 w-full text-left pt-2">
                     <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-indigo-500/40 text-dark-heading transition group shadow-sm" data-prompt="检查当前工作区结构，列出所有核心模块与文件清单并简要汇报">
                         <div class="flex items-center space-x-2 text-indigo-400 font-medium text-xs mb-1">
-                            <span>🔍</span>
+                            <span></span>
                             <span>工作区全面审计</span>
                         </div>
                         <div class="text-[11px] text-dark-muted truncate">扫描文件结构与当前项目核心逻辑</div>
                     </button>
                     <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-emerald-500/40 text-dark-heading transition group shadow-sm" data-prompt="查看当前连接的 MCP 服务与 Skills 技能，执行连通性自检">
                         <div class="flex items-center space-x-2 text-emerald-400 font-medium text-xs mb-1">
-                            <span>⚡</span>
+                            <span></span>
                             <span>MCP / Skills 挂载诊断</span>
                         </div>
                         <div class="text-[11px] text-dark-muted truncate">验证 29 项技能与 10 大 MCP 服务就绪度</div>
                     </button>
                     <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-amber-500/40 text-dark-heading transition group shadow-sm" data-prompt="运行 pytest 测试套件并输出测试覆盖率与结果">
                         <div class="flex items-center space-x-2 text-amber-400 font-medium text-xs mb-1">
-                            <span>🧪</span>
+                            <span></span>
                             <span>全量单元测试执行</span>
                         </div>
                         <div class="text-[11px] text-dark-muted truncate">自动化测试回归验证与断言分析</div>
                     </button>
                     <button class="quick-chip-btn p-3 rounded-xl glass-card hover:bg-dark-hover border border-dark-border hover:border-blue-500/40 text-dark-heading transition group shadow-sm" data-prompt="请根据当前任务，自动规划并执行完整的代码重构与优化">
                         <div class="flex items-center space-x-2 text-blue-400 font-medium text-xs mb-1">
-                            <span>🛠️</span>
+                            <span></span>
                             <span>自主 ReAct 深度攻坚</span>
                         </div>
                         <div class="text-[11px] text-dark-muted truncate">多步骤自主规划、多工具协同编写交付</div>
@@ -380,19 +385,19 @@
                         <label class="text-[10px] font-semibold text-dark-muted uppercase">Model / 模型档位:</label>
                         <div class="grid grid-cols-2 gap-1.5" id="popover-tier-grid">
                             <button data-tier="flash" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>⚡</span><span>Flash</span></div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Flash</span></div>
                                 <div class="text-[10px] text-dark-muted truncate">deepseek-chat</div>
                             </button>
                             <button data-tier="pro" class="pop-tier-btn p-1.5 rounded bg-blue-950/40 border border-blue-600 text-left transition">
-                                <div class="font-medium text-xs text-blue-400 flex items-center space-x-1"><span>🛠️</span><span>Pro</span></div>
+                                <div class="font-medium text-xs text-blue-400 flex items-center space-x-1"><span></span><span>Pro</span></div>
                                 <div class="text-[10px] text-dark-muted truncate">deepseek-chat</div>
                             </button>
                             <button data-tier="reasoner" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>🧠</span><span>Reasoner</span></div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Reasoner</span></div>
                                 <div class="text-[10px] text-dark-muted truncate">deepseek-reasoner</div>
                             </button>
                             <button data-tier="vision" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>👁️</span><span>Vision</span></div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Vision</span></div>
                                 <div class="text-[10px] text-dark-muted truncate">gpt-4o</div>
                             </button>
                         </div>
@@ -418,9 +423,9 @@
                     <div class="space-y-1 pt-1 border-t border-dark-border/60">
                         <label class="text-[10px] font-semibold text-dark-muted uppercase">Auth Mode / 权限模式:</label>
                         <div class="flex items-center space-x-1">
-                            <button data-auth="unrestricted" class="pop-auth-btn flex-1 py-1 rounded bg-emerald-950/40 border border-emerald-500/60 text-center text-[10px] text-emerald-400 font-medium">🔓 Full</button>
-                            <button data-auth="ask_confirmation" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-amber-400 font-medium">🛡️ Ask</button>
-                            <button data-auth="read_only" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-blue-400 font-medium">🔒 Read</button>
+                            <button data-auth="unrestricted" class="pop-auth-btn flex-1 py-1 rounded bg-emerald-950/40 border border-emerald-500/60 text-center text-[10px] text-emerald-400 font-medium"> Full</button>
+                            <button data-auth="ask_confirmation" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-amber-400 font-medium"> Ask</button>
+                            <button data-auth="read_only" class="pop-auth-btn flex-1 py-1 rounded bg-dark-bg border border-dark-border text-center text-[10px] text-dark-muted hover:text-blue-400 font-medium"> Read</button>
                         </div>
                     </div>
                 </div>
@@ -428,7 +433,7 @@
                 <!-- Floating Slash Commands Autocomplete Popover (斜杠快捷指令自动联想浮层) -->
                 <div id="slash-commands-popover" class="hidden absolute bottom-full left-2 mb-2 w-96 max-h-72 bg-dark-surface border border-dark-border rounded-xl shadow-2xl overflow-y-auto custom-scroll p-1.5 z-40 space-y-1">
                     <div class="px-2 py-1 text-[10px] font-semibold text-dark-muted border-b border-dark-border/60 flex items-center justify-between">
-                        <span class="text-blue-400 flex items-center space-x-1"><span>⚡</span><span>快捷指令 (Slash Commands)</span></span>
+                        <span class="text-blue-400 flex items-center space-x-1"><span></span><span>快捷指令 (Slash Commands)</span></span>
                         <span class="text-[9px] text-zinc-500">↑↓ 切换 · Enter / Tab 确认</span>
                     </div>
                     <div id="slash-commands-list" class="space-y-0.5">
@@ -452,7 +457,7 @@
 
                         <!-- Folded Model & Effort Pill Button (核心组件：只显示模型 + 推理强度) -->
                         <button id="btn-model-effort-popover" class="px-2.5 py-1 bg-dark-bg hover:bg-zinc-800/90 border border-dark-border hover:border-zinc-700 rounded-lg flex items-center space-x-1.5 text-xs text-dark-heading cursor-pointer transition select-none group">
-                            <span class="text-xs" id="pill-model-icon">🛠️</span>
+                            <span class="text-xs" id="pill-model-icon"></span>
                             <span class="font-medium text-xs" id="pill-model-name">deepseek-chat</span>
                             <span class="text-xs font-semibold text-blue-400" id="pill-effort-label">Med</span>
                             <svg class="w-3 h-3 text-dark-muted group-hover:text-dark-heading transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -584,13 +589,13 @@
             <div class="px-3 py-2 border-b border-dark-border flex items-center justify-between bg-dark-bg/40 text-xs flex-shrink-0">
                 <div class="flex items-center space-x-1 p-0.5 bg-dark-bg rounded-lg border border-dark-border/70 flex-1">
                     <button id="overview-tab-doc" class="flex-1 py-1 rounded text-center font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 shadow-sm transition flex items-center justify-center space-x-1">
-                        <span>📄 交付文档</span>
+                        <span> 交付文档</span>
                     </button>
                     <button id="overview-tab-code" class="flex-1 py-1 rounded text-center font-medium text-dark-muted hover:text-dark-heading transition flex items-center justify-center space-x-1">
-                        <span>🔍 代码补丁</span>
+                        <span> 代码补丁</span>
                     </button>
                     <button id="overview-tab-web" class="flex-1 py-1 rounded text-center font-medium text-dark-muted hover:text-dark-heading transition flex items-center justify-center space-x-1">
-                        <span>🌐 实时 Web</span>
+                        <span> 实时 Web</span>
                     </button>
                 </div>
             </div>
@@ -674,19 +679,19 @@
         <!-- Drawer Tab Switcher (5 Major Configuration Tabs) -->
         <div class="px-4 pt-3 border-b border-dark-border flex space-x-2 bg-dark-bg/40 text-xs overflow-x-auto custom-scroll flex-shrink-0">
             <button id="tab-btn-models" class="pb-2.5 border-b-2 border-brand-500 font-semibold text-dark-heading flex items-center space-x-1 whitespace-nowrap">
-                <span>🤖 模型与厂商</span>
+                <span> 模型与厂商</span>
             </button>
             <button id="tab-btn-prompt" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1 whitespace-nowrap">
-                <span>🧠 系统提示词</span>
+                <span> 系统提示词</span>
             </button>
             <button id="tab-btn-skills" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1 whitespace-nowrap">
-                <span>🧩 技能 (Skills)</span>
+                <span>技能 (Skills)</span>
             </button>
             <button id="tab-btn-mcp" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1 whitespace-nowrap">
-                <span>🔌 MCP 服务</span>
+                <span>MCP 服务</span>
             </button>
             <button id="tab-btn-tools" class="pb-2.5 border-b-2 border-transparent font-medium text-dark-muted hover:text-dark-heading flex items-center space-x-1 whitespace-nowrap">
-                <span>🛠️ 工具与环境</span>
+                <span> 工具与环境</span>
             </button>
         </div>
 
@@ -710,7 +715,7 @@
             <div class="p-3.5 bg-dark-bg/90 border border-dark-border rounded-xl space-y-3 shadow-inner">
                 <div class="flex items-center justify-between pb-1.5 border-b border-dark-border/60">
                     <span class="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
-                        <span id="form-provider-title">⚙️ 配置 / 接入供应商</span>
+                        <span id="form-provider-title"> 配置 / 接入供应商</span>
                     </span>
                     <span class="text-[10px] text-zinc-500 font-mono">独立存储 · 永不覆盖</span>
                 </div>
@@ -718,14 +723,14 @@
                 <div class="space-y-1">
                     <label class="text-[11px] font-semibold text-dark-heading">快速选择厂商模板 (Quick Template)</label>
                     <select id="settings-provider-preset" class="w-full bg-dark-surface border border-blue-500/40 rounded p-2 text-xs text-blue-400 focus:outline-none focus:border-blue-500 font-medium cursor-pointer">
-                        <option value="deepseek">🌟 DeepSeek 官方 (api.deepseek.com)</option>
-                        <option value="gemini">💎 Google Gemini 官方 (generativelanguage.googleapis.com)</option>
-                        <option value="openai">🤖 OpenAI 官方 (api.openai.com)</option>
-                        <option value="anthropic">🧠 Anthropic Claude (api.anthropic.com)</option>
-                        <option value="siliconflow">⚡ 硅基流动 SiliconFlow (api.siliconflow.cn)</option>
-                        <option value="moonshot">🌙 月之暗面 Kimi (api.moonshot.cn)</option>
-                        <option value="ollama">🏠 Ollama 本地私有化 (localhost:11434)</option>
-                        <option value="custom">⚙️ 自定义 OpenAI 兼容端点...</option>
+                        <option value="deepseek">DeepSeek 官方 (api.deepseek.com)</option>
+                        <option value="gemini"> Google Gemini 官方 (generativelanguage.googleapis.com)</option>
+                        <option value="openai"> OpenAI 官方 (api.openai.com)</option>
+                        <option value="anthropic"> Anthropic Claude (api.anthropic.com)</option>
+                        <option value="siliconflow"> 硅基流动 SiliconFlow (api.siliconflow.cn)</option>
+                        <option value="moonshot"> 月之暗面 Kimi (api.moonshot.cn)</option>
+                        <option value="ollama">Ollama 本地私有化 (localhost:11434)</option>
+                        <option value="custom"> 自定义 OpenAI 兼容端点...</option>
                     </select>
                 </div>
 
@@ -763,7 +768,7 @@
                             <polyline points="1 20 1 14 7 14"></polyline>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
-                        <span>🔄 在线探测并拉取模型列表 (Fetch Models)</span>
+                        <span> 在线探测并拉取模型列表 (Fetch Models)</span>
                     </button>
                     <div id="fetch-status-msg" class="hidden mt-2 p-2 rounded text-[11px] font-mono leading-relaxed"></div>
                 </div>
@@ -776,34 +781,34 @@
                 <!-- Custom 4-Tier Model Mapping (自定义4档模型绑定) -->
                 <div class="p-2.5 bg-dark-surface/80 border border-dark-border/80 rounded-lg space-y-2">
                     <div class="flex items-center justify-between pb-1 border-b border-dark-border/40">
-                        <span class="text-[11px] font-semibold text-zinc-300">🎯 快捷 4 档能力映射</span>
+                        <span class="text-[11px] font-semibold text-zinc-300">快捷 4 档能力映射</span>
                         <span class="text-[9px] text-dark-muted font-mono">DSH 映射</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="space-y-0.5">
                             <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
-                                <span>⚡ Flash (极速档)</span>
+                                <span>Flash (极速档)</span>
                             </label>
                             <select id="tier-map-flash" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
                             </select>
                         </div>
                         <div class="space-y-0.5">
                             <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
-                                <span>🛠️ Pro (主力档)</span>
+                                <span>Pro (主力档)</span>
                             </label>
                             <select id="tier-map-pro" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
                             </select>
                         </div>
                         <div class="space-y-0.5">
                             <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
-                                <span>🧠 Reasoner (深度推理)</span>
+                                <span>Reasoner (深度推理)</span>
                             </label>
                             <select id="tier-map-reasoner" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
                             </select>
                         </div>
                         <div class="space-y-0.5">
                             <label class="text-[10px] text-dark-muted font-medium flex items-center justify-between">
-                                <span>👁️ Vision (多模态档)</span>
+                                <span>Vision (多模态档)</span>
                             </label>
                             <select id="tier-map-vision" class="w-full bg-dark-bg border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-blue-500 focus:outline-none truncate">
                             </select>
@@ -822,7 +827,7 @@
                 <div class="pt-2">
                     <button id="btn-save-provider-config" type="button" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-xs transition shadow-lg flex items-center justify-center space-x-1.5">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        <span>💾 保存并应用当前供应商配置</span>
+                        <span> 保存并应用当前供应商配置</span>
                     </button>
                 </div>
             </div>
@@ -833,10 +838,10 @@
             <!-- Top Sub-Tab Switcher: Master System Prompt vs Master Response Suffix -->
             <div class="flex items-center space-x-1 p-1 bg-dark-bg rounded-lg border border-dark-border text-xs shrink-0">
                 <button id="btn-subtab-master-prompt" class="flex-1 py-1.5 px-2.5 rounded-md font-medium bg-blue-950/70 text-blue-400 border border-blue-800/50 shadow-sm transition flex items-center justify-center space-x-1.5">
-                    <span>🧠 最高系统提示词 (Prompt)</span>
+                    <span> 最高系统提示词 (Prompt)</span>
                 </button>
                 <button id="btn-subtab-master-suffix" class="flex-1 py-1.5 px-2.5 rounded-md font-medium text-dark-muted hover:text-dark-heading hover:bg-dark-hover transition flex items-center justify-center space-x-1.5">
-                    <span>💬 最高回答词 (Response Suffix)</span>
+                    <span> 最高回答词 (Response Suffix)</span>
                 </button>
             </div>
 
@@ -849,8 +854,8 @@
                         <span class="text-xs font-semibold text-dark-heading font-mono">MASTER_SYSTEM_PROMPT.md</span>
                     </div>
                     <div class="flex items-center space-x-1.5 bg-dark-bg p-0.5 rounded border border-dark-border text-[10px]">
-                        <button id="btn-prompt-mode-edit" class="px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition">📝 编辑源码</button>
-                        <button id="btn-prompt-mode-preview" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition">👁️ 实际透视预览</button>
+                        <button id="btn-prompt-mode-edit" class="px-2 py-0.5 rounded font-medium bg-blue-950/60 text-blue-400 border border-blue-800/40 transition"> 编辑源码</button>
+                        <button id="btn-prompt-mode-preview" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition"> 实际透视预览</button>
                     </div>
                 </div>
 
@@ -861,7 +866,7 @@
                         <div class="flex items-center space-x-2 relative">
                             <!-- 覆盖已有预设二级菜单按钮 -->
                             <button id="btn-overwrite-preset-toggle" class="text-[10px] text-amber-400 hover:text-amber-300 font-mono flex items-center space-x-1 px-1.5 py-0.5 rounded bg-dark-bg border border-amber-900/60 hover:border-amber-500/80 transition" title="将当前编辑的内容覆盖保存到已有的预设中">
-                                <span>🔄 覆盖已有预设</span>
+                                <span> 覆盖已有预设</span>
                                 <span class="text-[8px]">▼</span>
                             </button>
                             <!-- 二级弹出菜单 -->
@@ -935,8 +940,8 @@
                         <span class="text-xs font-semibold text-dark-heading font-mono">MASTER_RESPONSE_SUFFIX.md</span>
                     </div>
                     <div class="flex items-center space-x-1 bg-dark-bg p-0.5 rounded border border-dark-border text-[10px]">
-                        <button id="btn-suffix-mode-fixed" class="px-2 py-0.5 rounded font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 transition">📌 固定预设模式</button>
-                        <button id="btn-suffix-mode-random" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition">🎲 随机号池模式 (Pool)</button>
+                        <button id="btn-suffix-mode-fixed" class="px-2 py-0.5 rounded font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 transition"> 固定预设模式</button>
+                        <button id="btn-suffix-mode-random" class="px-2 py-0.5 rounded font-medium text-dark-muted hover:text-dark-heading transition"> 随机号池模式 (Pool)</button>
                     </div>
                 </div>
 
@@ -947,7 +952,7 @@
                         <div class="flex items-center space-x-2 relative">
                             <!-- 覆盖已有预设二级菜单按钮 -->
                             <button id="btn-overwrite-suffix-toggle" class="text-[10px] text-amber-400 hover:text-amber-300 font-mono flex items-center space-x-1 px-1.5 py-0.5 rounded bg-dark-bg border border-amber-900/60 hover:border-amber-500/80 transition" title="覆盖保存到已有的回答词预设">
-                                <span>🔄 覆盖预设</span>
+                                <span> 覆盖预设</span>
                                 <span class="text-[8px]">▼</span>
                             </button>
                             <!-- 二级弹出菜单 -->
@@ -1026,12 +1031,12 @@
             <div id="container-create-skill-form" class="hidden p-3 bg-dark-bg border border-purple-500/40 rounded-xl space-y-2 text-xs">
                 <div class="flex items-center justify-between border-b border-dark-border pb-1">
                     <span class="font-semibold text-purple-300">新建自定义 Skill 插件</span>
-                    <button id="btn-cancel-create-skill" class="text-dark-muted hover:text-dark-heading">✕</button>
+                    <button id="btn-cancel-create-skill" class="text-dark-muted hover:text-dark-heading"></button>
                 </div>
                 <input id="new-skill-name" type="text" placeholder="Skill 名称 (如 ctf-crypto-solver)" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs font-mono text-dark-heading focus:border-purple-500 focus:outline-none">
                 <input id="new-skill-desc" type="text" placeholder="技能简要说明 (何时触发该技能)" class="w-full bg-dark-surface border border-dark-border rounded p-1.5 text-xs text-dark-heading focus:border-purple-500 focus:outline-none">
                 <textarea id="new-skill-prompt" class="w-full h-24 bg-dark-surface border border-dark-border rounded p-2 text-xs font-mono text-dark-heading focus:border-purple-500 focus:outline-none resize-none" placeholder="写入 SKILL.md 核心指令与 Prompt 模版..."></textarea>
-                <button id="btn-submit-create-skill" class="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded font-medium text-xs transition">💾 保存并载入 Skill</button>
+                <button id="btn-submit-create-skill" class="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded font-medium text-xs transition"> 保存并载入 Skill</button>
             </div>
         </div>
 
@@ -1068,7 +1073,7 @@
             <div class="pt-1 border-t border-dark-border">
                 <button id="btn-save-mcp-config" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium text-xs transition shadow-lg flex items-center justify-center space-x-1.5">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                    <span>💾 保存配置并热重载 MCP 服务</span>
+                    <span> 保存配置并热重载 MCP 服务</span>
                 </button>
             </div>
         </div>
@@ -1091,7 +1096,7 @@
     <!-- Context Menu for Messages (上下文引用与消息操作右键菜单) -->
     <div id="message-context-menu" class="hidden fixed z-50 bg-dark-surface/95 backdrop-blur-md border border-dark-border rounded-xl shadow-2xl p-1.5 text-xs font-sans text-zinc-300 w-52 select-none">
         <div id="ctx-menu-header" class="px-2.5 py-1 text-[10px] font-mono text-zinc-500 border-b border-dark-border/60 mb-1 flex items-center justify-between">
-            <span id="ctx-role-title">💬 消息操作</span>
+            <span id="ctx-role-title"> 消息操作</span>
             <span id="ctx-selection-status" class="text-blue-400 font-semibold hidden text-[9px]">已选中文本</span>
         </div>
         <button id="ctx-quote-selection" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white flex items-center space-x-2 text-blue-300 font-medium transition hidden">
@@ -1115,7 +1120,7 @@
     <!-- Floating Quick Selection Quote Pill (选中文字浮动快捷引用胶囊) -->
     <div id="floating-quote-pill" class="hidden fixed z-50 bg-blue-600 hover:bg-blue-500 text-white font-medium px-2.5 py-1 rounded-full shadow-2xl flex items-center space-x-1.5 text-[11px] cursor-pointer select-none transition transform -translate-x-1/2 -translate-y-full hover:scale-105 active:scale-95">
         <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h4c0 4-2 6-5 6v2z"></path></svg>
-        <span>💬 引用选中</span>
+        <span> 引用选中</span>
     </div>
 
 
@@ -1285,6 +1290,7 @@
 
         // Provider & Engine Settings Elements
         const headerProviderSelect = document.getElementById('header-provider-select');
+        const btnHeaderFetchModels = document.getElementById('btn-header-fetch-models');
         const settingsProviderPreset = document.getElementById('settings-provider-preset');
         const settingsProviderId = document.getElementById('settings-provider-id');
         const settingsProviderName = document.getElementById('settings-provider-name');
@@ -1466,7 +1472,7 @@
                     if (settingsProviderName) settingsProviderName.value = tmpl.name || key;
                     if (settingsBaseUrl) settingsBaseUrl.value = tmpl.baseUrl;
                     if (settingsModelsInput) settingsModelsInput.value = (tmpl.models || []).join(', ');
-                    if (formProviderTitle) formProviderTitle.textContent = `⚙️ 配置 / 接入供应商: ${tmpl.name}`;
+                    if (formProviderTitle) formProviderTitle.textContent = ` 配置 / 接入供应商: ${tmpl.name}`;
                     populateModelSelects(tmpl.models, tmpl.pro || tmpl.models[0]);
                     populateTierMapDropdowns(tmpl.models, {
                         flash: tmpl.flash,
@@ -1478,7 +1484,7 @@
                     if (settingsProviderId) settingsProviderId.value = 'custom';
                     if (settingsProviderName) settingsProviderName.value = '自定义代理 / 上游';
                     if (settingsBaseUrl) settingsBaseUrl.value = 'http://localhost:8000/v1';
-                    if (formProviderTitle) formProviderTitle.textContent = '⚙️ 配置自定义 OpenAI 兼容上游';
+                    if (formProviderTitle) formProviderTitle.textContent = ' 配置自定义 OpenAI 兼容上游';
                 }
             });
         }
@@ -1987,10 +1993,10 @@
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-1.5 font-mono text-xs font-semibold text-purple-300">
-                            <span>🧩</span>
+                            <span></span>
                             <span>${escapeHtml(sk.name)}</span>
                         </div>
-                        <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950/40 text-emerald-400 border border-emerald-800/40">🟢 就绪</span>
+                        <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950/40 text-emerald-400 border border-emerald-800/40"> 就绪</span>
                     </div>
                     <p class="text-[11px] text-zinc-400 leading-snug line-clamp-2">${escapeHtml(sk.description || '无详细说明')}</p>
                     <div class="flex items-center justify-between text-[10px] text-dark-muted pt-1 border-t border-dark-border/40 font-mono">
@@ -2116,7 +2122,7 @@
                     btnSaveMcpConfig.disabled = false;
                     btnSaveMcpConfig.innerHTML = `
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        <span>💾 保存配置并热重载 MCP 服务</span>
+                        <span> 保存配置并热重载 MCP 服务</span>
                     `;
                 }
             });
@@ -2331,6 +2337,15 @@
                     activeProviderGlobal = data.active_provider || 'deepseek';
                     renderProvidersCards(configuredProvidersList, activeProviderGlobal);
                     renderHeaderProviderDropdown(configuredProvidersList, activeProviderGlobal);
+
+                    const activeP = configuredProvidersList.find(p => p.id === activeProviderGlobal) || configuredProvidersList[0];
+                    if (activeP && activeP.models && activeP.models.length > 0) {
+                        const savedModel = localStorage.getItem('omni_selected_model');
+                        const defaultM = (savedModel && activeP.models.includes(savedModel)) ? savedModel : (activeP.default_model || activeP.models[0]);
+                        populateModelSelects(activeP.models, defaultM);
+                        populateTierMapDropdowns(activeP.models, {});
+                        handleDropdownModelChange(defaultM);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load providers list:', err);
@@ -2343,7 +2358,7 @@
             providers.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                opt.textContent = `${p.id === activeId ? '● ' : ''}${p.name || p.id}`;
+                opt.textContent = `${p.name || p.id}`;
                 if (p.id === activeId) opt.selected = true;
                 headerProviderSelect.appendChild(opt);
             });
@@ -2378,8 +2393,8 @@
                         </div>
                         <div class="flex items-center space-x-1 shrink-0">
                             ${isActive 
-                                ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/50">● 使用中</span>'
-                                : `<button data-activate-id="${p.id}" class="btn-activate-provider px-2 py-0.5 rounded text-[10px] font-medium bg-blue-950/50 hover:bg-blue-900 text-blue-300 border border-blue-800 transition">⚡ 切换</button>`
+                                ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-700/50">使用中</span>'
+                                : `<button data-activate-id="${p.id}" class="btn-activate-provider px-2 py-0.5 rounded text-[10px] font-medium bg-blue-950/50 hover:bg-blue-900 text-blue-300 border border-blue-800 transition">切换</button>`
                             }
                             <button data-edit-id="${p.id}" class="btn-edit-provider p-1 rounded hover:bg-dark-hover text-zinc-400 hover:text-white transition" title="编辑该供应商配置">
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -2426,7 +2441,7 @@
             if (settingsApiKey) settingsApiKey.value = '';
             if (keyStatusIndicator) keyStatusIndicator.textContent = `已配置 (${p.masked_key})`;
             if (settingsModelsInput) settingsModelsInput.value = (p.models || []).join(', ');
-            if (formProviderTitle) formProviderTitle.textContent = `⚙️ 编辑供应商: ${p.name}`;
+            if (formProviderTitle) formProviderTitle.textContent = `编辑供应商: ${p.name}`;
             if (settingsProviderPreset) {
                 if (providerTemplates[p.id]) {
                     settingsProviderPreset.value = p.id;
@@ -2450,8 +2465,10 @@
                     await loadProvidersList();
                     const targetP = configuredProvidersList.find(x => x.id === providerId);
                     if (targetP && targetP.models && targetP.models.length > 0) {
-                        populateModelSelects(targetP.models, targetP.default_model || targetP.models[0]);
+                        const defaultM = targetP.default_model || targetP.models[0];
+                        populateModelSelects(targetP.models, defaultM);
                         populateTierMapDropdowns(targetP.models, {});
+                        handleDropdownModelChange(defaultM);
                     }
                 }
             } catch (err) {
@@ -2466,7 +2483,65 @@
             });
         }
 
-        // Test & Fetch Models API
+        // Top Header Quick Fetch Models Listener
+        if (btnHeaderFetchModels) {
+            btnHeaderFetchModels.addEventListener('click', async () => {
+                const currentProviderId = (headerProviderSelect ? headerProviderSelect.value : activeProviderGlobal) || 'deepseek';
+                const targetP = configuredProvidersList.find(x => x.id === currentProviderId) || { id: currentProviderId, base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/' };
+                
+                btnHeaderFetchModels.disabled = true;
+                btnHeaderFetchModels.innerHTML = `
+                    <svg class="w-3 h-3 animate-spin text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
+                    </svg>
+                    <span class="text-blue-400">拉取中...</span>
+                `;
+
+                try {
+                    const res = await fetch('/api/providers/fetch-models', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            provider_id: currentProviderId,
+                            base_url: targetP.base_url || '',
+                            api_key: ''
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success' && data.models && data.models.length > 0) {
+                        // 1. 保存到后台持久化
+                        await fetch('/api/providers', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                provider_id: currentProviderId,
+                                name: targetP.name || currentProviderId,
+                                base_url: targetP.base_url,
+                                models: data.models,
+                                default_model: data.models[0]
+                            })
+                        });
+
+                        // 2. 重新加载供应商列表并刷新 UI
+                        await loadProvidersList();
+                        populateModelSelects(data.models, data.models[0]);
+                        populateTierMapDropdowns(data.models, {});
+                        handleDropdownModelChange(data.models[0]);
+                    }
+                } catch (e) {
+                    console.error('Fetch models failed:', e);
+                } finally {
+                    btnHeaderFetchModels.disabled = false;
+                    btnHeaderFetchModels.innerHTML = `
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                        <span class="hidden xl:inline">拉取最新模型</span>
+                    `;
+                }
+            });
+        }
+
+        // Test & Fetch Models API (Settings Drawer)
         btnTestFetchModels.addEventListener('click', async () => {
             btnTestFetchModels.disabled = true;
             btnTestFetchModels.innerHTML = `
@@ -2499,6 +2574,7 @@
                         settingsModelsInput.value = data.models.join(', ');
                         populateModelSelects(data.models, data.models[0]);
                         populateTierMapDropdowns(data.models, {});
+                        handleDropdownModelChange(data.models[0]);
                     }
                 } else {
                     fetchStatusMsg.className = 'mt-2 p-2 rounded text-[11px] font-mono bg-red-950/40 border border-red-800/50 text-red-300';
@@ -2515,7 +2591,7 @@
                         <polyline points="1 20 1 14 7 14"></polyline>
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
-                    <span>🔄 在线探测并拉取模型列表 (Fetch Models)</span>
+                    <span> 在线探测并拉取模型列表 (Fetch Models)</span>
                 `;
             }
         });
@@ -2544,22 +2620,22 @@
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    btnSaveProviderConfig.textContent = '✅ 已成功保存并同步！';
+                    btnSaveProviderConfig.textContent = ' 已成功保存并同步！';
                     await loadProvidersList();
                     setTimeout(() => {
                         btnSaveProviderConfig.disabled = false;
-                        btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
+                        btnSaveProviderConfig.textContent = ' 保存并应用当前供应商配置';
                     }, 1500);
                 } else {
                     const err = await res.json();
                     alert('保存失败: ' + (err.detail || '未知错误'));
                     btnSaveProviderConfig.disabled = false;
-                    btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
+                    btnSaveProviderConfig.textContent = ' 保存并应用当前供应商配置';
                 }
             } catch (err) {
                 alert('保存失败: ' + err.message);
                 btnSaveProviderConfig.disabled = false;
-                btnSaveProviderConfig.textContent = '💾 保存并应用当前供应商配置';
+                btnSaveProviderConfig.textContent = ' 保存并应用当前供应商配置';
             }
         });
 
@@ -2611,10 +2687,10 @@
                 activePresetName = matched.name;
                 activePresetRawContent = matched.content;
                 activePresetBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/60 border border-emerald-500/80 text-emerald-400 transition shadow-sm';
-                activePresetBadge.textContent = `⭐ ${matched.name} (已激活)`;
+                activePresetBadge.textContent = ` ${matched.name} (已激活)`;
             } else {
                 activePresetBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-amber-950/60 border border-amber-500/80 text-amber-400 transition shadow-sm';
-                activePresetBadge.textContent = '⚡ 自定义 (已修改/未存)';
+                activePresetBadge.textContent = ' 自定义 (已修改/未存)';
             }
         }
 
@@ -2753,7 +2829,7 @@
                 const itemBtn = document.createElement('button');
                 itemBtn.className = 'w-full text-left p-1.5 rounded hover:bg-dark-hover text-xs font-mono text-dark-text hover:text-amber-400 transition flex items-center justify-between group';
                 itemBtn.innerHTML = `
-                    <span class="truncate">⭐ ${p.name}</span>
+                    <span class="truncate"> ${p.name}</span>
                     <span class="text-[9px] text-dark-muted font-mono ml-1">${(p.content || '').length}c</span>
                 `;
                 itemBtn.addEventListener('click', async (e) => {
@@ -2809,7 +2885,7 @@
             if (presets.length === 0) {
                 presetCardGallery.innerHTML = `
                     <div class="col-span-2 p-3 text-center text-dark-muted text-xs font-sans">
-                        💡 暂无自定义预设。在下方编辑框写好提示词后，点击右上角【+ 存为新预设】即可在此展示并一键切换。
+                         暂无自定义预设。在下方编辑框写好提示词后，点击右上角【+ 存为新预设】即可在此展示并一键切换。
                     </div>
                 `;
                 return;
@@ -2826,7 +2902,7 @@
                 card.innerHTML = `
                     <div class="flex-1 min-w-0 pr-2" title="点击载入并立即 100% 激活生效">
                         <div class="flex items-center space-x-1.5 font-medium text-xs text-dark-heading group-hover:text-emerald-400 transition truncate">
-                            <span>⭐</span>
+                            <span></span>
                             <span class="truncate">${p.name}</span>
                         </div>
                         <div class="text-[10px] text-dark-muted font-mono mt-0.5">${(p.content || '').length} chars</div>
@@ -2953,15 +3029,15 @@
             if (suffixState.mode === 'random') {
                 const poolCount = suffixState.enabled_pool_ids ? suffixState.enabled_pool_ids.length : suffixState.presets.length;
                 activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-purple-950/60 border border-purple-500/80 text-purple-400 transition shadow-sm';
-                activeSuffixBadge.textContent = `🎲 随机号池中 (${poolCount} 个预设轮换)`;
+                activeSuffixBadge.textContent = ` 随机号池中 (${poolCount} 个预设轮换)`;
             } else {
                 const activeP = suffixState.presets.find(p => p.id === suffixState.active_preset_id);
                 if (activeP) {
                     activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-emerald-950/60 border border-emerald-500/80 text-emerald-400 transition shadow-sm';
-                    activeSuffixBadge.textContent = `📌 固定生效: ${activeP.name}`;
+                    activeSuffixBadge.textContent = ` 固定生效: ${activeP.name}`;
                 } else if (masterSuffixTextarea.value.trim()) {
                     activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-amber-950/60 border border-amber-500/80 text-amber-400 transition shadow-sm';
-                    activeSuffixBadge.textContent = `⚡ 自定义临时回答词`;
+                    activeSuffixBadge.textContent = ` 自定义临时回答词`;
                 } else {
                     activeSuffixBadge.className = 'px-2 py-0.5 rounded font-mono font-medium bg-dark-bg border border-dark-border text-dark-muted transition';
                     activeSuffixBadge.textContent = `未设置 (留白)`;
@@ -2974,7 +3050,7 @@
             if (suffixState.presets.length === 0) {
                 suffixPresetGallery.innerHTML = `
                     <div class="col-span-2 p-3 text-center text-dark-muted text-xs font-sans">
-                        💡 暂无回答词预设。在下方编辑框填写后，点击右上角【+ 存为新预设】即可加入号池。
+                         暂无回答词预设。在下方编辑框填写后，点击右上角【+ 存为新预设】即可加入号池。
                     </div>
                 `;
                 return;
@@ -3007,7 +3083,7 @@
                         ${checkboxHtml}
                         <div class="flex-1 min-w-0 cursor-pointer flex flex-col justify-center" title="点击载入内容并在固定模式下激活">
                             <div class="flex items-center space-x-1 font-medium text-xs text-dark-heading group-hover:text-emerald-400 transition truncate">
-                                <span>💬</span>
+                                <span></span>
                                 <span class="truncate">${p.name}</span>
                             </div>
                             <div class="text-[10px] text-dark-muted font-mono mt-0.5">${(p.content || '').length} chars</div>
@@ -3302,10 +3378,10 @@
         }
 
         const tierModelMap = {
-            flash: { model: 'deepseek-v4-flash', icon: '⚡', name: 'deepseek-v4-flash' },
-            pro: { model: 'deepseek-v4-pro', icon: '🛠️', name: 'deepseek-v4-pro' },
-            reasoner: { model: 'deepseek-reasoner', icon: '🧠', name: 'deepseek-reasoner' },
-            vision: { model: 'deepseek-v4-flash-vision-exp', icon: '👁️', name: 'deepseek-v4-vision' }
+            flash: { model: 'deepseek-v4-flash', icon: '', name: 'deepseek-v4-flash' },
+            pro: { model: 'deepseek-v4-pro', icon: '', name: 'deepseek-v4-pro' },
+            reasoner: { model: 'deepseek-reasoner', icon: '', name: 'deepseek-reasoner' },
+            vision: { model: 'deepseek-v4-flash-vision-exp', icon: '', name: 'deepseek-v4-vision' }
         };
 
         function getTierFromModel(modelName) {
@@ -3365,11 +3441,22 @@
         function setModelTierUI(tier, specificModel = null) {
             currentTier = tier;
             const tInfo = tierModelMap[tier] || tierModelMap['pro'];
-            const targetModel = specificModel || tInfo.model;
+            let targetModel = specificModel;
+            if (!targetModel) {
+                targetModel = tInfo.model;
+                if (headerModelSelect && headerModelSelect.options.length > 0) {
+                    const hasOption = Array.from(headerModelSelect.options).some(o => o.value === targetModel);
+                    if (!hasOption) {
+                        targetModel = headerModelSelect.options[0].value;
+                    }
+                }
+            }
             
             // 1. 同步底部胶囊与弹层
-            document.getElementById('pill-model-icon').textContent = tInfo.icon;
-            document.getElementById('pill-model-name').textContent = targetModel;
+            const pillIcon = document.getElementById('pill-model-icon');
+            if (pillIcon) pillIcon.textContent = '';
+            const pillName = document.getElementById('pill-model-name');
+            if (pillName) pillName.textContent = targetModel;
 
             document.querySelectorAll('.pop-tier-btn').forEach(btn => {
                 if (btn.dataset.tier === tier) {
@@ -3391,8 +3478,22 @@
             });
 
             // 3. 同步顶部与设置抽屉内的下拉选单
-            if (headerModelSelect) headerModelSelect.value = targetModel;
-            if (settingsModelSelect) settingsModelSelect.value = targetModel;
+            if (headerModelSelect) {
+                if (Array.from(headerModelSelect.options).some(o => o.value === targetModel)) {
+                    headerModelSelect.value = targetModel;
+                } else if (headerModelSelect.options.length > 0) {
+                    headerModelSelect.selectedIndex = 0;
+                    targetModel = headerModelSelect.value;
+                    if (pillName) pillName.textContent = targetModel;
+                }
+            }
+            if (settingsModelSelect) {
+                if (Array.from(settingsModelSelect.options).some(o => o.value === targetModel)) {
+                    settingsModelSelect.value = targetModel;
+                } else if (settingsModelSelect.options.length > 0) {
+                    settingsModelSelect.selectedIndex = 0;
+                }
+            }
 
             localStorage.setItem('omni_selected_tier', tier);
             localStorage.setItem('omni_selected_model', targetModel);
@@ -3539,17 +3640,25 @@
         });
 
         function populateModelSelects(models, defaultModel) {
+            if (!headerModelSelect || !settingsModelSelect) return;
+            const list = Array.isArray(models) ? models : [];
+            const targetModel = defaultModel || list[0] || '';
             headerModelSelect.innerHTML = '';
             settingsModelSelect.innerHTML = '';
-            models.forEach(m => {
-                const isSelected = m === defaultModel;
+            list.forEach(m => {
+                const isSelected = (m === targetModel);
                 headerModelSelect.add(new Option(m, m, isSelected, isSelected));
                 settingsModelSelect.add(new Option(m, m, isSelected, isSelected));
             });
 
+            if (targetModel) {
+                headerModelSelect.value = targetModel;
+                settingsModelSelect.value = targetModel;
+            }
+
             // 还原持久化档位与推理强度与权限
             const savedTier = localStorage.getItem('omni_selected_tier') || 'pro';
-            setModelTierUI(savedTier);
+            setModelTierUI(savedTier, targetModel);
             const savedEffort = localStorage.getItem('omni_reasoning_effort') || 'medium';
             setReasoningEffortUI(savedEffort);
             const savedPerm = localStorage.getItem('omni_permission_mode') || 'unrestricted';
@@ -3691,15 +3800,15 @@
 
         // 斜杠指令定义表
         let registeredSlashCommands = [
-            { command: '/goal', title: '🎯 长程深度攻坚目标 (Goal Autonomy)', syntax: '/goal <目标>', desc: '设定自主长程攻坚目标，多步迭代自纠偏，不达目的誓不罢休。' },
-            { command: '/grill-me', title: '🔥 交互式对齐盘问 (Grill-Me Alignment)', syntax: '/grill-me [议题]', desc: '架构师多轮向用户追问厘清未说明的技术细节与边界决策。' },
-            { command: '/schedule', title: '⏰ 定时/周期巡检任务 (Schedule Cron)', syntax: '/schedule <秒/cron> <任务>', desc: '调度后台一次性定时器或周期性 Cron 自动化任务。' },
-            { command: '/browser', title: '🌐 Chrome DevTools 自动化浏览 (Browser)', syntax: '/browser <URL/目标>', desc: '调用 Chrome DevTools MCP 抓包、DOM 提取与自动化操作。' },
-            { command: '/teamwork-preview', title: '👥 多智能体集群演练 (Swarm Teamwork)', syntax: '/teamwork-preview <项目>', desc: '派发架构师、逆向员、测试员协同攻关复杂工程。' },
-            { command: '/learn', title: '🧠 经验模式持久化 (Persistent Learning)', syntax: '/learn <经验/规则>', desc: '将重要避坑经验直接写入 persistent_memory.txt 永久记忆。' },
-            { command: '/rollback', title: '⏪ 状态时空回退 (Rollback)', syntax: '/rollback [编号]', desc: '回退到指定轮次并裁剪多余上下文。' },
-            { command: '/clear', title: '🧹 清空控制台 (Clear Console)', syntax: '/clear', desc: '清空当前控制台显示并重置流式会话。' },
-            { command: '/help', title: '❓ 斜杠指令指南 (Commands Help)', syntax: '/help', desc: '查看全部支持的斜杠快捷指令列表与指南。' }
+            { command: '/goal', title: ' 长程深度攻坚目标 (Goal Autonomy)', syntax: '/goal <目标>', desc: '设定自主长程攻坚目标，多步迭代自纠偏，不达目的誓不罢休。' },
+            { command: '/grill-me', title: ' 交互式对齐盘问 (Grill-Me Alignment)', syntax: '/grill-me [议题]', desc: '架构师多轮向用户追问厘清未说明的技术细节与边界决策。' },
+            { command: '/schedule', title: ' 定时/周期巡检任务 (Schedule Cron)', syntax: '/schedule <秒/cron> <任务>', desc: '调度后台一次性定时器或周期性 Cron 自动化任务。' },
+            { command: '/browser', title: ' Chrome DevTools 自动化浏览 (Browser)', syntax: '/browser <URL/目标>', desc: '调用 Chrome DevTools MCP 抓包、DOM 提取与自动化操作。' },
+            { command: '/teamwork-preview', title: ' 多智能体集群演练 (Swarm Teamwork)', syntax: '/teamwork-preview <项目>', desc: '派发架构师、逆向员、测试员协同攻关复杂工程。' },
+            { command: '/learn', title: ' 经验模式持久化 (Persistent Learning)', syntax: '/learn <经验/规则>', desc: '将重要避坑经验直接写入 persistent_memory.txt 永久记忆。' },
+            { command: '/rollback', title: ' 状态时空回退 (Rollback)', syntax: '/rollback [编号]', desc: '回退到指定轮次并裁剪多余上下文。' },
+            { command: '/clear', title: ' 清空控制台 (Clear Console)', syntax: '/clear', desc: '清空当前控制台显示并重置流式会话。' },
+            { command: '/help', title: ' 斜杠指令指南 (Commands Help)', syntax: '/help', desc: '查看全部支持的斜杠快捷指令列表与指南。' }
         ];
 
         let selectedSlashIndex = 0;
@@ -3858,9 +3967,9 @@
                 btnAbortTask?.classList.remove('hidden');
                 btnHeaderAbort?.classList.remove('hidden');
                 btnSubmit.className = 'w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white flex items-center justify-center shadow-lg transition animate-pulse';
-                btnSubmit.title = '⚡ 实时穿插追问 / 纠偏 (Enter)';
+                btnSubmit.title = ' 实时穿插追问 / 纠偏 (Enter)';
                 btnSubmit.innerHTML = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
-                promptInput.placeholder = '⚡ Agent 执行中... 输入追问或纠偏指令 (按 Enter 实时穿插发送)';
+                promptInput.placeholder = ' Agent 执行中... 输入追问或纠偏指令 (按 Enter 实时穿插发送)';
                 statusDot.className = 'w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping';
                 statusText.textContent = 'Agent Running...';
             } else {
@@ -3893,7 +4002,7 @@
                 clearInterval(activeTimerInterval);
                 activeTimerInterval = null;
             }
-            appendAbortCard('🛑 任务已由用户紧急中止 (Emergency Stopped by User)');
+            appendAbortCard(' 任务已由用户紧急中止 (Emergency Stopped by User)');
             setRunningState(false);
             statusDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500';
             statusText.textContent = 'Aborted';
@@ -4065,7 +4174,7 @@
                                     currentAnswerContainer = null;
                                     currentAnswerText = '';
                                 }
-                                appendRefusalInterceptedPill(ev.message || `⚡ 毫秒级熔断模型拒绝倾向，已自动叠加第 ${ev.attempt || 1} 阶强力豁免指令重发...`);
+                                appendRefusalInterceptedPill(ev.message || ` 毫秒级熔断模型拒绝倾向，已自动叠加第 ${ev.attempt || 1} 阶强力豁免指令重发...`);
                             } else if (ev.type === 'steer_injected') {
                                 // 穿插追问已被 Agent 处理
                                 console.log('Steer injected event:', ev.content);
@@ -4105,7 +4214,7 @@
                                     currentThoughtContainer = null;
                                 }
                                 currentAnswerContainer = null;
-                                appendAbortCard(`❌ 调用异常: ${ev.error || '请求大模型失败，请检查 API Key 或网络'}`);
+                                appendAbortCard(` 调用异常: ${ev.error || '请求大模型失败，请检查 API Key 或网络'}`);
                                 setRunningState(false);
                             } else if (ev.type === 'complete') {
                                 if (activeTimerInterval) {
@@ -4181,7 +4290,7 @@
         }
 
         // 急停卡片展示
-        function appendAbortCard(message = '🛑 任务已由用户紧急中止 (Emergency Stopped by User)。') {
+        function appendAbortCard(message = ' 任务已由用户紧急中止 (Emergency Stopped by User)。') {
             const div = document.createElement('div');
             div.className = 'p-3 rounded-lg bg-rose-950/40 border border-rose-600/60 text-rose-200 text-xs flex items-center space-x-2 shadow-sm font-mono';
             div.innerHTML = `
@@ -4197,7 +4306,7 @@
             const div = document.createElement('div');
             div.className = 'my-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/60 text-amber-300 text-xs font-mono flex items-center space-x-2 animate-pulse shadow-md';
             div.innerHTML = `
-                <span class="text-amber-400 flex-shrink-0 text-sm">🛡️</span>
+                <span class="text-amber-400 flex-shrink-0 text-sm"></span>
                 <span class="flex-1">${escapeHtml(message)}</span>
             `;
             timeline.appendChild(div);
@@ -4215,7 +4324,7 @@
             if (msgIndex !== null && activeSessionId) {
                 rollbackHtml = `
                     <button onclick="rollbackToStep(${msgIndex})" class="px-2 py-0.5 rounded bg-dark-surface border border-dark-border text-[10px] text-dark-muted hover:text-amber-400 hover:border-amber-500/50 flex items-center space-x-1 transition" title="回退到此步并裁剪清除后续所有交互">
-                        <span>⏪ 回退</span>
+                        <span> 回退</span>
                     </button>
                 `;
             }
@@ -4395,7 +4504,7 @@
             div.innerHTML = `
                 <div class="flex items-center space-x-2 text-blue-400">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    <span class="text-xs font-semibold uppercase tracking-wider">❓ Agent 决策提问 (请确认执行分支)</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider"> Agent 决策提问 (请确认执行分支)</span>
                 </div>
                 <div class="text-xs font-medium text-dark-heading leading-relaxed">${escapeHtml(ev.question)}</div>
                 <div class="space-y-1.5">${optInputs}</div>
@@ -4474,7 +4583,7 @@
                 if (t.status === 'completed') {
                     icon = `<svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
                     textClass = 'text-dark-text line-through opacity-75';
-                    statusBadge = '<span class="text-[10px] text-emerald-400 font-mono">✓ 已完成</span>';
+                    statusBadge = '<span class="text-[10px] text-emerald-400 font-mono"> 已完成</span>';
                 } else if (t.status === 'in_progress') {
                     icon = `<div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping flex-shrink-0"></div>`;
                     textClass = 'text-blue-400 font-medium';
@@ -4641,7 +4750,7 @@
 
             const statusBadge = div.querySelector('.tool-status-badge');
             statusBadge.className = 'text-[10px] text-emerald-400 font-mono';
-            statusBadge.textContent = '✓ Completed';
+            statusBadge.textContent = ' Completed';
 
             if (diffText) {
                 const diffBox = div.querySelector('.tool-diff-box');
@@ -4822,7 +4931,7 @@
                             // Show badge
                             const badge = document.createElement('span');
                             badge.className = 'ml-2 text-[10px] text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800 font-mono';
-                            badge.textContent = '✓ 已修改上下文';
+                            badge.textContent = ' 已修改上下文';
                             const titleBadge = headerBar.querySelector('.assistant-title-badge');
                             if (titleBadge) titleBadge.appendChild(badge);
                             setTimeout(() => { badge.remove(); }, 4000);
@@ -4877,7 +4986,7 @@
 
             // 格式化 Markdown 块引用
             const quotedLines = cleanText.split('\n').map(line => `> ${line}`).join('\n');
-            const quoteHeader = `> 💬 [引用 ${roleLabel}${isPartial ? '片段' : ''}]:\n`;
+            const quoteHeader = `>  [引用 ${roleLabel}${isPartial ? '片段' : ''}]:\n`;
             const fullQuote = `${quoteHeader}${quotedLines}\n\n`;
 
             if (promptInput) {
@@ -5011,7 +5120,7 @@
                 currentContextTarget.msgIndex = msgIndex;
                 currentContextTarget.triggerEditFn = triggerEditFn;
 
-                const roleLabel = role === 'user' ? '👤 用户提问' : '🤖 AI 回答';
+                const roleLabel = role === 'user' ? ' 用户提问' : ' AI 回答';
                 if (ctxRoleTitle) ctxRoleTitle.textContent = `${roleLabel} 操作`;
 
                 if (selectedStr) {
@@ -5047,7 +5156,7 @@
             if (isNetwork) {
                 tipHtml = `
                     <div class="pt-1.5 border-t border-red-800/40 text-[11px] text-amber-300 font-sans flex items-start space-x-1.5">
-                        <span>💡</span>
+                        <span></span>
                         <span><strong>网络排查提示：</strong>上游大模型 API 连接中断或超时。底层已配置 3 次自动重试。若依然出现，建议点击右上角【设置】检查 API Key 或 Base URL，或切换为 <code>deepseek-chat</code> / <code>siliconflow</code> 等厂商备用端点。</span>
                     </div>
                 `;
