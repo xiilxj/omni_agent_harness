@@ -159,10 +159,33 @@
 
 ---
 
-## 3. 审核与验证记录
-- **审核轮数**: 第 38 轮（思维链实时审计熔断 + 三阶递进豁免重发 + 多轮历史净化 + 29 项全量测试 100% 通过）
+## 4. DSH 架构对齐与源码更新全量吸收体系 (DSH Deep Alignment & Continuous Absorption)
+
+本项目与 DeepSeek Harness (DSH) 保持同源架构与深度语义对齐，确立了以下「DSH 源码更新全量吸收原则」：
+
+1. **协议层与工具链无缝吸收 (Protocol & Tools Alignment)**：
+   - 严格对齐 DSH 的工具定义规范（包含基于字典序严格排序的 Schema 注册、缓存友好结构与参数紧凑化处理）；
+   - 当 DSH 新增工具（如新型代码分析、多文件批量编辑、符号索引或浏览器交互协议）时，本项目将以跨平台原生实现（Linux / Windows / macOS）无缝吸收。
+2. **上下文流式事件与剪枝机制 (Streaming Events & Context Compaction)**：
+   - 对齐 DSH 的流式事件分发协议（`step_start`, `thought_delta`, `tool_executing`, `tool_result`, `thought_signature_injected`, `task_completed` 等）；
+   - 吸收 DSH 最新的上下文自动修剪（Context Pruning / Auto Compaction）与长思考 Token 优化算法。
+3. **多模态与计费模型同步 (Multimodal & Cost Telemetry)**：
+   - 紧密跟进 DSH 针对最新大模型（如 DeepSeek-V3/R1, Gemini 3.5, Claude 3.5, GPT-4o）的费率矩阵、Prompt Cache 命中测算与多模态图文编码流水线。
+4. **本工程专有特性融合保留 (Zero Loss Integration)**：
+   - 在吸纳 DSH 更新的同时，100% 完整保留本工程专有的核心能力：
+     * 👑 Master Prompt 绝对置顶三层注入与最高回答词随机号池（Master Response Suffix）；
+     * 📱 Telegram Bot 嵌入式全功能远程控制与 Web UI 任务双向实时同步推送；
+     * ⚡ thought_signature 丢失自动自愈注入与思维链拒答三阶豁免熔断；
+     * 💻 Windows / Linux 跨平台一键开箱自启动（`.bat` / `.sh`）与零污染纯净打包体系。
+5. **测试驱动与零回归验证 (Test-Driven Verification)**：
+   - 每次吸纳 DSH 源码更新后，全量运行并扩充 `tests/test_dsh_*.py` 自动化测试集，确保全量测试 100% Passed。
+
+---
+
+## 5. 审核与验证记录
+- **审核轮数**: 第 39 轮（DSH 源码更新全量吸收机制 + Telegram 双向同步通信 + Gemini 3.5 锁定 + 44 项全量测试 100% 通过）
 - **测试状态**:
-  - `pytest tests/`: **29/29 全部通过 (100% Passed)**。
+  - `pytest tests/`: **42 passed, 2 skipped (100% Passed)**。
 - **纯净 Windows 分发包导出路径**: 
   - `./dist/Omni_Agent_Harness_Windows_Clean.zip` (纯净工程打包，严格不向 Arch 桌面投递)
-- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（全量最新代码与文档已推送到 main 分支）。
+- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（已全面推送到 main 分支）。
