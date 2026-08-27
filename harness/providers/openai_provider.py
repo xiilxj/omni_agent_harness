@@ -45,6 +45,13 @@ class OpenAICompatibleProvider(BaseProvider):
             payload.append(item)
         return payload
 
+    def _format_model_for_upstream(self, model: str) -> str:
+        """针对 Google Gemini 官方 OpenAI 端点自动补充 models/ 前缀"""
+        if "generativelanguage.googleapis.com" in self.base_url:
+            if not model.startswith("models/"):
+                return f"models/{model}"
+        return model
+
     async def chat(
         self,
         messages: List[Message],
@@ -62,7 +69,7 @@ class OpenAICompatibleProvider(BaseProvider):
         }
 
         body: Dict[str, Any] = {
-            "model": model,
+            "model": self._format_model_for_upstream(model),
             "messages": self._convert_messages_to_payload(messages),
             "temperature": temperature,
             "stream": False
@@ -154,7 +161,7 @@ class OpenAICompatibleProvider(BaseProvider):
         }
 
         body: Dict[str, Any] = {
-            "model": model,
+            "model": self._format_model_for_upstream(model),
             "messages": self._convert_messages_to_payload(messages),
             "temperature": temperature,
             "stream": True,
