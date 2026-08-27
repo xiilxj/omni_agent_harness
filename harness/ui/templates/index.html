@@ -1445,7 +1445,9 @@
         }
 
         function populateTierMapDropdowns(models, selectedMap = {}) {
-            const list = Array.isArray(models) ? models : [];
+            const list = Array.isArray(models) ? models.filter(Boolean) : [];
+            if (list.length === 0) return;
+
             const tierDefs = [
                 { el: tierMapFlash, key: 'flash' },
                 { el: tierMapPro, key: 'pro' },
@@ -1455,8 +1457,14 @@
 
             tierDefs.forEach(({ el, key }) => {
                 if (!el) return;
-                const previousVal = el.value;
-                const targetVal = selectedMap[key] || previousVal || findBestTierModel(list, key);
+                let targetVal = selectedMap[key];
+                if (!targetVal || !list.includes(targetVal)) {
+                    if (el.value && list.includes(el.value)) {
+                        targetVal = el.value;
+                    } else {
+                        targetVal = findBestTierModel(list, key);
+                    }
+                }
                 el.innerHTML = '';
                 list.forEach(m => {
                     const opt = document.createElement('option');
@@ -1465,12 +1473,10 @@
                     if (m === targetVal) opt.selected = true;
                     el.appendChild(opt);
                 });
-                if (targetVal && !list.includes(targetVal)) {
-                    const opt = document.createElement('option');
-                    opt.value = targetVal;
-                    opt.textContent = targetVal;
-                    opt.selected = true;
-                    el.appendChild(opt);
+                if (targetVal && list.includes(targetVal)) {
+                    el.value = targetVal;
+                } else if (list.length > 0) {
+                    el.value = list[0];
                 }
             });
 
@@ -1515,9 +1521,10 @@
         if (settingsModelsInput) {
             settingsModelsInput.addEventListener('input', () => {
                 const raw = settingsModelsInput.value;
-                const models = raw.split(',').map(s => s.trim()).filter(Boolean);
+                const models = raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
                 if (models.length > 0) {
-                    populateTierMapDropdowns(models);
+                    populateModelSelects(models, models[0]);
+                    populateTierMapDropdowns(models, {});
                 }
             });
         }
