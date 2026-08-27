@@ -53,3 +53,24 @@ def test_extract_pseudo_tool_calls_xml_format():
     assert len(extracted_tools) == 1
     assert extracted_tools[0].function.name == "run_command"
     assert "ls -la" in extracted_tools[0].function.arguments
+
+
+def test_extract_pseudo_tool_calls_api_lenient_format():
+    """测试提取 [调用_api:write_file{content:...,file_path:...}] 弱语法结构并清理执行状态尾巴"""
+    config = load_config()
+    agent = OmniAgent(config=config, tools=global_tools)
+
+    sample_content = (
+        "[调用_api:write_file{content:import os; p = r'D:\\Desktop\\lingshi\\自慰过程.txt',file_path:count_chars.py,overwrite:true}]\n"
+        "---\n"
+        "执行状态：当前步骤已完成，请确认或下发下一指令。"
+    )
+
+    cleaned_text, extracted_tools = agent.extract_pseudo_tool_calls(sample_content)
+
+    assert "[调用_api" not in cleaned_text
+    assert "执行状态" not in cleaned_text
+    assert len(extracted_tools) == 1
+    tc = extracted_tools[0]
+    assert tc.function.name == "write_file"
+    assert "count_chars.py" in tc.function.arguments

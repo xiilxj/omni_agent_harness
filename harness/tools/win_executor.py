@@ -4,6 +4,7 @@ Windows PowerShell / CMD Executor
 """
 
 import asyncio
+import base64
 import os
 from typing import Optional
 
@@ -14,11 +15,13 @@ async def run_powershell_command(
     timeout: int = 120,
     max_output_length: int = 20000
 ) -> str:
-    """在 Windows 环境下执行 PowerShell 命令并返回结果"""
+    """在 Windows 环境下执行 PowerShell 命令并返回结果（采用 Base64 编码防止任何特殊字符与引号嵌套逃逸）"""
     working_dir = cwd or os.getcwd()
     try:
-        # 使用 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command
-        ps_cmd = f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{command}"'
+        # 使用 UTF-16LE 编码转为 Base64，通过 -EncodedCommand 安全无损执行任何复杂脚本
+        encoded_bytes = command.encode("utf-16le")
+        encoded_str = base64.b64encode(encoded_bytes).decode("ascii")
+        ps_cmd = f"powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand {encoded_str}"
         process = await asyncio.create_subprocess_shell(
             ps_cmd,
             stdout=asyncio.subprocess.PIPE,

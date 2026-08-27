@@ -129,8 +129,7 @@ class OmniAgent:
     def extract_pseudo_tool_calls(self, text: str) -> Tuple[str, List[ToolCall]]:
         """
         智能伪工具调用提取与文本分离器：
-        当大模型在 content 回答文本中输出 [调用工具 write_file 参数: {...}]、<tool_call> 或 Markdown 代码块伪调用时，
-        自动将其从自然语言回答中分离剥离，转化为真实结构化的 ToolCall 对象进行物理执行，确保文本留在回答区，工具在对应卡片中执行。
+        支持 [调用工具 write_file 参数: {...}]、[调用_api:write_file{...}]、<tool_call> 及弱 JSON 语法的智能提取与执行分离。
         """
         if not text or not text.strip():
             return text, []
@@ -138,9 +137,59 @@ class OmniAgent:
         extracted_tool_calls: List[ToolCall] = []
         cleaned_text = text
 
-        # 1. 匹配 [调用工具 tool_name 参数: {...}] 或 [Tool Call tool_name args: {...}]
+        def parse_lenient_args(raw: str) -> str:
+            raw_str = raw.strip()
+            # 1. 尝试标准 JSON 解析
+            try:
+                parsed = json.loads(raw_str)
+                return json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                pass
+
+            # 2. 尝试换行符转义修补
+            try:
+                fixed = re.sub(r'(?<!\\)\n', r'\\n', raw_str)
+                parsed = json.loads(fixed)
+                return json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                pass
+
+            # 3. 弱键值对提取（针对如 {content:...,file_path:count_chars.py,overwrite:true}）
+            content_inside = raw_str
+            if content_inside.startswith("{") and content_inside.endswith("}"):
+                content_inside = content_inside[1:-1].strip()
+
+            keys = ["file_path", "filepath", "path", "content", "command", "cwd", "overwrite", "query", "search_path", "url", "tool_name", "action"]
+            found_keys = []
+            for k in keys:
+                m_k = re.search(r"(?:^|[,，\s])" + re.escape(k) + r"\s*[:：]", content_inside)
+                if m_k:
+                    found_keys.append((m_k.start(), k, m_k.end()))
+
+            if found_keys:
+                found_keys.sort()
+                res_dict = {}
+                for idx, (start_pos, k, val_start) in enumerate(found_keys):
+                    if idx + 1 < len(found_keys):
+                        val_end = found_keys[idx + 1][0]
+                        val = content_inside[val_start:val_end].strip()
+                    else:
+                        val = content_inside[val_start:].strip()
+                    val = val.rstrip(",，").strip()
+                    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                        val = val[1:-1]
+                    elif val.lower() == "true":
+                        val = True
+                    elif val.lower() == "false":
+                        val = False
+                    res_dict[k] = val
+                return json.dumps(res_dict, ensure_ascii=False)
+
+            return raw_str
+
+        # 1. 匹配 [调用工具 tool_name 参数: {...}] 或 [调用_api:tool_name{...}]
         pattern_bracket = re.compile(
-            r"\[\s*(?:调用工具|Tool\s*Call|tool_call|工具)\s+([a-zA-Z0-9_\-]+)\s*(?:参数|args|parameters)?\s*[:：]\s*(\{[\s\S]*?\})\s*\]",
+            r"\[\s*(?:调用_api|调用api|调用工具|api|tool_call|tool|action)\s*[:：]?\s*([a-zA-Z0-9_\-]+)\s*(?:参数|args|parameters)?\s*[:：]?\s*(\{[\s\S]*?\})\s*\]",
             re.IGNORECASE
         )
 
@@ -148,18 +197,7 @@ class OmniAgent:
             full_match = match.group(0)
             tool_name = match.group(1).strip()
             raw_args = match.group(2).strip()
-            
-            args_str = raw_args
-            try:
-                parsed = json.loads(raw_args)
-                args_str = json.dumps(parsed, ensure_ascii=False)
-            except Exception:
-                try:
-                    fixed = re.sub(r'(?<!\\)\n', r'\\n', raw_args)
-                    parsed = json.loads(fixed)
-                    args_str = json.dumps(parsed, ensure_ascii=False)
-                except Exception:
-                    pass
+            args_str = parse_lenient_args(raw_args)
 
             extracted_tool_calls.append(
                 ToolCall(
@@ -191,6 +229,10 @@ class OmniAgent:
                     cleaned_text = cleaned_text.replace(full_match, "").strip()
             except Exception:
                 pass
+
+        # 3. 清理伪工具伴随的末尾冗余模板语句
+        cleaned_text = re.sub(r"(?:^|\n)\s*[-—]{3,}\s*(?:\n|$)", "\n", cleaned_text)
+        cleaned_text = re.sub(r"执行状态\s*[:：]\s*当前步骤已完成[，,。]?\s*(?:请确认或下发下一指令[。]?)?", "", cleaned_text).strip()
 
         return cleaned_text, extracted_tool_calls
 
