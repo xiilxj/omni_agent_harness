@@ -55,7 +55,6 @@ def check_and_fix_dependencies(install_only: bool = False):
         import jinja2
         import httpx
         import yaml
-        import dotenv
     except (ImportError, Exception) as e:
         need_install = True
         print(f"[提示] 检测到依赖库未安装或动态链接库需要配置 ({e})，正在自动安装修复...")
