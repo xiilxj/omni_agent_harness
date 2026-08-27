@@ -5,6 +5,13 @@
 *.key
 *.pem
 
+# 用户私有系统提示词与最高回答词（绝对隐私隔离）
+MASTER_SYSTEM_PROMPT.md
+MASTER_RESPONSE_SUFFIX.md
+.user_prompts_backup/
+.omni_uploads/
+*.user_backup*
+
 # Python 缓存与构建产物
 __pycache__/
 *.py[cod]
