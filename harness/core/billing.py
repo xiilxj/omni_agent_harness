@@ -7,6 +7,8 @@ from typing import Any, Dict
 
 # 官方标准费率 (单位: 元/百万 Tokens, CNY / 1M tokens)
 MODEL_PRICING_RMB_PER_M = {
+    "gemini": {"input_miss": 0.0, "input_hit": 0.0, "output": 0.0, "currency": "¥", "is_free": True, "note": "Google 官方免费/独立配额"},
+    "gemma": {"input_miss": 0.0, "input_hit": 0.0, "output": 0.0, "currency": "¥", "is_free": True, "note": "Google 官方开源免费配额"},
     "deepseek-chat": {"input_miss": 1.0, "input_hit": 0.1, "output": 2.0, "currency": "¥"},
     "deepseek-v3": {"input_miss": 1.0, "input_hit": 0.1, "output": 2.0, "currency": "¥"},
     "deepseek-v4-pro": {"input_miss": 1.0, "input_hit": 0.1, "output": 2.0, "currency": "¥"},

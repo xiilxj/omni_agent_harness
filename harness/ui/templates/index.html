@@ -1232,7 +1232,7 @@
                         <div id="modal-session-accumulated" class="text-sm font-bold text-zinc-200">¥0.00000</div>
                     </div>
                     <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 space-y-1">
-                        <div class="text-[10px] text-emerald-400">官方账户剩余可用余额:</div>
+                        <div id="modal-balance-title" class="text-[10px] text-emerald-400">官方账户剩余可用余额:</div>
                         <div id="modal-account-balance" class="text-sm font-bold text-emerald-300">¥--</div>
                     </div>
                 </div>
@@ -3796,12 +3796,18 @@
         }
 
         function populateBillingModal() {
-            const currentModel = headerModelSelect ? headerModelSelect.value : 'deepseek-chat';
-            const isReasoner = currentModel.includes('reasoner') || currentModel.includes('r1');
+            const currentModel = (headerModelSelect ? headerModelSelect.value : '') || 'deepseek-chat';
+            const mLower = currentModel.toLowerCase();
+            const isGemini = mLower.includes('gemini') || mLower.includes('gemma') || activeProviderGlobal === 'gemini';
+            const isReasoner = mLower.includes('reasoner') || mLower.includes('r1');
             
-            // 费率标准展示
+            // 1. 费率标准展示
             document.getElementById('billing-modal-model-badge').textContent = currentModel;
-            if (isReasoner) {
+            if (isGemini) {
+                document.getElementById('pricing-input-miss').textContent = '¥0.00 / 免费配额';
+                document.getElementById('pricing-input-hit').textContent = '¥0.00 / 免费配额';
+                document.getElementById('pricing-output').textContent = '¥0.00 / 免费配额';
+            } else if (isReasoner) {
                 document.getElementById('pricing-input-miss').textContent = '¥4.00 / 1M';
                 document.getElementById('pricing-input-hit').textContent = '¥1.00 / 1M (省75%)';
                 document.getElementById('pricing-output').textContent = '¥16.00 / 1M';
@@ -3819,28 +3825,40 @@
             const compTokens = t.completion_tokens || 0;
             const totalTokens = t.total_tokens || (promptMissTokens + promptHitTokens + compTokens);
 
-            const costMiss = pb.cost_input_miss !== undefined ? pb.cost_input_miss : (promptMissTokens / 1000000 * (isReasoner ? 4.0 : 1.0));
-            const costHit = pb.cost_input_hit !== undefined ? pb.cost_input_hit : (promptHitTokens / 1000000 * (isReasoner ? 1.0 : 0.1));
-            const costOut = pb.cost_output !== undefined ? pb.cost_output : (compTokens / 1000000 * (isReasoner ? 16.0 : 2.0));
-            const totalTurnCost = pb.turn_cost !== undefined ? pb.turn_cost : (costMiss + costHit + costOut);
+            let costMiss = 0.0;
+            let costHit = 0.0;
+            let costOut = 0.0;
+            let totalTurnCost = 0.0;
+
+            if (!isGemini) {
+                costMiss = pb.cost_input_miss !== undefined ? pb.cost_input_miss : (promptMissTokens / 1000000 * (isReasoner ? 4.0 : 1.0));
+                costHit = pb.cost_input_hit !== undefined ? pb.cost_input_hit : (promptHitTokens / 1000000 * (isReasoner ? 1.0 : 0.1));
+                costOut = pb.cost_output !== undefined ? pb.cost_output : (compTokens / 1000000 * (isReasoner ? 16.0 : 2.0));
+                totalTurnCost = pb.turn_cost !== undefined ? pb.turn_cost : (costMiss + costHit + costOut);
+            }
 
             document.getElementById('row-prompt-miss-tokens').textContent = promptMissTokens.toLocaleString();
-            document.getElementById('row-prompt-miss-rate').textContent = isReasoner ? '¥4.00/M' : '¥1.00/M';
+            document.getElementById('row-prompt-miss-rate').textContent = isGemini ? '免费' : (isReasoner ? '¥4.00/M' : '¥1.00/M');
             document.getElementById('row-prompt-miss-cost').textContent = `¥${costMiss.toFixed(5)}`;
 
             document.getElementById('row-prompt-hit-tokens').textContent = promptHitTokens.toLocaleString();
-            document.getElementById('row-prompt-hit-rate').textContent = isReasoner ? '¥1.00/M' : '¥0.10/M';
+            document.getElementById('row-prompt-hit-rate').textContent = isGemini ? '免费' : (isReasoner ? '¥1.00/M' : '¥0.10/M');
             document.getElementById('row-prompt-hit-cost').textContent = `¥${costHit.toFixed(5)}`;
 
             document.getElementById('row-comp-tokens').textContent = compTokens.toLocaleString();
-            document.getElementById('row-comp-rate').textContent = isReasoner ? '¥16.00/M' : '¥2.00/M';
+            document.getElementById('row-comp-rate').textContent = isGemini ? '免费' : (isReasoner ? '¥16.00/M' : '¥2.00/M');
             document.getElementById('row-comp-cost').textContent = `¥${costOut.toFixed(5)}`;
 
             document.getElementById('row-total-tokens').textContent = totalTokens.toLocaleString();
-            document.getElementById('row-total-cost').textContent = `¥${totalTurnCost.toFixed(5)}`;
+            document.getElementById('row-total-cost').textContent = isGemini ? '¥0.00000 (免费配额)' : `¥${totalTurnCost.toFixed(5)}`;
 
-            const sessionCost = t.session_cost_cny !== undefined ? t.session_cost_cny : (t.session_cost || totalTurnCost);
-            document.getElementById('modal-session-accumulated').textContent = `¥${sessionCost.toFixed(5)}`;
+            const sessionCost = isGemini ? 0.0 : (t.session_cost_cny !== undefined ? t.session_cost_cny : (t.session_cost || totalTurnCost));
+            document.getElementById('modal-session-accumulated').textContent = isGemini ? '¥0.00000 (Google 免费)' : `¥${sessionCost.toFixed(5)}`;
+
+            const balanceLabel = document.getElementById('modal-balance-title');
+            if (balanceLabel) {
+                balanceLabel.textContent = isGemini ? 'DeepSeek 余额 (当前未扣除):' : 'DeepSeek 官方账户可用余额:';
+            }
             document.getElementById('modal-account-balance').textContent = meterBalanceBadge ? meterBalanceBadge.textContent : '¥--';
         }
 
