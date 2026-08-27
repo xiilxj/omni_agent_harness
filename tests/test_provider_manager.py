@@ -59,13 +59,13 @@ def test_provider_manager_crud():
             name="Google Gemini 官方",
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key="AQ.MOCK_SAMPLE_KEY_ABCDEF1234_TEST",
-            models=["gemini-2.5-pro", "gemini-2.5-flash"],
-            default_model="gemini-2.5-pro"
+            models=["gemini-3.7-flash", "gemini-3.5-flash-lite"],
+            default_model="gemini-3.5-flash-lite"
         )
 
         gemini_p = mgr.get_provider_info("gemini")
-        assert gemini_p["models"] == ["gemini-2.5-pro", "gemini-2.5-flash"]
-        assert gemini_p["default_model"] == "gemini-2.5-pro"
+        assert gemini_p["models"] == ["gemini-3.7-flash", "gemini-3.5-flash-lite"]
+        assert gemini_p["default_model"] == "gemini-3.5-flash-lite"
 
         # 验证 DeepSeek 仍然完好无损
         deepseek_p = mgr.get_provider_info("deepseek")
@@ -85,7 +85,7 @@ def test_provider_router_dynamic_switch(monkeypatch):
             provider_id="gemini",
             name="Google Gemini",
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            models=["gemini-2.5-flash", "gemini-2.5-pro"]
+            models=["gemini-3.5-flash-lite", "gemini-3.7-flash"]
         )
 
         app_config = AppConfig()

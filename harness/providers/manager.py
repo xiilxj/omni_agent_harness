@@ -28,14 +28,12 @@ BUILTIN_PROVIDER_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "type": "openai_compatible",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "models": [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
+            "gemini-3.5-flash-lite",
+            "gemini-3.7-flash",
             "gemini-2.0-flash",
-            "gemini-2.0-flash-thinking-exp-01-21",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash"
+            "gemini-2.0-flash-thinking-exp-01-21"
         ],
-        "default_model": "gemini-2.5-flash",
+        "default_model": "gemini-3.5-flash-lite",
         "env_key": "GEMINI_API_KEY",
         "description": "Google Gemini 官方 OpenAI 兼容接口，支持全系列 Gemini 多模态与长上下文模型"
     },
