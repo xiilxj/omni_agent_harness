@@ -177,9 +177,11 @@ class OpenAICompatibleProvider(BaseProvider):
                         prompt_cache_miss_tokens=usage_data.get("prompt_cache_miss_tokens", 0)
                     )
 
+                    r_content = msg_data.get("reasoning_content") or msg_data.get("reasoning") or msg_data.get("thought")
+
                     return LLMResponse(
                         content=msg_data.get("content"),
-                        reasoning_content=msg_data.get("reasoning_content"),
+                        reasoning_content=r_content,
                         tool_calls=tool_calls,
                         finish_reason=choice.get("finish_reason", "stop"),
                         usage=usage,
@@ -270,11 +272,12 @@ class OpenAICompatibleProvider(BaseProvider):
                                     continue
                                 delta = choices[0].get("delta", {})
                                 finish_reason = choices[0].get("finish_reason")
+                                r_content = delta.get("reasoning_content") or delta.get("reasoning") or delta.get("thought")
 
                                 yield {
                                     "type": "delta",
                                     "content": delta.get("content"),
-                                    "reasoning_content": delta.get("reasoning_content"),
+                                    "reasoning_content": r_content,
                                     "tool_calls": delta.get("tool_calls"),
                                     "finish_reason": finish_reason
                                 }
