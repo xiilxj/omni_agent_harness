@@ -52,6 +52,12 @@ class OpenAICompatibleProvider(BaseProvider):
                 return f"models/{model}"
         return model
 
+    def _get_api_keys_pool(self) -> List[str]:
+        """获取当前配置的可用 API Key 列表"""
+        raw = str(self.api_key or "").strip()
+        keys = [k.strip() for k in raw.split(",") if k.strip()]
+        return keys if keys else ["EMPTY"]
+
     async def chat(
         self,
         messages: List[Message],
@@ -61,12 +67,9 @@ class OpenAICompatibleProvider(BaseProvider):
         max_tokens: Optional[int] = None,
         extra_params: Optional[Dict[str, Any]] = None
     ) -> LLMResponse:
-        """执行同步/非流式请求（内置 3 次指数退避网络自动重试）"""
+        """执行同步/非流式请求（内置多 Key 轮询故障转移与 503/429 指数退避自动重试）"""
         url = f"{self.base_url.rstrip('/')}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        api_keys = self._get_api_keys_pool()
 
         body: Dict[str, Any] = {
             "model": self._format_model_for_upstream(model),
@@ -92,14 +95,25 @@ class OpenAICompatibleProvider(BaseProvider):
             body.update(ep)
 
         client_timeout = httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=60.0)
-        max_retries = 3
+        max_retries = max(3, len(api_keys))
+        last_error = ""
 
         for attempt in range(max_retries):
+            current_key = api_keys[attempt % len(api_keys)]
+            headers = {
+                "Authorization": f"Bearer {current_key}",
+                "Content-Type": "application/json"
+            }
             try:
                 async with httpx.AsyncClient(timeout=client_timeout) as client:
                     resp = await client.post(url, headers=headers, json=body)
                     if resp.status_code != 200:
-                        raise RuntimeError(f"OpenAI API Error ({resp.status_code}): {resp.text}")
+                        err_text = resp.text
+                        last_error = f"HTTP {resp.status_code}: {err_text}"
+                        if (resp.status_code in (429, 500, 502, 503, 504) or "UNAVAILABLE" in err_text) and attempt < max_retries - 1:
+                            await asyncio.sleep(1.2 * (attempt + 1))
+                            continue
+                        raise RuntimeError(f"OpenAI API Error ({resp.status_code}): {err_text}")
 
                     data = resp.json()
                     choice = data["choices"][0]
@@ -140,9 +154,10 @@ class OpenAICompatibleProvider(BaseProvider):
                         raw_response=data
                     )
             except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError, httpx.ConnectTimeout, httpx.PoolTimeout) as ne:
+                last_error = str(ne)
                 if attempt == max_retries - 1:
                     raise RuntimeError(f"上游 API 网络连接中断/超时 (已重试 {max_retries} 次): {str(ne)}。请检查网络状态、API Key 或 Base URL。")
-                await asyncio.sleep(1.0 * (attempt + 1))
+                await asyncio.sleep(1.2 * (attempt + 1))
 
     async def stream_chat(
         self,
@@ -153,12 +168,9 @@ class OpenAICompatibleProvider(BaseProvider):
         max_tokens: Optional[int] = None,
         extra_params: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """执行流式请求并逐帧解析 SSE（内置网络重试与大模型深度长链思考超时加固）"""
+        """执行流式请求并逐帧解析 SSE（内置多 Key 轮询故障转移与 503/429 指数退避自动重试）"""
         url = f"{self.base_url.rstrip('/')}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        api_keys = self._get_api_keys_pool()
 
         body: Dict[str, Any] = {
             "model": self._format_model_for_upstream(model),
@@ -185,16 +197,27 @@ class OpenAICompatibleProvider(BaseProvider):
             body.update(ep)
 
         client_timeout = httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=60.0)
-        max_retries = 3
+        max_retries = max(3, len(api_keys))
 
         for attempt in range(max_retries):
+            current_key = api_keys[attempt % len(api_keys)]
+            headers = {
+                "Authorization": f"Bearer {current_key}",
+                "Content-Type": "application/json"
+            }
             try:
                 async with httpx.AsyncClient(timeout=client_timeout) as client:
                     async with client.stream("POST", url, headers=headers, json=body) as response:
                         if response.status_code != 200:
                             err_body = await response.aread()
-                            raise RuntimeError(f"OpenAI Stream Error ({response.status_code}): {err_body.decode('utf-8', errors='ignore')}")
+                            err_text = err_body.decode("utf-8", errors="ignore")
+                            # 如果是临时过载或配额耗尽 (503 / 429 / 500 / 502 / 504 / UNAVAILABLE / RESOURCE_EXHAUSTED)，执行退避重试并尝试轮询下一个 Key
+                            if (response.status_code in (429, 500, 502, 503, 504) or "UNAVAILABLE" in err_text or "RESOURCE_EXHAUSTED" in err_text) and attempt < max_retries - 1:
+                                await asyncio.sleep(1.2 * (attempt + 1))
+                                continue
+                            raise RuntimeError(f"OpenAI Stream Error ({response.status_code}): {err_text}")
 
+                        has_yielded = False
                         async for line in response.aiter_lines():
                             line = line.strip()
                             if not line or not line.startswith("data:"):
@@ -202,6 +225,7 @@ class OpenAICompatibleProvider(BaseProvider):
                             data_str = line[5:].strip()
                             if data_str == "[DONE]":
                                 yield {"type": "done"}
+                                has_yielded = True
                                 break
 
                             try:
@@ -222,10 +246,13 @@ class OpenAICompatibleProvider(BaseProvider):
                                     "tool_calls": delta.get("tool_calls"),
                                     "finish_reason": finish_reason
                                 }
+                                has_yielded = True
                             except json.JSONDecodeError:
                                 continue
+                        if has_yielded:
+                            return
                 return
             except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError, httpx.ConnectTimeout, httpx.PoolTimeout) as ne:
                 if attempt == max_retries - 1:
                     raise RuntimeError(f"上游 API 流式连接超时/中断 (已重试 {max_retries} 次): {str(ne)}。请检查网络状态、API Key 或 Base URL。")
-                await asyncio.sleep(1.0 * (attempt + 1))
+                await asyncio.sleep(1.2 * (attempt + 1))
