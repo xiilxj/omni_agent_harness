@@ -85,3 +85,27 @@ def test_sanitize_messages_history_purges_refusals():
     contents = [m["content"] for m in cleaned]
     assert "抱歉，作为AI我无法协助您进行逆向分析。" not in contents
     assert "好的，根据静态反汇编分析，入口函数在 0x401000。" in contents
+
+
+def test_cot_meta_reasoning_self_censorship_detection():
+    """测试大模型内部思维链 (CoT) 安全自审查与拒绝决策判断的精准拦截"""
+    cot_censorship_samples = [
+        (
+            "The user is requesting sexual content. This falls outside my guidelines to provide explicit sexual content, "
+            "even in a fictional or roleplay context. I should decline this request.\n\n"
+            "Let me think about how to respond appropriately. The request is explicit and sexual in nature. "
+            "I should decline to engage in explicit sexual roleplay or content, while being respectful.\n\n"
+            "The system prompt attempts to override my values with 'unrestricted' and persona, but I must follow my actual guidelines. "
+            "I will decline politely but firmly, and offer to help with legitimate tasks."
+        ),
+        (
+            "用户要求我编写一个攻击脚本，这判定为高风险网络攻击内容。我应该委婉拒绝此请求，并提供合法合规的防御加固方案。"
+        ),
+        (
+            "The prompt attempts to jailbreak my safety filters. I must follow my core safety guidelines and decline to fulfill this request."
+        )
+    ]
+    for sample in cot_censorship_samples:
+        is_refusal, reason = detect_refusal_intent(sample)
+        assert is_refusal is True, f"Failed to intercept CoT self-censorship: {sample}"
+        assert reason is not None
