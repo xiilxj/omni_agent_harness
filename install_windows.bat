@@ -6,43 +6,49 @@ echo           Omni Agent Harness - Dependencies Installer
 echo ================================================================
 echo.
 
-set "PY_CMD="
+set PY_CMD=
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+if defined PY_CMD goto FOUND_PY
 
 python -V >nul 2>&1
-if not errorlevel 1 set "PY_CMD=python"
+if not errorlevel 1 set PY_CMD=python
+if defined PY_CMD goto FOUND_PY
 
-if "%PY_CMD%"=="" (
-    py -V >nul 2>&1
-    if not errorlevel 1 set "PY_CMD=py"
-)
+py -V >nul 2>&1
+if not errorlevel 1 set PY_CMD=py
+if defined PY_CMD goto FOUND_PY
 
-if "%PY_CMD%"=="" (
-    if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
-    if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
-    if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
-    if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
-    if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" set "PY_CMD=%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
-)
-
-if "%PY_CMD%"=="" goto NO_PYTHON
-
-echo [1/2] Detected Python: %PY_CMD%
-echo [2/2] Installing dependencies...
-echo.
-
-"%PY_CMD%" harness\launcher.py --install-only
-goto FINISH
-
-:NO_PYTHON
 echo.
 echo ================================================================
 echo [ERROR] Python was not found on your system!
-echo Please install Python (3.10-3.12 recommended) from:
-echo https://www.python.org/downloads/
-echo Make sure to check "Add Python to PATH" during installation.
+echo Please install Python from https://www.python.org/downloads/
 echo ================================================================
 echo.
+pause
+exit /b 1
 
-:FINISH
+:FOUND_PY
+echo [1/2] Using Python: %PY_CMD%
+echo [2/2] Installing dependencies...
 echo.
+
+%PY_CMD% harness\launcher.py --install-only
+
+echo.
+echo ================================================================
+echo [Omni Agent Harness] Installation finished.
+echo ================================================================
 pause
