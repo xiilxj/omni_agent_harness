@@ -252,8 +252,8 @@
                     <select id="header-model-select" class="bg-transparent text-[11px] text-zinc-300 font-mono focus:outline-none cursor-pointer max-w-[200px] truncate">
                         <option value="deepseek-chat">deepseek-chat</option>
                         <option value="deepseek-reasoner">deepseek-reasoner</option>
-                        <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                        <option value="models/gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                        <option value="models/gemini-3.7-flash">gemini-3.7-flash</option>
                         <option value="gpt-4o">gpt-4o</option>
                         <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>
                     </select>
@@ -3638,6 +3638,9 @@
                     }
                 }
             }
+            if (targetModel && (targetModel.includes('2.5') || targetModel.includes('gemini-2.5'))) {
+                targetModel = 'models/gemini-3.5-flash-lite';
+            }
             
             // 1. 同步底部胶囊与弹层
             const pillIcon = document.getElementById('pill-model-icon');
@@ -3843,6 +3846,10 @@
             const popoverCount = document.getElementById('popover-models-count');
             if (popoverAllSelect) popoverAllSelect.innerHTML = '';
 
+            if (targetModel && (targetModel.includes('2.5') || targetModel.includes('gemini-2.5'))) {
+                targetModel = 'models/gemini-3.5-flash-lite';
+            }
+
             list.forEach(m => {
                 const isSelected = (m === targetModel);
                 if (headerModelSelect) headerModelSelect.add(new Option(m, m, isSelected, isSelected));
@@ -3861,8 +3868,13 @@
             }
 
             // 还原持久化档位与推理强度与权限
-            const savedTier = localStorage.getItem('omni_selected_tier') || 'pro';
-            setModelTierUI(savedTier, targetModel);
+            let savedModel = localStorage.getItem('omni_selected_model') || targetModel;
+            if (savedModel && (savedModel.includes('2.5') || savedModel.includes('gemini-2.5'))) {
+                savedModel = 'models/gemini-3.5-flash-lite';
+                localStorage.setItem('omni_selected_model', savedModel);
+            }
+            const savedTier = localStorage.getItem('omni_selected_tier') || 'flash';
+            setModelTierUI(savedTier, savedModel);
             const savedEffort = localStorage.getItem('omni_reasoning_effort') || 'medium';
             setReasoningEffortUI(savedEffort);
             const savedPerm = localStorage.getItem('omni_permission_mode') || 'unrestricted';

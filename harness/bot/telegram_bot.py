@@ -87,10 +87,12 @@ class TelegramBotBridge:
     def get_user_state(self, user_id: int) -> Dict[str, Any]:
         """获取或初始化用户的独立会话与模型状态"""
         if user_id not in self.user_states:
-            active_p = self.provider_mgr.get_active_provider_id() or "deepseek"
+            active_p = self.provider_mgr.get_active_provider_id() or "gemini"
             p_info = self.provider_mgr.get_provider_info(active_p) or {}
-            models = p_info.get("models", ["deepseek-chat"])
-            def_model = p_info.get("default_model") or (models[0] if models else "deepseek-chat")
+            models = p_info.get("models", ["models/gemini-3.5-flash-lite"])
+            def_model = p_info.get("default_model") or (models[0] if models else "models/gemini-3.5-flash-lite")
+            if "2.5" in str(def_model):
+                def_model = "models/gemini-3.5-flash-lite"
 
             self.user_states[user_id] = {
                 "session_id": None,
@@ -100,6 +102,11 @@ class TelegramBotBridge:
                 "permission_mode": "unrestricted",
                 "staged_attachments": []
             }
+        else:
+            # 实时净化可能残留的 2.5 历史状态
+            cur_m = str(self.user_states[user_id].get("model", ""))
+            if "2.5" in cur_m:
+                self.user_states[user_id]["model"] = "models/gemini-3.5-flash-lite"
         return self.user_states[user_id]
 
     async def _send_api(self, method: str, data: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -879,6 +886,13 @@ class TelegramBotBridge:
                 except Exception as e:
                     logger.warning(f"发送上线通知到用户 {admin_uid} 失败: {e}")
 
+        async def _safe_dispatch(u_item: Dict[str, Any]):
+            try:
+                await self.handle_update(u_item)
+            except Exception as ex:
+                logger.error(f"[Telegram Bot Update 异常] {ex}", exc_info=True)
+                print(f"[Telegram Bot Update 异常]: {ex}")
+
         while self._running:
             try:
                 updates_res = await self._send_api(
@@ -890,7 +904,7 @@ class TelegramBotBridge:
                     for u in updates:
                         u_id = u["update_id"]
                         self._last_update_id = max(self._last_update_id, u_id)
-                        asyncio.create_task(self.handle_update(u))
+                        asyncio.create_task(_safe_dispatch(u))
                 await asyncio.sleep(poll_interval)
             except asyncio.CancelledError:
                 break
