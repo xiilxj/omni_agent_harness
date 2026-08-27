@@ -57,3 +57,8 @@ Thumbs.db
 # 日志与临时调试数据
 *.log
 scratch/
+agent_*.html
+*.tmp
+D:\\*
+D:/*
+D:\*
