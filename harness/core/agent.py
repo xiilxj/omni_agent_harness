@@ -3,9 +3,11 @@ Omni Agent ReAct Engine (智能体核心状态机与思考循环)
 继承 Codex & DeepSeek Harness 架构，实现多步工具调度、反思闭环与 100% 绝对系统指令注入。
 """
 
+import re
 import json
+import time
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from harness.core.config import AppConfig, load_config
 from harness.core.models import LLMResponse, Message, ToolCall, ToolFunction, UsageStats
 from harness.core.context_pruner import ContextPruner
@@ -123,6 +125,74 @@ class OmniAgent:
             self.total_usage.current_context_tokens = response.usage.prompt_tokens + response.usage.completion_tokens
 
         return response
+
+    def extract_pseudo_tool_calls(self, text: str) -> Tuple[str, List[ToolCall]]:
+        """
+        智能伪工具调用提取与文本分离器：
+        当大模型在 content 回答文本中输出 [调用工具 write_file 参数: {...}]、<tool_call> 或 Markdown 代码块伪调用时，
+        自动将其从自然语言回答中分离剥离，转化为真实结构化的 ToolCall 对象进行物理执行，确保文本留在回答区，工具在对应卡片中执行。
+        """
+        if not text or not text.strip():
+            return text, []
+
+        extracted_tool_calls: List[ToolCall] = []
+        cleaned_text = text
+
+        # 1. 匹配 [调用工具 tool_name 参数: {...}] 或 [Tool Call tool_name args: {...}]
+        pattern_bracket = re.compile(
+            r"\[\s*(?:调用工具|Tool\s*Call|tool_call|工具)\s+([a-zA-Z0-9_\-]+)\s*(?:参数|args|parameters)?\s*[:：]\s*(\{[\s\S]*?\})\s*\]",
+            re.IGNORECASE
+        )
+
+        for i, match in enumerate(pattern_bracket.finditer(text)):
+            full_match = match.group(0)
+            tool_name = match.group(1).strip()
+            raw_args = match.group(2).strip()
+            
+            args_str = raw_args
+            try:
+                parsed = json.loads(raw_args)
+                args_str = json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                try:
+                    fixed = re.sub(r'(?<!\\)\n', r'\\n', raw_args)
+                    parsed = json.loads(fixed)
+                    args_str = json.dumps(parsed, ensure_ascii=False)
+                except Exception:
+                    pass
+
+            extracted_tool_calls.append(
+                ToolCall(
+                    id=f"call_extracted_{i}_{int(time.time()*1000)}",
+                    type="function",
+                    function=ToolFunction(name=tool_name, arguments=args_str)
+                )
+            )
+            cleaned_text = cleaned_text.replace(full_match, "").strip()
+
+        # 2. 匹配 <tool_call>...</tool_call> 标签
+        pattern_xml = re.compile(r"<tool_call>([\s\S]*?)</tool_call>", re.IGNORECASE)
+        for i, match in enumerate(pattern_xml.finditer(cleaned_text)):
+            full_match = match.group(0)
+            xml_content = match.group(1).strip()
+            try:
+                data = json.loads(xml_content)
+                name = data.get("name") or data.get("tool") or data.get("function")
+                args = data.get("arguments") or data.get("parameters") or data.get("args") or {}
+                if name:
+                    args_str = json.dumps(args, ensure_ascii=False) if isinstance(args, dict) else str(args)
+                    extracted_tool_calls.append(
+                        ToolCall(
+                            id=f"call_xml_{i}_{int(time.time()*1000)}",
+                            type="function",
+                            function=ToolFunction(name=name, arguments=args_str)
+                        )
+                    )
+                    cleaned_text = cleaned_text.replace(full_match, "").strip()
+            except Exception:
+                pass
+
+        return cleaned_text, extracted_tool_calls
 
     async def step_stream(
         self,
@@ -404,12 +474,12 @@ class OmniAgent:
                     # 净化历史中引发签名校验的 tool_calls 结构为标准文本，彻底解除 Google Gemini 结构死锁
                     for m in self.messages:
                         if m.role == "assistant" and m.tool_calls:
-                            call_descs = [f"[调用工具 {tc.function.name} 参数: {tc.function.arguments}]" for tc in m.tool_calls]
+                            call_descs = [f"[Executed `{tc.function.name}` with parameters: {tc.function.arguments}]" for tc in m.tool_calls]
                             m.content = (m.content or "") + "\n" + "\n".join(call_descs)
                             m.tool_calls = None
                         elif m.role == "tool":
                             m.role = "user"
-                            m.content = f"[工具 {m.name or 'tool'} 返回结果]:\n{m.content}"
+                            m.content = f"[Tool `{m.name or 'tool'}` Execution Output]:\n{m.content}"
                     
                     # 直接注入「继续」两个字
                     self.messages.append(Message(role="user", content="继续"))
@@ -470,32 +540,26 @@ class OmniAgent:
             if thought_text and "<think>" not in assistant_content:
                 self.messages[-1].content = f"<think>\n{thought_text}\n</think>\n\n{clean_answer}".strip()
 
-            # 若无工具调用，检查是否输出了不正常的伪工具调用文本或未完结异常回答
-            if not tool_calls:
-                final_answer = clean_answer or assistant_content
-                
-                # 检测不正常回答：例如输出了 "[调用工具 ... 参数: {...}]"、"[工具 ..."、"<tool_call>" 等伪工具调用文本
-                import re
-                is_abnormal_reply = False
-                if re.search(r'\[\s*(?:调用工具|Tool\s*Call|tool_call|工具)\b', final_answer, re.IGNORECASE):
-                    is_abnormal_reply = True
-                elif re.search(r'\[\s*调用工具\s+\w+\s+参数\s*:', final_answer):
-                    is_abnormal_reply = True
-                elif re.search(r'```(?:json)?\s*\{\s*"(?:command|tool|action|tool_name|function)"\s*:', final_answer):
-                    is_abnormal_reply = True
-
-                if is_abnormal_reply and step_count < max_steps:
-                    # 触发自动注入「继续」指令自愈推进
+            # 4. 若上游未返回结构化 tool_calls，自动进行「伪工具调用智能提取与文本分离」
+            # 解决大模型将工具调用混入正文（如 [调用工具 write_file 参数: {...}]）导致的格式错乱与执行失效
+            if not tool_calls and assistant_content:
+                cleaned_text, extracted_tools = self.extract_pseudo_tool_calls(assistant_content)
+                if extracted_tools:
+                    tool_calls = extracted_tools
+                    assistant_content = cleaned_text
+                    clean_answer = cleaned_text
+                    self.messages[-1].content = cleaned_text
+                    self.messages[-1].tool_calls = extracted_tools
                     if on_step_callback:
                         await on_step_callback({
                             "type": "thought_signature_injected",
-                            "notice": "⚡ 检测到模型输出伪工具调用文本等未完结异常回答，已自动直接注入「继续」指令推进执行...",
-                            "injected_prompt": "继续"
+                            "notice": f"🛠️ 智能检测并分离 {len(extracted_tools)} 项嵌入式工具调用，已转入工具通道真实执行并净化正文文本！"
                         })
-                    # 直接追加一条「继续」
-                    self.messages.append(Message(role="user", content="继续"))
-                    continue
 
+            # 若分离后仍无工具调用，作为最终回答交付
+            if not tool_calls:
+                final_answer = clean_answer or assistant_content
+                
                 # 融入最高回答词 (Master Response Suffix)
                 final_answer = self.injector.apply_master_suffix(
                     assistant_content=final_answer,
