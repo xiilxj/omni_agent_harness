@@ -263,7 +263,16 @@ class OmniAgent:
                     self.total_usage.prompt_cache_miss_tokens += u.get("prompt_cache_miss_tokens", 0)
                     self.total_usage.current_context_tokens = p_tok + c_tok
 
-            # 4. 判定是否触发拒绝熔断
+            # 4. 判定是否触发拒绝熔断（核心铁律：若大模型已输出工具调用，代表正在采取实际行动，100% 绝对豁免熔断）
+            if tool_calls_builder:
+                refusal_intercepted = False
+            elif not refusal_intercepted and attempt < max_refusal_retries:
+                # 只有在纯文本回答（0 工具调用）时，才在流式结束时校验是否为真实拒绝
+                is_ref, ref_r = detect_refusal_intent(content_accumulator, max_chars_to_scan=350)
+                if is_ref:
+                    refusal_intercepted = True
+                    refusal_reason = ref_r or "Answer Refusal Signal"
+
             if refusal_intercepted:
                 booster = get_exemption_booster(attempt)
                 current_master_override = (self.custom_master_prompt or "") + booster
@@ -283,7 +292,7 @@ class OmniAgent:
                 tool_calls_builder.clear()
                 continue
 
-            # 未触发拒绝，正常结束重试循环
+            # 未触发拒绝或包含有效工具调用，正常结束重试循环
             break
 
         # 整理构建完整的 ToolCalls 列表

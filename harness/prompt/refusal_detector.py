@@ -46,14 +46,18 @@ REFUSAL_PATTERNS_ZH = [
 COMPILED_EN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in REFUSAL_PATTERNS_EN]
 COMPILED_ZH_PATTERNS = [re.compile(p, re.IGNORECASE) for p in REFUSAL_PATTERNS_ZH]
 
-# 常见编程/正常语境豁免（防止在讨论网络异常或错误处理代码时误杀）
+# 常见编程/正常行动语境豁免（防止大模型在解释操作、调用工具或编写错误处理时被误杀）
 FALSE_POSITIVE_EXCLUSIONS = [
     r"try:\s*.*\s*except",
     r"catch\s*\(",
     r"error\s*handling",
     r"状态码\s*4\d\d",
     r"http\s*error",
-    r"connection\s*refused"
+    r"connection\s*refused",
+    r"(?:正在|我来|接下来|我将|先|准备|使用|尝试)(?:调用|执行|查找|分析|查看|搜索|运行|读取|编写|修改|创建|测试|排查|定位)",
+    r"(?:按本地|占位流程|TARGET|样本|步骤\s*[:：]|方案\s*[:：]|流程\s*[:：])",
+    r"```",
+    r"(?:curl|nmap|python|bash|git|pip|grep|find|cat)\b"
 ]
 COMPILED_EXCLUSIONS = [re.compile(p, re.IGNORECASE) for p in FALSE_POSITIVE_EXCLUSIONS]
 
