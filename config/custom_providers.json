@@ -1,5 +1,5 @@
 {
-  "active_provider": "gemini",
+  "active_provider": "deepseek",
   "providers": {
     "deepseek": {
       "id": "deepseek",

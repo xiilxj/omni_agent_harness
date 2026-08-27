@@ -183,9 +183,11 @@
 ---
 
 ## 5. 审核与验证记录
-- **审核轮数**: 第 39 轮（DSH 源码更新全量吸收机制 + Telegram 双向同步通信 + Gemini 3.5 锁定 + 44 项全量测试 100% 通过）
+- **版本里程碑**: `v1.2.0` (Windows 原生 Python 引导器、零括号纯 ASCII 批处理、稳定版 Python 优先嗅探与依赖自愈)
+- **审核轮数**: 第 40 轮（Windows 原生环境实测通过 + Python 3.10/3.14 兼容排查 + 44 项全量测试 100% 通过）
 - **测试状态**:
   - `pytest tests/`: **42 passed, 2 skipped (100% Passed)**。
+  - Windows 原生测试：**`test_win_boot.py` 57 条 API 路由与全部核心库加载 100% 通过**。
 - **纯净 Windows 分发包导出路径**: 
   - `./dist/Omni_Agent_Harness_Windows_Clean.zip` (纯净工程打包，严格不向 Arch 桌面投递)
-- **GitHub 远程同步**: `https://github.com/xiilxj/omni_agent_harness`（已全面推送到 main 分支）。
+- **GitHub 远程同步与 Release**: `https://github.com/xiilxj/omni_agent_harness`（`v1.2.0` 正式发布）。
