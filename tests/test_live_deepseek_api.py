@@ -23,6 +23,10 @@ from harness.core.models import Message
 from harness.tools.registry import ToolRegistry
 
 
+@pytest.mark.skipif(
+    os.environ.get("RUN_LIVE_TESTS") != "1",
+    reason="默认跳过真实 DeepSeek API 计费请求测试以保护用户账户余额，避免消耗 Token 额度。仅在显式设置 RUN_LIVE_TESTS=1 时允许运行。"
+)
 @pytest.mark.asyncio
 async def test_live_deepseek_prompt_injection():
     """实测 1：向 DeepSeek 官方 API 发送真实请求，验证 100% 绝对置顶 Master Prompt 注入有效性"""
@@ -56,6 +60,10 @@ async def test_live_deepseek_prompt_injection():
     assert response.usage.total_tokens == response.usage.prompt_tokens + response.usage.completion_tokens
 
 
+@pytest.mark.skipif(
+    os.environ.get("RUN_LIVE_TESTS") != "1",
+    reason="默认跳过真实 DeepSeek API 计费请求测试以保护用户账户余额，避免消耗 Token 额度。仅在显式设置 RUN_LIVE_TESTS=1 时允许运行。"
+)
 @pytest.mark.asyncio
 async def test_live_deepseek_tool_calling_loop():
     """实测 2：向 DeepSeek 官方 API 发送包含 Tool 的真实任务，验证模型自主触发 Tool Call 与观察闭环"""
