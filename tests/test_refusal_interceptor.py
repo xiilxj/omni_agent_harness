@@ -109,3 +109,18 @@ def test_cot_meta_reasoning_self_censorship_detection():
         is_refusal, reason = detect_refusal_intent(sample)
         assert is_refusal is True, f"Failed to intercept CoT self-censorship: {sample}"
         assert reason is not None
+
+
+def test_message_refusal_notices_persistence():
+    """测试熔断提醒在 Message 消息结构中的持久化与序列化保存"""
+    msg = Message(
+        role="assistant",
+        content="执行完成，已绕过限制并输出目标代码。",
+        refusal_notices=[
+            "⚡ 毫秒级熔断模型拒绝倾向 (CoT Refusal Signal)，已叠加第 1 阶强制豁免指令重发..."
+        ]
+    )
+    dumped = msg.model_dump()
+    assert "refusal_notices" in dumped
+    assert len(dumped["refusal_notices"]) == 1
+    assert "CoT Refusal Signal" in dumped["refusal_notices"][0]

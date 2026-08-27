@@ -27,6 +27,7 @@ class Message(BaseModel):
     name: Optional[str] = None
     tool_call_id: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
+    refusal_notices: Optional[List[str]] = Field(default_factory=list, description="本轮被熔断拦截的拒绝事件记录")
 
 
 class ToolParamSchema(BaseModel):

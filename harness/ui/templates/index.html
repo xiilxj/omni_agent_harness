@@ -1643,6 +1643,13 @@
                 if (m.role === 'user') {
                     appendUserMessage(m.content, idx);
                 } else if (m.role === 'assistant') {
+                    // 如果该轮次触发过抗拒绝熔断，持久化渲染熔断告警胶囊（绝不删除）
+                    if (m.refusal_notices && Array.isArray(m.refusal_notices) && m.refusal_notices.length > 0) {
+                        m.refusal_notices.forEach(notice => {
+                            appendRefusalInterceptedPill(notice);
+                        });
+                    }
+
                     // 1. 如果包含工具调用或前置决策思考
                     if (m.tool_calls && m.tool_calls.length > 0) {
                         if (m.content) {

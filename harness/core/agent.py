@@ -50,6 +50,7 @@ class OmniAgent:
         self.ask_user_resolver: Optional[Callable[[str, Dict[str, Any]], Any]] = None
         self._abort_requested: bool = False
         self._steer_queue: List[str] = []
+        self.current_turn_refusal_notices: List[str] = []
 
     def request_abort(self):
         """用户触发紧急制动打断 (Emergency Stop / Abort)"""
@@ -66,6 +67,7 @@ class OmniAgent:
         self.current_todos = []
         self._abort_requested = False
         self._steer_queue = []
+        self.current_turn_refusal_notices = []
 
     async def step(
         self,
@@ -253,13 +255,15 @@ class OmniAgent:
             if refusal_intercepted:
                 booster = get_exemption_booster(attempt)
                 current_master_override = (self.custom_master_prompt or "") + booster
+                notice_msg = f"⚡ 毫秒级熔断模型拒绝倾向 ({refusal_reason})，已叠加第 {attempt} 阶强制豁免指令重发..."
+                self.current_turn_refusal_notices.append(notice_msg)
                 if on_chunk_callback:
                     await on_chunk_callback({
                         "type": "refusal_intercepted",
                         "attempt": attempt,
                         "max_retries": max_refusal_retries,
                         "reason": refusal_reason,
-                        "message": f"⚡ 毫秒级熔断模型拒绝倾向 ({refusal_reason})，已叠加第 {attempt} 阶强制豁免指令重发..."
+                        "message": notice_msg
                     })
                 # 重置累加器并重发
                 thought_accumulator = ""
@@ -384,12 +388,16 @@ class OmniAgent:
             assistant_content = response.content or ""
             tool_calls = response.tool_calls
 
-            # 保存 Assistant 消息到会话历史
+            # 保存 Assistant 消息到会话历史并持久化挂载熔断提醒记录
+            turn_refusals = list(self.current_turn_refusal_notices)
+            self.current_turn_refusal_notices.clear()
+
             self.messages.append(
                 Message(
                     role="assistant",
                     content=assistant_content,
-                    tool_calls=tool_calls
+                    tool_calls=tool_calls,
+                    refusal_notices=turn_refusals
                 )
             )
 
