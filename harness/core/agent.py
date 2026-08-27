@@ -382,6 +382,30 @@ class OmniAgent:
                     on_chunk_callback=on_step_callback
                 )
             except Exception as e:
+                err_str = str(e)
+                # 针对 Google Gemini thought_signature 校验异常自动直接注入「继续」指令推进
+                if "thought_signature" in err_str:
+                    if on_step_callback:
+                        await on_step_callback({
+                            "type": "thought_signature_injected",
+                            "notice": "⚡ 检测到上游 thought_signature 校验异常，已自动直接注入「继续」指令自愈推进...",
+                            "injected_prompt": "继续"
+                        })
+                    
+                    # 净化历史中引发签名校验的 tool_calls 结构为标准文本，彻底解除 Google Gemini 结构死锁
+                    for m in self.messages:
+                        if m.role == "assistant" and m.tool_calls:
+                            call_descs = [f"[调用工具 {tc.function.name} 参数: {tc.function.arguments}]" for tc in m.tool_calls]
+                            m.content = (m.content or "") + "\n" + "\n".join(call_descs)
+                            m.tool_calls = None
+                        elif m.role == "tool":
+                            m.role = "user"
+                            m.content = f"[工具 {m.name or 'tool'} 返回结果]:\n{m.content}"
+                    
+                    # 直接注入「继续」两个字
+                    self.messages.append(Message(role="user", content="继续"))
+                    continue
+
                 err_msg = f"LLM Call Failed at step {step_count}: {e}"
                 if on_step_callback:
                     await on_step_callback({"type": "error", "error": err_msg})
