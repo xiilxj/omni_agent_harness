@@ -666,7 +666,8 @@ class TelegramBotBridge:
                 deliv_res = await self.send_message(chat_id, final_header + res, parse_mode="Markdown")
                 if not deliv_res.get("ok"):
                     # 若 Markdown 解析失败（如代码块或符号特殊），降级为纯文本直送
-                    await self.send_message(chat_id, f"🏁 Agent 答复 ({target_model}):\n\n" + res)
+                    deliv_res = await self.send_message(chat_id, f"🏁 Agent 答复 ({target_model}):\n\n" + res)
+                print(f"🚀 [Telegram 成功回传终答] 用户 {user_id}, 结果: {deliv_res.get('ok')}")
 
             except Exception as e:
                 logger.error(f"Telegram task failed: {e}")
@@ -888,6 +889,12 @@ class TelegramBotBridge:
 
         async def _safe_dispatch(u_item: Dict[str, Any]):
             try:
+                msg_obj = u_item.get("message", {})
+                cb_obj = u_item.get("callback_query", {})
+                if msg_obj:
+                    print(f"📩 [Telegram 收到用户消息] 来自 ID: {msg_obj.get('from', {}).get('id')} ({msg_obj.get('from', {}).get('first_name')}): {msg_obj.get('text')}")
+                elif cb_obj:
+                    print(f"🔘 [Telegram 收到按钮点击] 来自 ID: {cb_obj.get('from', {}).get('id')}: {cb_obj.get('data')}")
                 await self.handle_update(u_item)
             except Exception as ex:
                 logger.error(f"[Telegram Bot Update 异常] {ex}", exc_info=True)
