@@ -218,24 +218,34 @@ class TelegramBotBridge:
     async def handle_start(self, chat_id: int, user_id: int) -> None:
         """处理 /start 与 /help 指令"""
         state = self.get_user_state(user_id)
+        current_sid = state.get("session_id")
+        cur_title = "临时新会话 (首条消息自动创建)"
+        if current_sid:
+            cur_s = self.session_mgr.get_session(current_sid)
+            if cur_s:
+                cur_title = cur_s.title
+
         msg = (
             "🤖 *Omni Agent Harness Pro · Telegram 远程控制终端*\n\n"
             f"📍 *当前工作区*: `{self.workspace_mgr.cwd}`\n"
+            f"📌 *当前对话*: `{cur_title}`\n"
             f"🏢 *当前厂商*: `{state['provider']}`\n"
             f"🧠 *当前模型*: `{state['model']}`\n"
             f"⚡ *推理强度*: `{state['reasoning_effort']}`\n"
             f"🛡️ *权限模式*: `{state['permission_mode']}`\n\n"
             "📋 *支持的远程控制指令*:\n"
+            "• `/new` - 开启全新独立会话上下文\n"
+            "• `/sessions` 或 `/list` - 浏览与切换历史对话列表\n"
+            "• `/session` - 查看当前选定对话详情\n"
             "• `/model` - 自选可用模型列表 (Inline 按钮)\n"
             "• `/provider` - 切换上游厂商 (DeepSeek / Gemini / OpenAI)\n"
             "• `/effort` - 调节思考强度 (Off / Low / Med / High / Max)\n"
             "• `/auth` - 调节执行权限模式 (Full / Ask / Read)\n"
             "• `/balance` - 查询 DeepSeek 官方账户可用余额\n"
-            "• `/status` - 查看当前连接与环境状态\n"
+            "• `/status` - 查看当前环境与运行状态\n"
             "• `/abort` - 紧急中止正在执行的任务\n"
-            "• `/clear` - 清空历史开启新任务\n"
             "• `/help` - 查看此帮助面板\n\n"
-            "💡 *使用方法*: 直接发送文字或图片/文档，Agent 将全自动规划与调用工具执行！"
+            "💡 *使用方法*: 直接发送文字或图片/文档，Agent 将全自动调用工具执行并实时回传结果！"
         )
         markup = {
             "inline_keyboard": [
@@ -248,8 +258,12 @@ class TelegramBotBridge:
                     {"text": "🛡️ 权限模式", "callback_data": "menu_auth"}
                 ],
                 [
+                    {"text": "➕ 新建对话", "callback_data": "cmd_new"},
+                    {"text": "🗂️ 历史会话", "callback_data": "menu_sessions"}
+                ],
+                [
                     {"text": "💰 账户余额", "callback_data": "cmd_balance"},
-                    {"text": "🧹 清空会话", "callback_data": "cmd_clear"}
+                    {"text": "📊 运行状态", "callback_data": "cmd_status"}
                 ]
             ]
         }
@@ -382,12 +396,145 @@ class TelegramBotBridge:
         else:
             await self.send_message(chat_id, "ℹ️ 当前没有正在运行的后台任务。")
 
-    async def handle_clear(self, chat_id: int, user_id: int) -> None:
-        """重置用户会话"""
+    async def handle_new_session(self, chat_id: int, user_id: int, message_id: Optional[int] = None) -> None:
+        """开启全新对话会话"""
         state = self.get_user_state(user_id)
         state["session_id"] = None
         state["staged_attachments"] = []
-        await self.send_message(chat_id, "🧹 会话上下文与暂存附件已清空，可直接发送新指令开始！")
+
+        text = (
+            "✨ *已为您开启全新独立对话会话！*\n\n"
+            f"🧠 当前模型: `{state['model']}`\n"
+            f"🏢 当前厂商: `{state['provider']}`\n"
+            f"⚡ 推理强度: `{state['reasoning_effort']}`\n\n"
+            "💡 直接发送您的任务指令、问题或图片/文件，Agent 将在此全新会话中执行。"
+        )
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🧠 切换模型", "callback_data": "menu_model"},
+                    {"text": "🗂️ 历史会话列表", "callback_data": "menu_sessions"}
+                ],
+                [{"text": "🔙 返回主菜单", "callback_data": "menu_main"}]
+            ]
+        }
+        if message_id:
+            await self.edit_message(chat_id, message_id, text, reply_markup=markup, parse_mode="Markdown")
+        else:
+            await self.send_message(chat_id, text, reply_markup=markup, parse_mode="Markdown")
+
+    async def handle_sessions_menu(self, chat_id: int, user_id: int, message_id: Optional[int] = None) -> None:
+        """弹出历史对话会话列表与切换菜单 (Inline Keyboard)"""
+        state = self.get_user_state(user_id)
+        current_sid = state.get("session_id")
+        sessions = self.session_mgr.list_sessions()
+
+        keyboard = [
+            [{"text": "➕ 新建全新会话", "callback_data": "cmd_new"}]
+        ]
+
+        if sessions:
+            for s in sessions[:8]:  # 展示最新 8 个会话
+                sid = s.get("id")
+                title = s.get("title", "未命名会话")
+                short_title = title if len(title) <= 15 else title[:15] + "..."
+                msg_count = s.get("message_count", 0)
+                is_cur = (sid == current_sid)
+                btn_text = f"✅ {short_title} ({msg_count}条)" if is_cur else f"📌 {short_title} ({msg_count}条)"
+                keyboard.append([{"text": btn_text, "callback_data": f"set_session:{sid}"}])
+        else:
+            keyboard.append([{"text": "(暂无历史会话记录)", "callback_data": "menu_main"}])
+
+        keyboard.append([{"text": "🔙 返回主菜单", "callback_data": "menu_main"}])
+
+        cur_title = "未指定 (首条消息自动创建)"
+        if current_sid:
+            cur_s = self.session_mgr.get_session(current_sid)
+            if cur_s:
+                cur_title = cur_s.title
+
+        text = (
+            f"🗂️ *会话与对话管理中心*\n\n"
+            f"📍 *当前选定会话*: `{cur_title}`\n"
+            f"🔑 *Session ID*: `{current_sid or '新会话'}`\n\n"
+            "点击下方任意历史会话，即可直接切换并继承其上下文对话："
+        )
+        markup = {"inline_keyboard": keyboard}
+
+        if message_id:
+            await self.edit_message(chat_id, message_id, text, reply_markup=markup, parse_mode="Markdown")
+        else:
+            await self.send_message(chat_id, text, reply_markup=markup, parse_mode="Markdown")
+
+    async def handle_session_info(self, chat_id: int, user_id: int) -> None:
+        """查看当前会话详情"""
+        state = self.get_user_state(user_id)
+        current_sid = state.get("session_id")
+        if current_sid:
+            s = self.session_mgr.get_session(current_sid)
+            if s:
+                text = (
+                    f"📌 *当前会话详情*\n"
+                    f"📝 标题: *{s.title}*\n"
+                    f"🔑 ID: `{s.id}`\n"
+                    f"💬 消息数: `{len(s.messages)}` 条\n"
+                    f"🧠 激活模型: `{s.model}` (`{s.provider}`)\n"
+                    f"📂 工作区: `{s.workspace}`"
+                )
+            else:
+                text = f"📌 *当前会话*: `{current_sid}`"
+        else:
+            text = "📌 *当前会话*: 临时新会话（发送首条指令后将自动创建并生成标题）"
+
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "➕ 新建对话", "callback_data": "cmd_new"},
+                    {"text": "🗂️ 切换历史会话", "callback_data": "menu_sessions"}
+                ],
+                [{"text": "🔙 返回主菜单", "callback_data": "menu_main"}]
+            ]
+        }
+        await self.send_message(chat_id, text, reply_markup=markup, parse_mode="Markdown")
+
+    async def handle_status_query(self, chat_id: int, user_id: int, message_id: Optional[int] = None) -> None:
+        """查看系统状态"""
+        state = self.get_user_state(user_id)
+        current_sid = state.get("session_id")
+        cur_title = "临时新会话"
+        if current_sid:
+            cur_s = self.session_mgr.get_session(current_sid)
+            if cur_s:
+                cur_title = cur_s.title
+
+        status_text = (
+            f"📊 *Omni Agent Harness 运行状态报告*\n\n"
+            f"📍 *当前工作区*: `{self.workspace_mgr.cwd}`\n"
+            f"📌 *当前对话*: `{cur_title}`\n"
+            f"🏢 *上游供应商*: `{state['provider']}`\n"
+            f"🧠 *执行模型*: `{state['model']}`\n"
+            f"⚡ *推理强度*: `{state['reasoning_effort']}`\n"
+            f"🛡️ *权限模式*: `{state['permission_mode']}`\n"
+            f"📁 *暂存附件数*: `{len(state.get('staged_attachments', []))}` 个\n"
+            f"👥 *授权管理员数*: `{len(self.allowed_users)}` 位"
+        )
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🧠 切换模型", "callback_data": "menu_model"},
+                    {"text": "🗂️ 切换对话", "callback_data": "menu_sessions"}
+                ],
+                [{"text": "🔙 返回主菜单", "callback_data": "menu_main"}]
+            ]
+        }
+        if message_id:
+            await self.edit_message(chat_id, message_id, status_text, reply_markup=markup, parse_mode="Markdown")
+        else:
+            await self.send_message(chat_id, status_text, reply_markup=markup, parse_mode="Markdown")
+
+    async def handle_clear(self, chat_id: int, user_id: int) -> None:
+        """重置用户会话 (同 /new)"""
+        await self.handle_new_session(chat_id, user_id)
 
     # ==================== 任务分发与流式执行 ====================
 
@@ -495,13 +642,31 @@ class TelegramBotBridge:
                 session.messages = [m.model_dump() for m in agent.messages]
                 self.session_mgr.save_session(session)
 
-                # 发送最终交付答复
-                final_header = f"🏁 *Agent 任务完成* (`{target_model}`)\n\n"
-                await self.send_message(chat_id, final_header + res, parse_mode="Markdown")
+                # 更新初始状态卡片为已完成
+                if status_msg_id:
+                    try:
+                        await self.edit_message(
+                            chat_id,
+                            status_msg_id,
+                            f"🏁 *Agent 任务已完成* (`{target_model}`)\n💡 完整答复已生成在下方 👇",
+                            parse_mode="Markdown"
+                        )
+                    except Exception:
+                        pass
+
+                # 发送最终交付答复 (双层投递保障：Markdown + 纯文本降级)
+                final_header = f"🏁 *Agent 答复* (`{target_model}`):\n\n"
+                deliv_res = await self.send_message(chat_id, final_header + res, parse_mode="Markdown")
+                if not deliv_res.get("ok"):
+                    # 若 Markdown 解析失败（如代码块或符号特殊），降级为纯文本直送
+                    await self.send_message(chat_id, f"🏁 Agent 答复 ({target_model}):\n\n" + res)
 
             except Exception as e:
                 logger.error(f"Telegram task failed: {e}")
-                await self.send_message(chat_id, f"❌ *执行失败*: `{e}`", parse_mode="Markdown")
+                err_msg = f"❌ *执行失败*: `{e}`"
+                err_res = await self.send_message(chat_id, err_msg, parse_mode="Markdown")
+                if not err_res.get("ok"):
+                    await self.send_message(chat_id, f"❌ 执行失败: {e}")
             finally:
                 self.active_agents.pop(user_id, None)
                 self.active_tasks.pop(user_id, None)
@@ -547,9 +712,26 @@ class TelegramBotBridge:
             elif data == "cmd_balance":
                 await self.answer_callback_query(cb_id)
                 await self.handle_balance_query(chat_id, user_id)
-            elif data == "cmd_clear":
-                await self.answer_callback_query(cb_id, "已重置会话")
-                await self.handle_clear(chat_id, user_id)
+            elif data == "cmd_new" or data == "cmd_clear":
+                await self.handle_new_session(chat_id, user_id, msg_id)
+                await self.answer_callback_query(cb_id, "✨ 已开启全新对话")
+            elif data == "menu_sessions":
+                await self.handle_sessions_menu(chat_id, user_id, msg_id)
+                await self.answer_callback_query(cb_id)
+            elif data == "cmd_status":
+                await self.handle_status_query(chat_id, user_id, msg_id)
+                await self.answer_callback_query(cb_id)
+            elif data.startswith("set_session:"):
+                chosen_sid = data.split(":", 1)[1]
+                s = self.session_mgr.get_session(chosen_sid)
+                if s:
+                    state["session_id"] = chosen_sid
+                    state["model"] = s.model or state["model"]
+                    state["provider"] = s.provider or state["provider"]
+                    await self.answer_callback_query(cb_id, f"✅ 已切换至: {s.title[:12]}")
+                else:
+                    await self.answer_callback_query(cb_id, "⚠️ 会话不存在或已删除", show_alert=True)
+                await self.handle_sessions_menu(chat_id, user_id, msg_id)
             elif data.startswith("set_model:"):
                 chosen_m = data.split(":", 1)[1]
                 state["model"] = chosen_m
@@ -595,6 +777,15 @@ class TelegramBotBridge:
             if text in ("/start", "/help"):
                 await self.handle_start(chat_id, user_id)
                 return
+            elif text in ("/new", "/clear", "/new_session"):
+                await self.handle_new_session(chat_id, user_id)
+                return
+            elif text in ("/sessions", "/list", "/history"):
+                await self.handle_sessions_menu(chat_id, user_id)
+                return
+            elif text == "/session":
+                await self.handle_session_info(chat_id, user_id)
+                return
             elif text == "/model":
                 await self.handle_model_menu(chat_id, user_id)
                 return
@@ -613,21 +804,8 @@ class TelegramBotBridge:
             elif text == "/abort":
                 await self.handle_abort(chat_id, user_id)
                 return
-            elif text == "/clear":
-                await self.handle_clear(chat_id, user_id)
-                return
             elif text == "/status":
-                state = self.get_user_state(user_id)
-                status_text = (
-                    f"📊 *Omni Agent Harness 状态报告*\n"
-                    f"🏢 供应商: `{state['provider']}`\n"
-                    f"🧠 模型: `{state['model']}`\n"
-                    f"⚡ 推理强度: `{state['reasoning_effort']}`\n"
-                    f"🛡️ 权限: `{state['permission_mode']}`\n"
-                    f"📂 工作区: `{self.workspace_mgr.cwd}`\n"
-                    f"📁 暂存附件数: `{len(state.get('staged_attachments', []))}`"
-                )
-                await self.send_message(chat_id, status_text, parse_mode="Markdown")
+                await self.handle_status_query(chat_id, user_id)
                 return
 
             # 处理附件：照片 (Photo)

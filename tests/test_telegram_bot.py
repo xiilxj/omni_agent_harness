@@ -115,3 +115,52 @@ async def test_telegram_bot_message_dispatch_and_execution():
         mock_instance.run_task.assert_called_once()
         sent_texts = [call[0][1]["text"] for call in bot._send_api.call_args_list if call[0][0] == "sendMessage"]
         assert any("这是 Telegram 远程执行完成的答案。" in t for t in sent_texts)
+
+
+@pytest.mark.asyncio
+async def test_telegram_bot_session_management():
+    """测试 Telegram Bot 新建会话、会话列表与切换历史对话"""
+    config = load_config()
+    bot = TelegramBotBridge(token="TEST_TOKEN", allowed_users=[1001], config=config)
+    bot._send_api = AsyncMock(return_value={"ok": True, "result": {"message_id": 200}})
+
+    # 1. 模拟发送 /new 指令开启新会话
+    await bot.handle_update({
+        "message": {
+            "message_id": 10,
+            "chat": {"id": 123},
+            "from": {"id": 1001},
+            "text": "/new"
+        }
+    })
+    state = bot.get_user_state(1001)
+    assert state["session_id"] is None
+
+    # 2. 模拟发送 /sessions 指令弹出历史会话列表
+    await bot.handle_update({
+        "message": {
+            "message_id": 11,
+            "chat": {"id": 123},
+            "from": {"id": 1001},
+            "text": "/sessions"
+        }
+    })
+    last_call = bot._send_api.call_args[0]
+    assert "会话与对话管理中心" in last_call[1]["text"]
+
+    # 3. 模拟点击会话按钮切换会话
+    from harness.core.session import SessionItem
+    test_session = SessionItem(id="sess_test_123", title="测试历史对话", model="models/gemini-3.5-flash-lite", provider="gemini")
+    bot.session_mgr.save_session(test_session)
+
+    await bot.handle_update({
+        "callback_query": {
+            "id": "query_sess",
+            "from": {"id": 1001},
+            "data": "set_session:sess_test_123",
+            "message": {"chat": {"id": 123}, "message_id": 200}
+        }
+    })
+    assert state["session_id"] == "sess_test_123"
+    assert state["model"] == "models/gemini-3.5-flash-lite"
+    assert state["provider"] == "gemini"
