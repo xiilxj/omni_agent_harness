@@ -8,10 +8,13 @@ echo.
 
 set PY_CMD=
 
-if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+if exist "%ProgramFiles%\Python310\python.exe" set PY_CMD="%ProgramFiles%\Python310\python.exe"
 if defined PY_CMD goto FOUND_PY
 
-if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+if exist "%ProgramFiles%\Python311\python.exe" set PY_CMD="%ProgramFiles%\Python311\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%ProgramFiles%\Python312\python.exe" set PY_CMD="%ProgramFiles%\Python312\python.exe"
 if defined PY_CMD goto FOUND_PY
 
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
@@ -21,6 +24,9 @@ if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set PY_CMD="%LOCA
 if defined PY_CMD goto FOUND_PY
 
 if exist "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+if defined PY_CMD goto FOUND_PY
+
+if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" set PY_CMD="%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
 if defined PY_CMD goto FOUND_PY
 
 python -V >nul 2>&1
