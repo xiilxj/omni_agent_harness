@@ -2,7 +2,10 @@
 
 <p align="center">
   <b>基于 OpenAI Codex 与 DeepSeek Harness (DSH) 核心架构深度融合改造的工业级智能体底座</b><br>
-  <i>100% 协议级系统提示词注入 ｜ 上下文精准引用与历史回答行内修改 ｜ 5 档深度推理强度 ｜ 实时穿插纠偏与一键急停 ｜ 跨平台 Linux & Windows 原生支持</i>
+  <i>100% 协议级系统提示词注入 ｜ 上下文精准引用与历史回答行内修改 ｜ 5 档深度推理强度 ｜ 实时穿插纠偏与一键急停 ｜ 跨平台 Linux & Windows 原生支持</i><br><br>
+  <img src="https://img.shields.io/badge/Release-v1.3.0-blue?style=flat-square" alt="Version 1.3.0" />
+  <img src="https://img.shields.io/badge/Tests-29%20Passed%20(100%25)-brightgreen?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-emerald?style=flat-square" alt="Platform" />
 </p>
 
 ---

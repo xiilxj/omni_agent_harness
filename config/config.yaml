@@ -1,5 +1,5 @@
 # Omni Agent Harness 全局配置文件
-version: "1.0.0"
+version: "1.3.0"
 
 # 运行环境与工作区
 workspace:
