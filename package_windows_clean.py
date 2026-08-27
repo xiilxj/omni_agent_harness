@@ -24,6 +24,7 @@ def create_clean_windows_package():
         "requirements.txt",
         "start_windows.bat",
         "install_windows.bat",
+        "start_debug_windows.bat",
         "start_linux.sh",
         "README_WINDOWS.md",
         "README.md",
