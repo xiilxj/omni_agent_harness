@@ -131,35 +131,36 @@ class TelegramBotBridge:
         reply_markup: Optional[Dict[str, Any]] = None,
         parse_mode: Optional[str] = None
     ) -> Dict[str, Any]:
-        """发送文本消息（自动处理 4096 字符分片）"""
-        if len(text) > 4000:
-            chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
-            last_res = {"ok": True}
-            for idx, c in enumerate(chunks):
-                markup = reply_markup if idx == len(chunks) - 1 else None
-                payload = {
-                    "chat_id": chat_id,
-                    "text": c,
-                    "reply_markup": markup
-                }
-                if parse_mode:
-                    payload["parse_mode"] = parse_mode
-                last_res = await self._send_api("sendMessage", payload)
-            return last_res
-        else:
+        """发送文本消息（自动处理 4096 字符分片，并在任何 Markdown 解析异常时无缝降级为纯文本重发）"""
+        if not text:
+            return {"ok": True}
+
+        chunks = [text[i:i+3800] for i in range(0, len(text), 3800)]
+        last_res = {"ok": True}
+
+        for idx, c in enumerate(chunks):
+            markup = reply_markup if idx == len(chunks) - 1 else None
             payload = {
                 "chat_id": chat_id,
-                "text": text,
-                "reply_markup": reply_markup
+                "text": c
             }
+            if markup is not None:
+                payload["reply_markup"] = markup
             if parse_mode:
                 payload["parse_mode"] = parse_mode
+
             res = await self._send_api("sendMessage", payload)
-            if not res.get("ok") and parse_mode:
-                # 若 Markdown 格式解析失败，降级为纯文本重发
-                payload.pop("parse_mode", None)
-                res = await self._send_api("sendMessage", payload)
-            return res
+            if not res.get("ok"):
+                # 如果带 parse_mode 发送失败，立即移除 parse_mode 降级为纯文本重新发送
+                if parse_mode:
+                    payload.pop("parse_mode", None)
+                    res = await self._send_api("sendMessage", payload)
+                if not res.get("ok"):
+                    logger.warning(f"Telegram sendMessage chunk {idx+1}/{len(chunks)} failed: {res}")
+                    print(f"⚠️ [Telegram 发送失败] 详情: {res}")
+            last_res = res
+
+        return last_res
 
     async def edit_message(
         self,
@@ -173,9 +174,10 @@ class TelegramBotBridge:
         payload = {
             "chat_id": chat_id,
             "message_id": message_id,
-            "text": text[:4000],
-            "reply_markup": reply_markup
+            "text": text[:4000]
         }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
         if parse_mode:
             payload["parse_mode"] = parse_mode
         res = await self._send_api("editMessageText", payload)
