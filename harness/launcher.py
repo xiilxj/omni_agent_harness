@@ -1,14 +1,16 @@
 """
 Omni Agent Harness - Cross-Platform Native Python Launcher
-跨平台统一启动引导器：解决 Windows CMD 批处理编码缺陷与 DLL 依赖自愈。
+跨平台统一启动引导器：解决 Windows CMD 批处理编码缺陷、依赖自愈与防闪退保护。
 """
 
 import os
 import sys
 import time
+import shutil
 import threading
 import subprocess
 import webbrowser
+import traceback
 from pathlib import Path
 
 # 确保在 Windows 终端下 UTF-8 正常输出
@@ -35,7 +37,6 @@ def ensure_env_file():
     env_example = BASE_DIR / ".env.example"
     if not env_file.exists() and env_example.exists():
         try:
-            import shutil
             shutil.copy(env_example, env_file)
             print("[提示] 已根据模板自动创建本地 .env 配置文件。")
         except Exception as e:
@@ -121,16 +122,22 @@ def main():
     print("=" * 64)
     print()
 
-    # 启动 Uvicorn 服务
+    # 启动 Uvicorn 服务 (使用标准的 factory 字符串格式)
     try:
         import uvicorn
-        from harness.ui.app import create_app
-        app = create_app()
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(
+            "harness.ui.app:create_app",
+            factory=True,
+            host=host,
+            port=port,
+            reload=False,
+            log_level="info"
+        )
     except KeyboardInterrupt:
         print("\n[退出] 服务已停止。")
     except Exception as e:
         print(f"\n[错误] 服务启动异常: {e}")
+        traceback.print_exc()
         print("\n" + "=" * 64)
         print("[启动异常排查指引]")
         print("若提示 DLL load failed，通常是由于缺少微软 Visual C++ 运行库。")
@@ -143,4 +150,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as ex:
+        traceback.print_exc()
+        print("\n================================================================")
+        print(f"[严重异常] 启动器遇到错误: {ex}")
+        print("================================================================")
+        try:
+            input("\n按回车键退出...")
+        except Exception:
+            pass
+        sys.exit(1)
