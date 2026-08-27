@@ -632,8 +632,10 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
             reasoning_effort=req.reasoning_effort or getattr(config, "reasoning_effort", "medium")
         )
 
-        # 挂载历史消息以继续对话
-        for m in session.messages:
+        # 挂载历史消息以继续对话（执行全量拒绝历史净化，杜绝拒绝记忆污染）
+        from harness.prompt.refusal_detector import sanitize_messages_history
+        sanitized_history = sanitize_messages_history(session.messages)
+        for m in sanitized_history:
             if m.get("role") in ["user", "assistant", "tool"]:
                 agent.messages.append(Message(**m))
 

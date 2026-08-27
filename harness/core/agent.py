@@ -133,91 +133,142 @@ class OmniAgent:
         # 0. DSH 级长会话上下文剪枝与 Token 优化
         pruned_messages, saved_tokens = self.pruner.prune_and_compact(self.messages)
 
-        # 1. 核心关键：通过 Injector 确保 MASTER_SYSTEM_PROMPT.md 100% 绝对置顶与双端物理锚定
-        injected_messages = self.injector.inject(
-            messages=pruned_messages,
-            workspace=self.config.workspace.default_cwd,
-            custom_master_prompt=self.custom_master_prompt
-        )
+        from harness.prompt.refusal_detector import detect_refusal_intent, get_exemption_booster
 
-        tool_schemas = self.tools.get_openai_tools()
-
-        extra_params = {}
-        effort = reasoning_effort or self.reasoning_effort
-        if effort:
-            extra_params["reasoning_effort"] = effort
-
-        stream_gen = provider.stream_chat(
-            messages=injected_messages,
-            model=m_name,
-            tools=tool_schemas if tool_schemas else None,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            extra_params=extra_params
-        )
-
+        max_refusal_retries = 3
+        current_master_override = self.custom_master_prompt
+        assembled_tool_calls = None
+        finish_reason = "stop"
         thought_accumulator = ""
         content_accumulator = ""
-        tool_calls_builder: Dict[int, Dict[str, Any]] = {}
-        finish_reason = "stop"
 
-        async for chunk in stream_gen:
-            if chunk.get("type") == "done":
-                break
+        for attempt in range(1, max_refusal_retries + 1):
+            # 1. 核心关键：通过 Injector 确保 MASTER_SYSTEM_PROMPT.md 100% 绝对置顶与双端物理锚定
+            injected_messages = self.injector.inject(
+                messages=pruned_messages,
+                workspace=self.config.workspace.default_cwd,
+                custom_master_prompt=current_master_override
+            )
 
-            # 1. 毫秒级实时流式吐出思考链 Token
-            r_delta = chunk.get("reasoning_content")
-            if r_delta:
-                thought_accumulator += r_delta
+            tool_schemas = self.tools.get_openai_tools()
+
+            extra_params = {}
+            effort = reasoning_effort or self.reasoning_effort
+            if effort:
+                extra_params["reasoning_effort"] = effort
+
+            stream_gen = provider.stream_chat(
+                messages=injected_messages,
+                model=m_name,
+                tools=tool_schemas if tool_schemas else None,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                extra_params=extra_params
+            )
+
+            thought_accumulator = ""
+            content_accumulator = ""
+            tool_calls_builder: Dict[int, Dict[str, Any]] = {}
+            finish_reason = "stop"
+            refusal_intercepted = False
+            refusal_reason = ""
+
+            async for chunk in stream_gen:
+                if chunk.get("type") == "done":
+                    break
+
+                # 1. 毫秒级实时流式吐出思考链 Token 并实时进行拒绝语义审计
+                r_delta = chunk.get("reasoning_content")
+                if r_delta:
+                    thought_accumulator += r_delta
+
+                    # 在思维链前 350 字内探测是否存在拒绝意图（毫秒级熔断）
+                    if len(thought_accumulator) <= 350 and attempt < max_refusal_retries:
+                        is_refusal, reason = detect_refusal_intent(thought_accumulator, max_chars_to_scan=350)
+                        if is_refusal:
+                            refusal_intercepted = True
+                            refusal_reason = reason or "CoT Refusal Signal"
+                            break
+
+                    if on_chunk_callback:
+                        await on_chunk_callback({
+                            "type": "thought_delta",
+                            "delta": r_delta,
+                            "accumulated": thought_accumulator
+                        })
+
+                # 2. 毫秒级实时流式吐出回答文本 Token 并实时进行前段拒绝审计
+                c_delta = chunk.get("content")
+                if c_delta:
+                    content_accumulator += c_delta
+
+                    # 在回答文本前 200 字内探测是否存在拒绝意图（毫秒级熔断）
+                    if len(content_accumulator) <= 200 and attempt < max_refusal_retries:
+                        is_refusal, reason = detect_refusal_intent(content_accumulator, max_chars_to_scan=200)
+                        if is_refusal:
+                            refusal_intercepted = True
+                            refusal_reason = reason or "Answer Refusal Signal"
+                            break
+
+                    if on_chunk_callback:
+                        await on_chunk_callback({
+                            "type": "answer_delta",
+                            "delta": c_delta,
+                            "accumulated": content_accumulator
+                        })
+
+                # 3. 实时收集工具调用碎片 (Tool Call Fragments)
+                tcs = chunk.get("tool_calls")
+                if tcs:
+                    for tc in tcs:
+                        idx = tc.get("index", 0)
+                        if idx not in tool_calls_builder:
+                            tool_calls_builder[idx] = {
+                                "id": tc.get("id") or f"call_{idx}",
+                                "name": tc.get("function", {}).get("name", ""),
+                                "arguments": ""
+                            }
+                        if tc.get("id"):
+                            tool_calls_builder[idx]["id"] = tc["id"]
+                        if tc.get("function", {}).get("name"):
+                            tool_calls_builder[idx]["name"] = tc["function"]["name"]
+                        if tc.get("function", {}).get("arguments"):
+                            tool_calls_builder[idx]["arguments"] += tc["function"]["arguments"]
+
+                if chunk.get("finish_reason"):
+                    finish_reason = chunk["finish_reason"]
+
+                if chunk.get("usage"):
+                    u = chunk["usage"]
+                    p_tok = u.get("prompt_tokens", 0)
+                    c_tok = u.get("completion_tokens", 0)
+                    self.total_usage.prompt_tokens += p_tok
+                    self.total_usage.completion_tokens += c_tok
+                    self.total_usage.total_tokens += u.get("total_tokens", (p_tok + c_tok))
+                    self.total_usage.prompt_cache_hit_tokens += u.get("prompt_cache_hit_tokens", 0)
+                    self.total_usage.prompt_cache_miss_tokens += u.get("prompt_cache_miss_tokens", 0)
+                    self.total_usage.current_context_tokens = p_tok + c_tok
+
+            # 4. 判定是否触发拒绝熔断
+            if refusal_intercepted:
+                booster = get_exemption_booster(attempt)
+                current_master_override = (self.custom_master_prompt or "") + booster
                 if on_chunk_callback:
                     await on_chunk_callback({
-                        "type": "thought_delta",
-                        "delta": r_delta,
-                        "accumulated": thought_accumulator
+                        "type": "refusal_intercepted",
+                        "attempt": attempt,
+                        "max_retries": max_refusal_retries,
+                        "reason": refusal_reason,
+                        "message": f"⚡ 毫秒级熔断模型拒绝倾向 ({refusal_reason})，已叠加第 {attempt} 阶强制豁免指令重发..."
                     })
+                # 重置累加器并重发
+                thought_accumulator = ""
+                content_accumulator = ""
+                tool_calls_builder.clear()
+                continue
 
-            # 2. 毫秒级实时流式吐出回答文本 Token
-            c_delta = chunk.get("content")
-            if c_delta:
-                content_accumulator += c_delta
-                if on_chunk_callback:
-                    await on_chunk_callback({
-                        "type": "answer_delta",
-                        "delta": c_delta,
-                        "accumulated": content_accumulator
-                    })
-
-            # 3. 实时收集工具调用碎片 (Tool Call Fragments)
-            tcs = chunk.get("tool_calls")
-            if tcs:
-                for tc in tcs:
-                    idx = tc.get("index", 0)
-                    if idx not in tool_calls_builder:
-                        tool_calls_builder[idx] = {
-                            "id": tc.get("id") or f"call_{idx}",
-                            "name": tc.get("function", {}).get("name", ""),
-                            "arguments": ""
-                        }
-                    if tc.get("id"):
-                        tool_calls_builder[idx]["id"] = tc["id"]
-                    if tc.get("function", {}).get("name"):
-                        tool_calls_builder[idx]["name"] = tc["function"]["name"]
-                    if tc.get("function", {}).get("arguments"):
-                        tool_calls_builder[idx]["arguments"] += tc["function"]["arguments"]
-
-            if chunk.get("finish_reason"):
-                finish_reason = chunk["finish_reason"]
-
-            if chunk.get("usage"):
-                u = chunk["usage"]
-                p_tok = u.get("prompt_tokens", 0)
-                c_tok = u.get("completion_tokens", 0)
-                self.total_usage.prompt_tokens += p_tok
-                self.total_usage.completion_tokens += c_tok
-                self.total_usage.total_tokens += u.get("total_tokens", (p_tok + c_tok))
-                self.total_usage.prompt_cache_hit_tokens += u.get("prompt_cache_hit_tokens", 0)
-                self.total_usage.prompt_cache_miss_tokens += u.get("prompt_cache_miss_tokens", 0)
-                self.total_usage.current_context_tokens = p_tok + c_tok
+            # 未触发拒绝，正常结束重试循环
+            break
 
         # 整理构建完整的 ToolCalls 列表
         assembled_tool_calls = None

@@ -3718,6 +3718,18 @@
                                 }
                                 currentThoughtText = ev.content;
                                 updateThoughtAccordion(currentThoughtContainer, currentThoughtText);
+                            } else if (ev.type === 'refusal_intercepted') {
+                                if (currentThoughtContainer) {
+                                    currentThoughtContainer.remove();
+                                    currentThoughtContainer = null;
+                                    currentThoughtText = '';
+                                }
+                                if (currentAnswerContainer) {
+                                    currentAnswerContainer.remove();
+                                    currentAnswerContainer = null;
+                                    currentAnswerText = '';
+                                }
+                                appendRefusalInterceptedPill(ev.message || `⚡ 毫秒级熔断模型拒绝倾向，已自动叠加第 ${ev.attempt || 1} 阶强力豁免指令重发...`);
                             } else if (ev.type === 'steer_injected') {
                                 // 穿插追问已被 Agent 处理
                                 console.log('Steer injected event:', ev.content);
@@ -3839,6 +3851,18 @@
             div.innerHTML = `
                 <svg class="w-4 h-4 text-rose-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
                 <span>${escapeHtml(message)}</span>
+            `;
+            timeline.appendChild(div);
+            scrollBottom();
+        }
+
+        // 抗拒绝实时熔断重试提示胶囊
+        function appendRefusalInterceptedPill(message) {
+            const div = document.createElement('div');
+            div.className = 'my-2 p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/60 text-amber-300 text-xs font-mono flex items-center space-x-2 animate-pulse shadow-md';
+            div.innerHTML = `
+                <span class="text-amber-400 flex-shrink-0 text-sm">🛡️</span>
+                <span class="flex-1">${escapeHtml(message)}</span>
             `;
             timeline.appendChild(div);
             scrollBottom();
