@@ -48,17 +48,20 @@ class TelegramBotBridge:
         self.config = config or load_config()
         self.token = token or os.environ.get("TELEGRAM_BOT_TOKEN") or self.config.telegram.bot_token
         
-        # 白名单处理 (支持环境变量以逗号分隔的用户 ID)
-        env_allowed = os.environ.get("TELEGRAM_ALLOWED_USERS", "")
-        if env_allowed:
-            parsed_users = []
-            for u in env_allowed.split(","):
-                u_str = u.strip()
-                if u_str.isdigit():
-                    parsed_users.append(int(u_str))
-            self.allowed_users = parsed_users
+        # 白名单处理 (显式参数优先，其次环境变量，最后配置文件)
+        if allowed_users is not None:
+            self.allowed_users = allowed_users
         else:
-            self.allowed_users = allowed_users or self.config.telegram.allowed_users
+            env_allowed = os.environ.get("TELEGRAM_ALLOWED_USERS", "")
+            if env_allowed:
+                parsed_users = []
+                for u in env_allowed.split(","):
+                    u_str = u.strip()
+                    if u_str.isdigit():
+                        parsed_users.append(int(u_str))
+                self.allowed_users = parsed_users
+            else:
+                self.allowed_users = self.config.telegram.allowed_users
 
         self.tools = tools or register_default_tools(global_tools)
         self.session_mgr = global_session_manager
@@ -682,6 +685,21 @@ class TelegramBotBridge:
             return
         bot_user = me_res.get("result", {})
         print(f"✓ Telegram Bot 已成功连接: @{bot_user.get('username')} ({bot_user.get('first_name')})")
+
+        # 向已配置白名单的管理员发送上线就绪广播通知
+        if self.allowed_users:
+            for admin_uid in self.allowed_users[:3]:
+                try:
+                    await self.send_message(
+                        admin_uid,
+                        f"🚀 *Omni Agent Harness Pro 已成功在主机上线启动！*\n\n"
+                        f"📍 *当前工作区*: `{self.workspace_mgr.cwd}`\n"
+                        f"🏢 *激活厂商*: `{self.provider_mgr.get_active_provider_id() or 'deepseek'}`\n"
+                        f"🤖 Telegram 远程控制已就绪，发送 `/help` 或 `/model` 开始远程操控！",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.warning(f"发送上线通知到用户 {admin_uid} 失败: {e}")
 
         while self._running:
             try:

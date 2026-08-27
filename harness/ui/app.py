@@ -1186,4 +1186,144 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    # ==================== Telegram Bot 嵌入式管理与生命周期 ====================
+    from harness.bot.telegram_bot import TelegramBotBridge
+    telegram_bridge: Optional[TelegramBotBridge] = None
+    telegram_task: Optional[asyncio.Task] = None
+
+    async def _start_telegram_bot_service():
+        nonlocal telegram_bridge, telegram_task
+        tg_token = os.environ.get("TELEGRAM_BOT_TOKEN") or config.telegram.bot_token
+        if tg_token and tg_token.strip():
+            if telegram_task and not telegram_task.done():
+                return
+            try:
+                telegram_bridge = TelegramBotBridge(token=tg_token, config=config, tools=tools)
+                telegram_task = asyncio.create_task(telegram_bridge.start_polling())
+                print(f"[Telegram Bot] 远程控制服务已在后台自动伴随启动！Token: {telegram_bridge.token[:6]}***")
+            except Exception as e:
+                print(f"[Telegram Bot] 自动启动异常: {e}")
+        else:
+            print("[Telegram Bot] 未配置 TELEGRAM_BOT_TOKEN，远程控制服务保持未启动状态（可在 Web UI 设置中随时配置并一键开启）。")
+
+    async def _stop_telegram_bot_service():
+        nonlocal telegram_bridge, telegram_task
+        if telegram_bridge:
+            await telegram_bridge.stop()
+            telegram_bridge = None
+        if telegram_task and not telegram_task.done():
+            telegram_task.cancel()
+            telegram_task = None
+
+    @app.on_event("startup")
+    async def on_app_startup():
+        """FastAPI 启动时自动检测并启动 Telegram Bot"""
+        asyncio.create_task(_start_telegram_bot_service())
+
+    @app.on_event("shutdown")
+    async def on_app_shutdown():
+        """FastAPI 关闭时优雅停止 Telegram Bot"""
+        await _stop_telegram_bot_service()
+
+    @app.get("/api/telegram/status")
+    async def get_telegram_status():
+        """获取当前 Telegram Bot 运行状态与配置摘要"""
+        tg_token = os.environ.get("TELEGRAM_BOT_TOKEN") or config.telegram.bot_token
+        is_running = bool(telegram_task and not telegram_task.done() and telegram_bridge and telegram_bridge._running)
+        
+        masked_token = ""
+        if tg_token:
+            if len(tg_token) > 10:
+                masked_token = tg_token[:6] + "..." + tg_token[-4:]
+            else:
+                masked_token = "******"
+
+        allowed = config.telegram.allowed_users
+        if os.environ.get("TELEGRAM_ALLOWED_USERS"):
+            env_users = []
+            for u in os.environ.get("TELEGRAM_ALLOWED_USERS", "").split(","):
+                if u.strip().isdigit():
+                    env_users.append(int(u.strip()))
+            allowed = env_users
+
+        return {
+            "status": "success",
+            "has_token": bool(tg_token and tg_token.strip()),
+            "running": is_running,
+            "token_masked": masked_token,
+            "allowed_users": allowed,
+            "allowed_users_str": ",".join(map(str, allowed))
+        }
+
+    class SaveTelegramConfigRequest(BaseModel):
+        bot_token: str
+        allowed_users: Optional[str] = ""
+
+    @app.post("/api/telegram/config")
+    async def save_telegram_config(req: SaveTelegramConfigRequest):
+        """在 Web UI 中保存 Telegram Bot 配置并热重启服务"""
+        new_token = req.bot_token.strip()
+        users_str = (req.allowed_users or "").strip()
+        
+        parsed_users = []
+        if users_str:
+            for u in users_str.split(","):
+                u_clean = u.strip()
+                if u_clean.isdigit():
+                    parsed_users.append(int(u_clean))
+
+        # 写入 .env 文件
+        env_path = Path.cwd() / ".env"
+        env_content = ""
+        if env_path.exists():
+            with open(env_path, "r", encoding="utf-8") as f:
+                env_content = f.read()
+
+        import re
+        if "TELEGRAM_BOT_TOKEN=" in env_content:
+            env_content = re.sub(r'TELEGRAM_BOT_TOKEN=.*', f'TELEGRAM_BOT_TOKEN="{new_token}"', env_content)
+        else:
+            env_content += f'\nTELEGRAM_BOT_TOKEN="{new_token}"\n'
+
+        if "TELEGRAM_ALLOWED_USERS=" in env_content:
+            env_content = re.sub(r'TELEGRAM_ALLOWED_USERS=.*', f'TELEGRAM_ALLOWED_USERS="{users_str}"', env_content)
+        else:
+            env_content += f'TELEGRAM_ALLOWED_USERS="{users_str}"\n'
+
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.write(env_content)
+
+        # 更新运行态环境变量与内存 config
+        os.environ["TELEGRAM_BOT_TOKEN"] = new_token
+        os.environ["TELEGRAM_ALLOWED_USERS"] = users_str
+        config.telegram.bot_token = new_token
+        config.telegram.allowed_users = parsed_users
+
+        # 重新启停 Bot
+        await _stop_telegram_bot_service()
+        if new_token:
+            await _start_telegram_bot_service()
+            return {"status": "success", "message": "Telegram Bot 配置已保存，服务已在后台自动热重启连接！"}
+        else:
+            return {"status": "success", "message": "Telegram Bot Token 已清空，服务已停止。"}
+
+    class ToggleTelegramRequest(BaseModel):
+        action: str
+
+    @app.post("/api/telegram/toggle")
+    async def toggle_telegram_service(req: ToggleTelegramRequest):
+        """手动启停或重启 Telegram Bot 服务"""
+        if req.action == "start":
+            await _start_telegram_bot_service()
+            return {"status": "success", "message": "已尝试启动 Telegram Bot 服务。"}
+        elif req.action == "stop":
+            await _stop_telegram_bot_service()
+            return {"status": "success", "message": "Telegram Bot 服务已停止。"}
+        elif req.action == "restart":
+            await _stop_telegram_bot_service()
+            await _start_telegram_bot_service()
+            return {"status": "success", "message": "Telegram Bot 服务已热重启。"}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+
     return app

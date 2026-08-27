@@ -575,8 +575,13 @@
                     </div>
                 </div>
 
-                <!-- Right: Billing Breakdown Trigger & 128K Context Bar -->
+                <!-- Right: Telegram Bot, Billing Breakdown Trigger & 128K Context Bar -->
                 <div class="flex items-center space-x-2.5 flex-shrink-0">
+                    <button id="btn-open-telegram-modal" class="px-2 py-0.5 rounded bg-dark-surface hover:bg-zinc-800 border border-dark-border hover:border-sky-500/60 text-zinc-300 hover:text-sky-400 text-[10px] flex items-center space-x-1.5 transition shadow-sm" title="配置与管理 Telegram Bot 远程控制">
+                        <span id="tg-status-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+                        <span id="tg-status-label">Telegram</span>
+                    </button>
+
                     <button id="btn-open-billing-modal" class="px-2 py-0.5 rounded bg-dark-surface hover:bg-zinc-800 border border-dark-border hover:border-emerald-500/60 text-zinc-300 hover:text-emerald-400 text-[10px] flex items-center space-x-1 transition shadow-sm" title="查看 DSH 官方费率标准与本次计费明细清单">
                         <svg class="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                         <span>计费明细</span>
@@ -1259,6 +1264,119 @@
                 <button id="btn-dismiss-billing-modal" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition shadow">
                     确定
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Telegram Bot 远程控制中心与配置 -->
+    <div id="modal-telegram-config" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+        <div class="bg-dark-surface border border-dark-border rounded-xl shadow-2xl w-full max-w-xl max-h-[88vh] flex flex-col overflow-hidden text-xs">
+            <!-- Modal Header -->
+            <div class="p-3.5 bg-dark-bg/90 border-b border-dark-border flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-sm">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-16.5 6.75a2.25 2.25 0 0 0 .126 4.172l4.896 1.71 1.71 4.896a2.25 2.25 0 0 0 4.172.126l6.75-16.5a2.25 2.25 0 0 0-2.132-3.369z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-dark-heading">Telegram Bot 远程控制中心</h3>
+                        <p class="text-[10px] text-dark-muted">全自动伴随守护 · 手机端随时远程选模型、发指令与多模态交互</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="modal-tg-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700">⚪ 未配置</span>
+                    <button id="btn-close-tg-modal" class="text-dark-muted hover:text-dark-heading p-1 rounded hover:bg-dark-hover transition">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-4 overflow-y-auto space-y-4 text-zinc-300">
+                <!-- Status & Info Card -->
+                <div class="bg-dark-bg p-3 rounded-lg border border-dark-border space-y-2">
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="text-zinc-400">当前运行状态:</span>
+                        <span id="tg-card-status" class="font-medium text-zinc-300">未启动</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="text-zinc-400">已授权白名单用户:</span>
+                        <span id="tg-card-users-count" class="font-mono text-emerald-400">0 人 (所有人可访问)</span>
+                    </div>
+                </div>
+
+                <!-- Form Card -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[11px] font-medium text-zinc-300 mb-1">
+                            Telegram Bot Token <span class="text-rose-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <input id="tg-input-token" type="password" placeholder="例如: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" class="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-sky-500 font-mono">
+                            <button id="btn-toggle-tg-token-visibility" type="button" class="absolute right-2.5 top-2 text-zinc-500 hover:text-zinc-300 text-[10px]">显示</button>
+                        </div>
+                        <p class="text-[10px] text-zinc-500 mt-0.5">从 Telegram 官方 @BotFather 获取的 HTTP API Token</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-medium text-zinc-300 mb-1">
+                            管理员 Telegram User ID 白名单 <span class="text-zinc-500 font-normal">(可选，强烈推荐)</span>
+                        </label>
+                        <input id="tg-input-users" type="text" placeholder="例如: 123456789,987654321 (多个用逗号隔开)" class="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-sky-500 font-mono">
+                        <p class="text-[10px] text-zinc-500 mt-0.5">仅允许这些数字 ID 控制机器人，防止他人未经授权调用您的模型与系统</p>
+                    </div>
+                </div>
+
+                <!-- 3-Step Setup Guide -->
+                <div class="bg-dark-bg/60 border border-sky-900/30 rounded-lg p-3 space-y-2">
+                    <div class="flex items-center space-x-1.5 text-sky-400 font-semibold text-[11px]">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span>📖 Telegram Bot 3 步极速配置保姆级指南</span>
+                    </div>
+                    <div class="text-[11px] text-zinc-400 space-y-1.5 pl-1 leading-relaxed">
+                        <div>
+                            <strong class="text-zinc-200">1. 创建机器人获取 Token：</strong>
+                            打开 Telegram 搜索 <span class="text-sky-300 font-mono select-all">@BotFather</span>，发送 <code class="px-1 py-0.5 bg-dark-bg rounded text-amber-300">/newbot</code>，按指引为机器人起名并设置以 <code class="text-amber-300">_bot</code> 结尾的用户名，即可获得 API Token 复制粘贴到上方。
+                        </div>
+                        <div>
+                            <strong class="text-zinc-200">2. 获取您的 Telegram 数字 User ID：</strong>
+                            在 Telegram 搜索 <span class="text-sky-300 font-mono select-all">@userinfobot</span> 发送任意消息，复制返回的数字 ID（如 <code class="text-amber-300">123456789</code>）填入上方白名单。
+                        </div>
+                        <div>
+                            <strong class="text-zinc-200">3. 保存与开启使用：</strong>
+                            点击下方「保存并热重启 Bot」，随后在 Telegram 找到您的机器人发送 <code class="px-1 py-0.5 bg-dark-bg rounded text-emerald-400">/start</code> 或 <code class="px-1 py-0.5 bg-dark-bg rounded text-emerald-400">/model</code> 即可随时随地远程控制！
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Cheat Sheet -->
+                <div class="bg-dark-bg/40 border border-dark-border rounded-lg p-2.5 text-[10px] text-zinc-400">
+                    <div class="font-semibold text-zinc-300 mb-1">📱 常用远程指令速查：</div>
+                    <div class="grid grid-cols-2 gap-1.5 font-mono text-zinc-400">
+                        <div>• <span class="text-sky-300">/model</span>: 内联按钮自选模型</div>
+                        <div>• <span class="text-sky-300">/provider</span>: 切换模型厂商</div>
+                        <div>• <span class="text-sky-300">/effort</span>: 调节思考推理强度</div>
+                        <div>• <span class="text-sky-300">/balance</span>: 查询官方余额</div>
+                        <div>• <span class="text-sky-300">/abort</span>: 紧急中止任务</div>
+                        <div>• <span class="text-sky-300">直接发图/文件</span>: 视觉多模态分析</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 bg-dark-bg/80 border-t border-dark-border flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <button id="btn-toggle-tg-service" class="px-3 py-1.5 bg-dark-surface hover:bg-zinc-800 border border-dark-border text-zinc-400 hover:text-zinc-200 rounded-lg text-xs transition">
+                        停止服务
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-dismiss-tg-modal" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs transition">
+                        关闭
+                    </button>
+                    <button id="btn-save-tg-config" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-medium transition shadow">
+                        💾 保存配置并自动连接
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -5570,6 +5688,169 @@
         });
         loadSessions();
         loadUserBalance();
+
+        // ==================== Telegram Bot Remote Control Controller ====================
+        const btnOpenTgModal = document.getElementById('btn-open-telegram-modal');
+        const modalTgConfig = document.getElementById('modal-telegram-config');
+        const btnCloseTgModal = document.getElementById('btn-close-tg-modal');
+        const btnDismissTgModal = document.getElementById('btn-dismiss-tg-modal');
+        const btnSaveTgConfig = document.getElementById('btn-save-tg-config');
+        const btnToggleTgService = document.getElementById('btn-toggle-tg-service');
+        const tgInputToken = document.getElementById('tg-input-token');
+        const tgInputUsers = document.getElementById('tg-input-users');
+        const btnToggleTgTokenVis = document.getElementById('btn-toggle-tg-token-visibility');
+        const tgStatusDot = document.getElementById('tg-status-dot');
+        const tgStatusLabel = document.getElementById('tg-status-label');
+        const modalTgBadge = document.getElementById('modal-tg-badge');
+        const tgCardStatus = document.getElementById('tg-card-status');
+        const tgCardUsersCount = document.getElementById('tg-card-users-count');
+
+        let isTgTokenVisible = false;
+        let tgState = { running: false, has_token: false, token_masked: '', allowed_users: [], allowed_users_str: '' };
+
+        if (btnToggleTgTokenVis && tgInputToken) {
+            btnToggleTgTokenVis.addEventListener('click', () => {
+                isTgTokenVisible = !isTgTokenVisible;
+                tgInputToken.type = isTgTokenVisible ? 'text' : 'password';
+                btnToggleTgTokenVis.textContent = isTgTokenVisible ? '隐藏' : '显示';
+            });
+        }
+
+        async function fetchTelegramStatus() {
+            try {
+                const res = await fetch('/api/telegram/status');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    tgState = data;
+                    updateTelegramUI(data);
+                }
+            } catch (e) {
+                console.error('Fetch Telegram status failed:', e);
+            }
+        }
+
+        function updateTelegramUI(data) {
+            if (!tgStatusDot || !tgStatusLabel) return;
+            if (data.running) {
+                tgStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
+                tgStatusLabel.textContent = 'TG: 在线';
+                tgStatusLabel.className = 'text-emerald-400 font-medium';
+                if (modalTgBadge) {
+                    modalTgBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-700/60';
+                    modalTgBadge.textContent = '🟢 在线运行中';
+                }
+                if (tgCardStatus) tgCardStatus.textContent = '🟢 守护进程运行中 (Long-Polling 监听)';
+                if (btnToggleTgService) btnToggleTgService.textContent = '⏸️ 停止 Bot 服务';
+            } else if (data.has_token) {
+                tgStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+                tgStatusLabel.textContent = 'TG: 已停止';
+                tgStatusLabel.className = 'text-amber-400';
+                if (modalTgBadge) {
+                    modalTgBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/80 text-amber-400 border border-amber-700/60';
+                    modalTgBadge.textContent = '🟡 已配置但未启动';
+                }
+                if (tgCardStatus) tgCardStatus.textContent = '🟡 已配置 Token，当前未连接';
+                if (btnToggleTgService) btnToggleTgService.textContent = '▶️ 启动 Bot 服务';
+            } else {
+                tgStatusDot.className = 'w-1.5 h-1.5 rounded-full bg-zinc-500';
+                tgStatusLabel.textContent = 'TG: 未配置';
+                tgStatusLabel.className = 'text-zinc-400';
+                if (modalTgBadge) {
+                    modalTgBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700';
+                    modalTgBadge.textContent = '⚪ 未配置';
+                }
+                if (tgCardStatus) tgCardStatus.textContent = '⚪ 未配置 Bot Token (静默就绪)';
+                if (btnToggleTgService) btnToggleTgService.textContent = '▶️ 启动 Bot 服务';
+            }
+
+            if (tgCardUsersCount) {
+                if (data.allowed_users && data.allowed_users.length > 0) {
+                    tgCardUsersCount.textContent = `${data.allowed_users.length} 位已授权管理员 (${data.allowed_users.join(', ')})`;
+                    tgCardUsersCount.className = 'font-mono text-emerald-400';
+                } else {
+                    tgCardUsersCount.textContent = '0 人 (⚠️ 未设置白名单，所有人可访问)';
+                    tgCardUsersCount.className = 'font-mono text-amber-400';
+                }
+            }
+        }
+
+        if (btnOpenTgModal && modalTgConfig) {
+            btnOpenTgModal.addEventListener('click', () => {
+                fetchTelegramStatus().then(() => {
+                    if (tgInputUsers) tgInputUsers.value = tgState.allowed_users_str || '';
+                    if (tgInputToken && !tgInputToken.value && tgState.token_masked) {
+                        tgInputToken.placeholder = `已配置: ${tgState.token_masked} (留空不修改，输入新 Token 覆盖)`;
+                    }
+                    modalTgConfig.classList.remove('hidden');
+                });
+            });
+        }
+
+        if (btnCloseTgModal && modalTgConfig) {
+            btnCloseTgModal.addEventListener('click', () => modalTgConfig.classList.add('hidden'));
+        }
+        if (btnDismissTgModal && modalTgConfig) {
+            btnDismissTgModal.addEventListener('click', () => modalTgConfig.classList.add('hidden'));
+        }
+
+        if (btnSaveTgConfig) {
+            btnSaveTgConfig.addEventListener('click', async () => {
+                const tokenVal = tgInputToken ? tgInputToken.value.trim() : '';
+                const usersVal = tgInputUsers ? tgInputUsers.value.trim() : '';
+                
+                const origBtnText = btnSaveTgConfig.textContent;
+                btnSaveTgConfig.disabled = true;
+                btnSaveTgConfig.textContent = '⏳ 正在保存并热重启...';
+
+                try {
+                    const res = await fetch('/api/telegram/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            bot_token: tokenVal,
+                            allowed_users: usersVal
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        alert(data.message || 'Telegram Bot 配置已保存！');
+                        await fetchTelegramStatus();
+                    } else {
+                        alert('保存失败: ' + (data.message || JSON.stringify(data)));
+                    }
+                } catch (e) {
+                    alert('网络请求异常: ' + e);
+                } finally {
+                    btnSaveTgConfig.disabled = false;
+                    btnSaveTgConfig.textContent = origBtnText;
+                }
+            });
+        }
+
+        if (btnToggleTgService) {
+            btnToggleTgService.addEventListener('click', async () => {
+                const action = tgState.running ? 'stop' : 'start';
+                btnToggleTgService.disabled = true;
+                try {
+                    const res = await fetch('/api/telegram/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: action })
+                    });
+                    const data = await res.json();
+                    alert(data.message || '操作完成');
+                    await fetchTelegramStatus();
+                } catch (e) {
+                    alert('操作异常: ' + e);
+                } finally {
+                    btnToggleTgService.disabled = false;
+                }
+            });
+        }
+
+        // 定时每 15 秒同步一次 Telegram 在线状态
+        fetchTelegramStatus();
+        setInterval(fetchTelegramStatus, 15000);
     </script>
 </body>
 </html>
