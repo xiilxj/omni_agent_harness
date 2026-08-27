@@ -21,13 +21,14 @@ class ToolCall(BaseModel):
 
 
 class Message(BaseModel):
-    """统一消息对象结构（兼容 OpenAI / Anthropic / DeepSeek）"""
+    """统一消息对象结构（兼容 OpenAI / Anthropic / DeepSeek / Gemini 多模态）"""
     role: str = Field(..., description="角色: system, user, assistant, tool")
     content: Optional[Union[str, List[Dict[str, Any]]]] = ""
     name: Optional[str] = None
     tool_call_id: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     refusal_notices: Optional[List[str]] = Field(default_factory=list, description="本轮被熔断拦截的拒绝事件记录")
+    attachments: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="上传的图片与文件附件列表")
 
 
 class ToolParamSchema(BaseModel):

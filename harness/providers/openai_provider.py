@@ -15,12 +15,44 @@ class OpenAICompatibleProvider(BaseProvider):
     """OpenAI / DeepSeek 协议兼容适配器"""
 
     def _convert_messages_to_payload(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """将内部 Message 序列转换为 OpenAI 规范的 messages payload"""
+        """将内部 Message 序列转换为 OpenAI / Gemini 规范的 messages payload (支持 Vision 多模态与文件挂载)"""
+        from harness.tools.uploader import encode_image_to_data_uri, is_image_file
         payload = []
         for msg in messages:
+            content_val = msg.content or ""
+            
+            # 处理多模态图片与文件附件
+            if msg.attachments and msg.role == "user":
+                image_parts = []
+                file_notices = []
+                for att in msg.attachments:
+                    att_path = att.get("path", "")
+                    att_name = att.get("name", "file")
+                    if att.get("is_image") or (att_path and is_image_file(att_path)):
+                        data_uri = encode_image_to_data_uri(att_path)
+                        if data_uri:
+                            image_parts.append({
+                                "type": "image_url",
+                                "image_url": {"url": data_uri}
+                            })
+                    else:
+                        file_notices.append(f"- 📎 附件: `{att_name}` (路径: `{att_path}`, 大小: {att.get('size', 0)} 字节)")
+
+                # 如果有图片，组装多模态 Content Parts
+                if image_parts:
+                    text_content = str(content_val)
+                    if file_notices:
+                        text_content += "\n\n[用户挂载的文件列表]:\n" + "\n".join(file_notices)
+                    parts = [{"type": "text", "text": text_content}]
+                    parts.extend(image_parts)
+                    content_val = parts
+                elif file_notices:
+                    text_content = str(content_val) + "\n\n[用户挂载的文件列表，可直接使用工具 view_file / grep_search 查看与分析]:\n" + "\n".join(file_notices)
+                    content_val = text_content
+
             item: Dict[str, Any] = {
                 "role": msg.role,
-                "content": msg.content or ""
+                "content": content_val
             }
             if msg.name:
                 item["name"] = msg.name

@@ -10,8 +10,8 @@ import time
 import httpx
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -667,6 +667,39 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         """获取所有可用 Agent 工具定义列表"""
         return {"tools": tools.get_openai_tools()}
 
+    # ==================== 文件与图片上传及多模态预览 API ====================
+
+    @app.post("/api/upload")
+    async def upload_file(
+        file: UploadFile = File(...),
+        session_id: Optional[str] = Form(None)
+    ):
+        """上传图片或文件到当前工作区持久化暂存目录并返回多模态元数据"""
+        from harness.tools.uploader import save_upload_bytes
+        file_bytes = await file.read()
+        workspace_dir = workspace_mgr.cwd
+        file_info = save_upload_bytes(
+            file_bytes=file_bytes,
+            filename=file.filename or "uploaded_file",
+            workspace_dir=workspace_dir,
+            session_id=session_id
+        )
+        return {"status": "success", "file": file_info}
+
+    @app.get("/api/uploads/raw")
+    async def get_uploaded_file_raw(filename: str, session_id: Optional[str] = None):
+        """提供上传图片与文件的直接静态访问与缩略图预览服务"""
+        workspace_dir = workspace_mgr.cwd
+        target_dir = workspace_dir / ".omni_uploads"
+        if session_id:
+            target_dir = target_dir / session_id
+        file_path = (target_dir / filename).resolve()
+        if not file_path.exists() or not str(file_path).startswith(str(workspace_dir.resolve())):
+            raise HTTPException(status_code=404, detail="File not found")
+        from harness.tools.uploader import get_file_mime_type
+        mime = get_file_mime_type(file_path)
+        return FileResponse(file_path, media_type=mime)
+
     # ==================== Agent 流式交互与 Telemetry 收集 API ====================
 
     class RunTaskRequest(BaseModel):
@@ -678,6 +711,7 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
         reasoning_effort: Optional[str] = None
         custom_master_prompt: Optional[str] = None
         custom_master_suffix: Optional[str] = None
+        attachments: Optional[List[Dict[str, Any]]] = None
 
     @app.post("/api/agent/stream")
     async def run_agent_stream(req: RunTaskRequest):
@@ -759,6 +793,7 @@ def create_app(config_path: Optional[str] = None) -> FastAPI:
                     provider_name=target_provider,
                     model_name=target_model,
                     reasoning_effort=req.reasoning_effort or getattr(config, "reasoning_effort", "medium"),
+                    attachments=req.attachments,
                     on_step_callback=step_callback
                 )
             )

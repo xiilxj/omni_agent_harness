@@ -329,6 +329,7 @@ class OmniAgent:
         provider_name: Optional[str] = None,
         model_name: Optional[str] = None,
         reasoning_effort: Optional[str] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
         on_step_callback: Optional[Callable[[Dict[str, Any]], Any]] = None
     ) -> str:
         """
@@ -337,7 +338,7 @@ class OmniAgent:
         """
         # 1. 解析并转换斜杠快捷指令 (如 /goal, /grill-me, /schedule, /browser, /learn 等)
         transformed_prompt, cmd_name, cmd_meta = parse_and_transform_slash_command(task_prompt)
-        self.messages.append(Message(role="user", content=transformed_prompt))
+        self.messages.append(Message(role="user", content=transformed_prompt, attachments=attachments or []))
 
         step_count = 0
         final_answer = ""

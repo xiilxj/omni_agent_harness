@@ -454,13 +454,25 @@
                     </div>
                 </div>
 
+                <!-- Staged Attachments Tray (上传文件与图片预检托盘) -->
+                <div id="staged-attachments-tray" class="hidden mb-2 p-2 bg-dark-bg/90 border border-dark-border rounded-xl flex flex-wrap gap-2 items-center text-xs">
+                </div>
+
                 <!-- Input Textarea -->
-                <textarea id="prompt-input" rows="2" class="w-full bg-transparent px-2 pt-1 pb-2 text-xs text-dark-heading placeholder-dark-muted focus:outline-none resize-none font-sans leading-relaxed custom-scroll" placeholder="Type instructions, /goal, /grill-me... (Enter to execute, Shift+Enter for newline)"></textarea>
+                <textarea id="prompt-input" rows="2" class="w-full bg-transparent px-2 pt-1 pb-2 text-xs text-dark-heading placeholder-dark-muted focus:outline-none resize-none font-sans leading-relaxed custom-scroll" placeholder="Type instructions, /goal, /grill-me... (Enter to execute, Shift+Enter for newline, Ctrl+V to paste screenshot)"></textarea>
 
                 <!-- Input Card Lower Control Bar (折叠底部栏，正如截图所示) -->
                 <div class="flex items-center justify-between pt-1 border-t border-dark-border/40">
-                    <!-- Left: Quick +, Model Tier & Reasoning Pill, Auth Badge -->
+                    <!-- Left: Quick +, File Upload, Model Tier & Reasoning Pill, Auth Badge -->
                     <div class="flex items-center space-x-1.5">
+                        <input type="file" id="file-upload-input" multiple class="hidden" accept="image/*,.txt,.py,.js,.ts,.json,.csv,.md,.log,.pdf,.html,.css,.yaml,.yml,.c,.cpp,.rs,.go,.sh,.bat,.zip">
+                        
+                        <button id="btn-upload-attachment" class="w-7 h-7 rounded-lg hover:bg-dark-hover text-dark-muted hover:text-blue-400 flex items-center justify-center transition" title="上传图片或文件 (可多选 / 拖拽 / 粘贴截图 Ctrl+V)">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </button>
+
                         <button id="btn-input-plus" class="w-7 h-7 rounded-lg hover:bg-dark-hover text-dark-muted hover:text-dark-heading flex items-center justify-center transition" title="Add / System Presets">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1842,7 +1854,7 @@
 
             messages.forEach((m, idx) => {
                 if (m.role === 'user') {
-                    appendUserMessage(m.content, idx);
+                    appendUserMessage(m.content, idx, m.attachments || []);
                 } else if (m.role === 'assistant') {
                     // 如果该轮次触发过抗拒绝熔断，持久化渲染熔断告警胶囊（绝不删除）
                     if (m.refusal_notices && Array.isArray(m.refusal_notices) && m.refusal_notices.length > 0) {
@@ -4139,12 +4151,147 @@
             }
         }
 
+        // ==================== 文件与多模态图片上传系统 (Upload System) ====================
+        const btnUploadAttachment = document.getElementById('btn-upload-attachment');
+        const fileUploadInput = document.getElementById('file-upload-input');
+        const stagedAttachmentsTray = document.getElementById('staged-attachments-tray');
+        let stagedAttachments = [];
+
+        function renderStagedAttachments() {
+            if (!stagedAttachmentsTray) return;
+            if (stagedAttachments.length === 0) {
+                stagedAttachmentsTray.classList.add('hidden');
+                stagedAttachmentsTray.innerHTML = '';
+                return;
+            }
+
+            stagedAttachmentsTray.classList.remove('hidden');
+            stagedAttachmentsTray.innerHTML = '';
+
+            stagedAttachments.forEach((att, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center space-x-2 pl-2 pr-1.5 py-1 rounded-lg bg-zinc-900 border border-zinc-700/80 text-xs font-mono text-zinc-200 shadow-sm group';
+                
+                let iconOrThumb = '';
+                if (att.is_image) {
+                    iconOrThumb = `<img src="${att.url || `/api/uploads/raw?filename=${encodeURIComponent(att.name)}&session_id=${encodeURIComponent(activeSessionId || '')}`}" class="w-6 h-6 object-cover rounded border border-zinc-700" alt="${escapeHtml(att.name)}">`;
+                } else {
+                    iconOrThumb = `<svg class="w-4 h-4 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+                }
+
+                chip.innerHTML = `
+                    ${iconOrThumb}
+                    <div class="flex flex-col max-w-[140px] truncate">
+                        <span class="truncate font-medium text-[11px]">${escapeHtml(att.name)}</span>
+                        <span class="text-[9px] text-zinc-500">${att.size ? (att.size / 1024).toFixed(1) + ' KB' : ''}</span>
+                    </div>
+                    <button class="btn-remove-attachment p-0.5 rounded text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition" title="移除附件">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                `;
+
+                chip.querySelector('.btn-remove-attachment').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    stagedAttachments.splice(idx, 1);
+                    renderStagedAttachments();
+                });
+
+                stagedAttachmentsTray.appendChild(chip);
+            });
+        }
+
+        async function uploadFiles(files) {
+            if (!files || files.length === 0) return;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                if (activeSessionId) {
+                    formData.append('session_id', activeSessionId);
+                }
+
+                try {
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success' && data.file) {
+                        stagedAttachments.push(data.file);
+                    }
+                } catch (e) {
+                    console.error('Upload failed:', e);
+                }
+            }
+            renderStagedAttachments();
+        }
+
+        if (btnUploadAttachment && fileUploadInput) {
+            btnUploadAttachment.addEventListener('click', () => {
+                fileUploadInput.click();
+            });
+
+            fileUploadInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    uploadFiles(e.target.files);
+                    fileUploadInput.value = '';
+                }
+            });
+        }
+
+        // 剪贴板图片粘贴支持 (Ctrl+V Paste Image)
+        if (promptInput) {
+            promptInput.addEventListener('paste', (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+                if (!items) return;
+                const imageFiles = [];
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type && items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        if (blob) {
+                            const filename = `screenshot_${Date.now()}.png`;
+                            const file = new File([blob], filename, { type: blob.type });
+                            imageFiles.push(file);
+                        }
+                    }
+                }
+                if (imageFiles.length > 0) {
+                    uploadFiles(imageFiles);
+                }
+            });
+        }
+
+        // 拖拽文件到输入卡片直接上传 (Drag & Drop)
+        const mainInputContainer = promptInput ? promptInput.closest('.relative') : null;
+        if (mainInputContainer) {
+            mainInputContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                mainInputContainer.classList.add('border-blue-500/80', 'bg-blue-950/20');
+            });
+            mainInputContainer.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                mainInputContainer.classList.remove('border-blue-500/80', 'bg-blue-950/20');
+            });
+            mainInputContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                mainInputContainer.classList.remove('border-blue-500/80', 'bg-blue-950/20');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    uploadFiles(e.dataTransfer.files);
+                }
+            });
+        }
+
         async function executeTask() {
             const prompt = promptInput.value.trim();
-            if (!prompt || isRunning) return;
+            if ((!prompt && stagedAttachments.length === 0) || isRunning) return;
+
+            const finalPrompt = prompt || '(请分析上述上传的文件或图片)';
 
             // 处理前端直出快捷指令
-            if (prompt === '/clear') {
+            if (finalPrompt === '/clear') {
                 timeline.innerHTML = '';
                 if (emptyState) emptyState.classList.remove('hidden');
                 resetPromptInputHeight();
@@ -4156,7 +4303,11 @@
             emptyState?.classList.add('hidden');
             resetPromptInputHeight();
 
-            appendUserMessage(prompt);
+            const attachmentsToSend = [...stagedAttachments];
+            stagedAttachments = [];
+            renderStagedAttachments();
+
+            appendUserMessage(finalPrompt, null, attachmentsToSend);
 
             const chosenModel = (headerModelSelect ? headerModelSelect.value : 'deepseek-v4-flash') || 'deepseek-v4-flash';
             let suffixToSend = masterSuffixTextarea ? masterSuffixTextarea.value : '';
@@ -4168,13 +4319,14 @@
 
             const payload = {
                 session_id: activeSessionId,
-                prompt: prompt,
+                prompt: finalPrompt,
                 provider: chosenProvider,
                 model: chosenModel,
                 permission_mode: currentPermission || 'unrestricted',
                 reasoning_effort: currentEffort || 'medium',
                 custom_master_prompt: masterTextarea ? masterTextarea.value : '',
-                custom_master_suffix: suffixToSend
+                custom_master_suffix: suffixToSend,
+                attachments: attachmentsToSend
             };
 
             let currentThoughtContainer = null;
@@ -4407,8 +4559,8 @@
             scrollBottom();
         }
 
-        // Accordion Helpers: User Message with Rollback & Inline Edit & Quote Action
-        function appendUserMessage(text, msgIndex = null) {
+        // Accordion Helpers: User Message with Rollback & Inline Edit & Quote Action & Attachments
+        function appendUserMessage(text, msgIndex = null, attachments = []) {
             const div = document.createElement('div');
             div.className = 'group p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 text-dark-heading relative transition hover:border-zinc-700 select-text';
             
@@ -4446,6 +4598,38 @@
                 </div>
             `;
 
+            // 渲染附件卡片
+            const atts = Array.isArray(attachments) ? attachments : [];
+            let attContainer = null;
+            if (atts.length > 0) {
+                attContainer = document.createElement('div');
+                attContainer.className = 'flex flex-wrap gap-2 mb-2 pt-0.5';
+                atts.forEach(att => {
+                    if (att.is_image) {
+                        const imgBox = document.createElement('div');
+                        imgBox.className = 'relative group/img rounded-lg overflow-hidden border border-zinc-700/80 max-w-xs shadow-md bg-black/50 cursor-pointer';
+                        const imgSrc = att.url || `/api/uploads/raw?filename=${encodeURIComponent(att.name)}&session_id=${encodeURIComponent(activeSessionId || '')}`;
+                        imgBox.innerHTML = `
+                            <img src="${imgSrc}" class="max-h-40 rounded object-contain hover:scale-105 transition" alt="${escapeHtml(att.name)}">
+                            <div class="absolute bottom-0 inset-x-0 bg-black/75 px-1.5 py-0.5 text-[9px] font-mono text-zinc-300 truncate">${escapeHtml(att.name)}</div>
+                        `;
+                        imgBox.addEventListener('click', () => window.open(imgSrc, '_blank'));
+                        attContainer.appendChild(imgBox);
+                    } else {
+                        const fileBox = document.createElement('div');
+                        fileBox.className = 'flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-zinc-950/80 border border-zinc-800 hover:border-blue-500/60 text-xs font-mono transition';
+                        fileBox.innerHTML = `
+                            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                            <div class="truncate max-w-[220px]">
+                                <div class="text-zinc-200 truncate font-medium text-[11px]">${escapeHtml(att.name)}</div>
+                                <div class="text-[9px] text-zinc-500 font-mono">${(att.size ? (att.size / 1024).toFixed(1) + ' KB' : '')}</div>
+                            </div>
+                        `;
+                        attContainer.appendChild(fileBox);
+                    }
+                });
+            }
+
             const viewContainer = document.createElement('div');
             viewContainer.className = 'font-mono text-xs whitespace-pre-wrap select-text leading-relaxed';
             viewContainer.textContent = currentContent;
@@ -4466,6 +4650,7 @@
             `;
 
             div.appendChild(headerBar);
+            if (attContainer) div.appendChild(attContainer);
             div.appendChild(viewContainer);
             div.appendChild(editContainer);
 
