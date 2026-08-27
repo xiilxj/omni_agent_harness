@@ -1,6 +1,6 @@
 # Omni Agent Harness (Windows 独立运行指南)
 
-欢迎使用 **Omni Agent Harness** 工业级智能体交互底座！本项目支持在 Windows 纯原生环境中独立运行，无需安装复杂的 Linux 虚拟机或 Docker。
+欢迎使用 **Omni Agent Harness**！这是一个由 **15 岁准高一学生** 开发的开源轻量级 AI Agent 工作台，旨在把对大模型的一切控制权（提示词、历史记忆、执行纠偏、远程消息）完全还给使用者。支持在 Windows 纯原生环境中独立运行，无需安装 Linux 虚拟机或 Docker。
 
 ---
 
