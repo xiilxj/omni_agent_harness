@@ -384,6 +384,12 @@ class OmniAgent:
                 err_msg = f"LLM Call Failed at step {step_count}: {e}"
                 if on_step_callback:
                     await on_step_callback({"type": "error", "error": err_msg})
+                self.messages.append(
+                    Message(
+                        role="assistant",
+                        content=f"❌ 调用失败: {err_msg}"
+                    )
+                )
                 return err_msg
 
             # 再次检查急停打断

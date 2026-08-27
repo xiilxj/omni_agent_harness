@@ -18,7 +18,7 @@ def test_mask_key():
 def test_provider_manager_crud():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        mgr = ProviderManager(config_dir=tmp_path)
+        mgr = ProviderManager(config_dir=tmp_path, env_file=tmp_path / ".env")
 
         # 1. 验证内置厂商列表已初始化
         providers = mgr.list_providers()
@@ -80,7 +80,7 @@ def test_provider_router_dynamic_switch(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "AQ.TESTKEY1234567890")
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        mgr = ProviderManager(config_dir=tmp_path)
+        mgr = ProviderManager(config_dir=tmp_path, env_file=tmp_path / ".env")
         mgr.save_provider(
             provider_id="gemini",
             name="Google Gemini",

@@ -114,9 +114,10 @@ def mask_key(key: Optional[str]) -> str:
 class ProviderManager:
     """模型供应商配置管理与多上游路由持久化中心"""
 
-    def __init__(self, config_dir: Optional[Path] = None):
+    def __init__(self, config_dir: Optional[Path] = None, env_file: Optional[Path] = None):
         self.config_dir = config_dir or (Path.cwd() / "config")
         self.storage_file = self.config_dir / "custom_providers.json"
+        self.env_file = env_file or (Path.cwd() / ".env")
         self._ensure_storage()
 
     def _ensure_storage(self):
@@ -277,32 +278,28 @@ class ProviderManager:
 
     def _write_to_env(self, env_var: str, key_val: str):
         """安全写入私有 .env 文件"""
-        candidate_envs = [
-            Path.cwd() / ".env",
-            Path(__file__).resolve().parent.parent.parent / ".env"
-        ]
-        for env_file in candidate_envs:
-            try:
-                lines = []
-                found = False
-                if env_file.exists():
-                    with open(env_file, "r", encoding="utf-8") as f:
-                        lines = f.readlines()
+        env_file = self.env_file
+        try:
+            lines = []
+            found = False
+            if env_file.exists():
+                with open(env_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
 
-                new_lines = []
-                for line in lines:
-                    if line.startswith(f"{env_var}="):
-                        new_lines.append(f"{env_var}={key_val}\n")
-                        found = True
-                    else:
-                        new_lines.append(line)
-                if not found:
+            new_lines = []
+            for line in lines:
+                if line.startswith(f"{env_var}="):
                     new_lines.append(f"{env_var}={key_val}\n")
+                    found = True
+                else:
+                    new_lines.append(line)
+            if not found:
+                new_lines.append(f"{env_var}={key_val}\n")
 
-                with open(env_file, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
-            except Exception as e:
-                print(f"Warning writing to .env ({env_file}): {e}")
+            with open(env_file, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+        except Exception as e:
+            print(f"Warning writing to .env ({env_file}): {e}")
 
     @staticmethod
     async def fetch_upstream_models(base_url: str, api_key: str) -> Tuple[bool, List[str], str]:
