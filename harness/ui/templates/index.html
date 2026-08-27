@@ -382,25 +382,38 @@
 
                     <!-- 1. Model Tier Selection -->
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-semibold text-dark-muted uppercase">Model / 模型档位:</label>
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-semibold text-dark-muted uppercase">快捷 4 档能力映射:</label>
+                            <span class="text-[9px] text-blue-400 font-medium">快速切换</span>
+                        </div>
                         <div class="grid grid-cols-2 gap-1.5" id="popover-tier-grid">
                             <button data-tier="flash" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Flash</span></div>
-                                <div class="text-[10px] text-dark-muted truncate">deepseek-chat</div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>Flash</span></div>
+                                <div class="text-[10px] text-dark-muted truncate" id="pop-tier-model-flash">deepseek-chat</div>
                             </button>
                             <button data-tier="pro" class="pop-tier-btn p-1.5 rounded bg-blue-950/40 border border-blue-600 text-left transition">
-                                <div class="font-medium text-xs text-blue-400 flex items-center space-x-1"><span></span><span>Pro</span></div>
-                                <div class="text-[10px] text-dark-muted truncate">deepseek-chat</div>
+                                <div class="font-medium text-xs text-blue-400 flex items-center space-x-1"><span>Pro</span></div>
+                                <div class="text-[10px] text-dark-muted truncate" id="pop-tier-model-pro">deepseek-chat</div>
                             </button>
                             <button data-tier="reasoner" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Reasoner</span></div>
-                                <div class="text-[10px] text-dark-muted truncate">deepseek-reasoner</div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>Reasoner</span></div>
+                                <div class="text-[10px] text-dark-muted truncate" id="pop-tier-model-reasoner">deepseek-reasoner</div>
                             </button>
                             <button data-tier="vision" class="pop-tier-btn p-1.5 rounded bg-dark-bg border border-dark-border hover:border-blue-500 text-left transition">
-                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span></span><span>Vision</span></div>
-                                <div class="text-[10px] text-dark-muted truncate">gpt-4o</div>
+                                <div class="font-medium text-xs text-dark-heading flex items-center space-x-1"><span>Vision</span></div>
+                                <div class="text-[10px] text-dark-muted truncate" id="pop-tier-model-vision">gpt-4o</div>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Direct All Models Selector (自选当前全部可用模型) -->
+                    <div class="space-y-1 pt-1.5 border-t border-dark-border/60">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-semibold text-zinc-400 uppercase">自选当前可用全部模型:</label>
+                            <span class="text-[9px] text-zinc-500 font-mono" id="popover-models-count"></span>
+                        </div>
+                        <select id="popover-all-models-select" class="w-full bg-dark-bg border border-dark-border hover:border-blue-500/70 rounded-lg px-2 py-1.5 text-xs text-dark-heading font-mono focus:outline-none focus:border-blue-500 transition cursor-pointer">
+                        </select>
                     </div>
 
                     <!-- 2. Reasoning Intensity (5 档真实有效推理强度) -->
@@ -1509,6 +1522,16 @@
             tierModelMap.pro.name = tierModelMap.pro.model;
             tierModelMap.reasoner.name = tierModelMap.reasoner.model;
             tierModelMap.vision.name = tierModelMap.vision.model;
+
+            // 实时同步更新底部弹层 4 档卡片副标题模型名称
+            const popFlash = document.getElementById('pop-tier-model-flash');
+            if (popFlash) popFlash.textContent = tierModelMap.flash.model;
+            const popPro = document.getElementById('pop-tier-model-pro');
+            if (popPro) popPro.textContent = tierModelMap.pro.model;
+            const popReasoner = document.getElementById('pop-tier-model-reasoner');
+            if (popReasoner) popReasoner.textContent = tierModelMap.reasoner.model;
+            const popVision = document.getElementById('pop-tier-model-vision');
+            if (popVision) popVision.textContent = tierModelMap.vision.model;
 
             const mapObj = {
                 flash: tierModelMap.flash.model,
@@ -3533,12 +3556,20 @@
         function handleDropdownModelChange(modelName) {
             const tier = getTierFromModel(modelName);
             setModelTierUI(tier, modelName);
+            const popoverAllSelect = document.getElementById('popover-all-models-select');
+            if (popoverAllSelect && popoverAllSelect.value !== modelName) {
+                popoverAllSelect.value = modelName;
+            }
         }
         if (headerModelSelect) {
             headerModelSelect.addEventListener('change', () => handleDropdownModelChange(headerModelSelect.value));
         }
         if (settingsModelSelect) {
             settingsModelSelect.addEventListener('change', () => handleDropdownModelChange(settingsModelSelect.value));
+        }
+        const popoverAllModelsSelectEl = document.getElementById('popover-all-models-select');
+        if (popoverAllModelsSelectEl) {
+            popoverAllModelsSelectEl.addEventListener('change', () => handleDropdownModelChange(popoverAllModelsSelectEl.value));
         }
 
         function setReasoningEffortUI(effort) {
@@ -3640,20 +3671,29 @@
         });
 
         function populateModelSelects(models, defaultModel) {
-            if (!headerModelSelect || !settingsModelSelect) return;
             const list = Array.isArray(models) ? models : [];
             const targetModel = defaultModel || list[0] || '';
-            headerModelSelect.innerHTML = '';
-            settingsModelSelect.innerHTML = '';
+            if (headerModelSelect) headerModelSelect.innerHTML = '';
+            if (settingsModelSelect) settingsModelSelect.innerHTML = '';
+            const popoverAllSelect = document.getElementById('popover-all-models-select');
+            const popoverCount = document.getElementById('popover-models-count');
+            if (popoverAllSelect) popoverAllSelect.innerHTML = '';
+
             list.forEach(m => {
                 const isSelected = (m === targetModel);
-                headerModelSelect.add(new Option(m, m, isSelected, isSelected));
-                settingsModelSelect.add(new Option(m, m, isSelected, isSelected));
+                if (headerModelSelect) headerModelSelect.add(new Option(m, m, isSelected, isSelected));
+                if (settingsModelSelect) settingsModelSelect.add(new Option(m, m, isSelected, isSelected));
+                if (popoverAllSelect) popoverAllSelect.add(new Option(m, m, isSelected, isSelected));
             });
 
+            if (popoverCount) {
+                popoverCount.textContent = `(共 ${list.length} 个模型)`;
+            }
+
             if (targetModel) {
-                headerModelSelect.value = targetModel;
-                settingsModelSelect.value = targetModel;
+                if (headerModelSelect) headerModelSelect.value = targetModel;
+                if (settingsModelSelect) settingsModelSelect.value = targetModel;
+                if (popoverAllSelect) popoverAllSelect.value = targetModel;
             }
 
             // 还原持久化档位与推理强度与权限
